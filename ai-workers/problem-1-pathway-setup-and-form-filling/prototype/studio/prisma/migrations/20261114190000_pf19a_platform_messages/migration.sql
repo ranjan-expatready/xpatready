@@ -78,6 +78,7 @@ CREATE TABLE "msg_consent" (
     "evidence_ref" TEXT,
     "locale" TEXT,
     "ip_hash" TEXT,
+    "jurisdiction" TEXT,
     "recorded_kind" "MsgRecorderKind" NOT NULL,
     "recorded_by" TEXT NOT NULL,
     "copied_from_id" UUID,
@@ -88,6 +89,22 @@ CREATE TABLE "msg_consent" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "msg_consent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "msg_consent_withdrawal" (
+    "id" UUID NOT NULL,
+    "firm_id" UUID NOT NULL,
+    "subject_kind" "MsgSubjectKind" NOT NULL,
+    "subject_id" UUID NOT NULL,
+    "channel" "MsgChannel" NOT NULL,
+    "purpose" "MsgPurpose" NOT NULL,
+    "via" "MsgWithdrawalVia" NOT NULL,
+    "withdrawn_by" TEXT NOT NULL,
+    "withdrawn_at" TIMESTAMPTZ NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "msg_consent_withdrawal_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -200,6 +217,9 @@ CREATE INDEX "msg_consent_firm_id_wording_id_idx" ON "msg_consent"("firm_id", "w
 CREATE UNIQUE INDEX "msg_consent_firm_id_id_key" ON "msg_consent"("firm_id", "id");
 
 -- CreateIndex
+CREATE INDEX "msg_consent_withdrawal_firm_id_subject_kind_subject_id_chan_idx" ON "msg_consent_withdrawal"("firm_id", "subject_kind", "subject_id", "channel", "purpose", "withdrawn_at");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "msg_suppression_firm_id_channel_address_key" ON "msg_suppression"("firm_id", "channel", "address");
 
 -- CreateIndex
@@ -239,6 +259,9 @@ ALTER TABLE "msg_consent" ADD CONSTRAINT "msg_consent_firm_id_wording_id_channel
 ALTER TABLE "msg_consent" ADD CONSTRAINT "msg_consent_firm_id_copied_from_id_fkey" FOREIGN KEY ("firm_id", "copied_from_id") REFERENCES "msg_consent"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
+ALTER TABLE "msg_consent_withdrawal" ADD CONSTRAINT "msg_consent_withdrawal_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "msg_firm"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+-- AddForeignKey
 ALTER TABLE "msg_suppression" ADD CONSTRAINT "msg_suppression_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "msg_firm"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
@@ -270,10 +293,11 @@ ALTER TABLE "msg_send_counter" ADD CONSTRAINT "msg_send_counter_firm_id_fkey" FO
 
 
 -- ----------------------------------------------------------------------------------------------------- rules Prisma cannot say
--- Addresses are kept in one form so the gate's lookup is exact: email lower case and trimmed, WhatsApp numbers in E.164.
+-- Addresses are kept in one form so the gate's lookup is exact (ports/consent.ts normaliseAddress): email ASCII, lower case,
+-- a dotted domain with no trailing dot (EMAIL_KEPT); WhatsApp numbers in E.164.
 CREATE FUNCTION msg_address_ok(channel "MsgChannel", address TEXT) RETURNS BOOLEAN LANGUAGE sql IMMUTABLE AS $$
   SELECT CASE channel
-    WHEN 'EMAIL' THEN address = lower(btrim(address)) AND address ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' AND length(address) <= 320
+    WHEN 'EMAIL' THEN address ~ '^[a-z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$' AND length(address) <= 320
     WHEN 'WHATSAPP' THEN address ~ '^\+[1-9][0-9]{6,14}$'
   END
 $$;
@@ -301,11 +325,19 @@ ALTER TABLE "msg_consent"
   -- A SYSTEM row is a Link or Merge copy and names the row it copies (AG-2-83 rules 3, 8).
   ADD CONSTRAINT "msg_consent_copy_check" CHECK ((("recorded_kind" = 'SYSTEM') = ("copied_from_id" IS NOT NULL)) AND "copied_from_id" IS DISTINCT FROM "id"),
   ADD CONSTRAINT "msg_consent_ip_hash_check" CHECK ("ip_hash" IS NULL OR ("source" = 'WEB_FORM' AND "ip_hash" ~ '^[0-9a-f]{64}$')),
+  ADD CONSTRAINT "msg_consent_jurisdiction_check" CHECK ("jurisdiction" IS NULL OR "jurisdiction" ~ '^[A-Z]{2}(-[A-Z0-9]{1,3})?$'),
   ADD CONSTRAINT "msg_consent_locale_check" CHECK ("locale" IS NULL OR "locale" ~ '^[a-z]{2}(-[A-Z]{2})?$'),
   ADD CONSTRAINT "msg_consent_by_check" CHECK (msg_actor_ok("recorded_by")),
+  ADD CONSTRAINT "msg_consent_times_check" CHECK (isfinite("given_at") AND ("withdrawn_at" IS NULL OR isfinite("withdrawn_at"))),
   ADD CONSTRAINT "msg_consent_withdrawal_check" CHECK (
     ("withdrawn_at" IS NULL AND "withdrawn_by" IS NULL AND "withdrawn_via" IS NULL)
     OR ("withdrawn_at" IS NOT NULL AND msg_actor_ok("withdrawn_by") AND "withdrawn_via" IS NOT NULL AND "withdrawn_at" >= "given_at"));
+
+-- A withdrawal is kept whether or not a live consent existed (AG-10-24), with who and how; insert-only (below).
+ALTER TABLE "msg_consent_withdrawal"
+  ADD CONSTRAINT "msg_consent_withdrawal_purpose_check" CHECK ("purpose" = 'MARKETING' OR "channel" = 'WHATSAPP'),
+  ADD CONSTRAINT "msg_consent_withdrawal_by_check" CHECK (msg_actor_ok("withdrawn_by")),
+  ADD CONSTRAINT "msg_consent_withdrawal_at_check" CHECK (isfinite("withdrawn_at"));
 
 ALTER TABLE "msg_suppression"
   ADD CONSTRAINT "msg_suppression_address_check" CHECK (msg_address_ok("channel", "address")),
@@ -333,7 +365,8 @@ ALTER TABLE "msg_outbox"
 ALTER TABLE "msg_send_counter"
   ADD CONSTRAINT "msg_send_counter_sent_check" CHECK ("sent" >= 0);
 
--- Write-once rows: consent wording versions, template versions and delivery events refuse update, delete and truncate.
+-- Write-once rows: consent wording versions, withdrawals, template versions and delivery events refuse update, delete and
+-- truncate.
 CREATE FUNCTION msg_write_once() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   RAISE EXCEPTION '% is write-once: % refused', TG_TABLE_NAME, TG_OP USING ERRCODE = 'restrict_violation';
@@ -342,6 +375,8 @@ CREATE TRIGGER "msg_consent_wording_write_once" BEFORE UPDATE OR DELETE ON "msg_
 CREATE TRIGGER "msg_consent_wording_no_truncate" BEFORE TRUNCATE ON "msg_consent_wording" FOR EACH STATEMENT EXECUTE FUNCTION msg_write_once();
 CREATE TRIGGER "msg_template_version_write_once" BEFORE UPDATE OR DELETE ON "msg_template_version" FOR EACH ROW EXECUTE FUNCTION msg_write_once();
 CREATE TRIGGER "msg_template_version_no_truncate" BEFORE TRUNCATE ON "msg_template_version" FOR EACH STATEMENT EXECUTE FUNCTION msg_write_once();
+CREATE TRIGGER "msg_consent_withdrawal_insert_only" BEFORE UPDATE OR DELETE ON "msg_consent_withdrawal" FOR EACH ROW EXECUTE FUNCTION msg_write_once();
+CREATE TRIGGER "msg_consent_withdrawal_no_truncate" BEFORE TRUNCATE ON "msg_consent_withdrawal" FOR EACH STATEMENT EXECUTE FUNCTION msg_write_once();
 CREATE TRIGGER "msg_event_insert_only" BEFORE UPDATE OR DELETE ON "msg_event" FOR EACH ROW EXECUTE FUNCTION msg_write_once();
 CREATE TRIGGER "msg_event_no_truncate" BEFORE TRUNCATE ON "msg_event" FOR EACH STATEMENT EXECUTE FUNCTION msg_write_once();
 

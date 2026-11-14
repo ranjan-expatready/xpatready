@@ -9,8 +9,9 @@
 // 20261114190000_pf19a_platform_messages (functions and triggers prefixed msg_): wording, template versions and delivery
 // events are write-once; a consent's withdrawal is set once, never cleared, and nothing else on it ever changes; a template
 // version and an outbox row stay in their template's firm. A consent names a wording of its own firm, channel and purpose
-// by a composite foreign key. Every firm row here is covered by PF-12's walls (msg_firm, msg_consent_wording, msg_consent,
-// msg_suppression, msg_template, msg_template_version, msg_outbox, msg_event, msg_send_counter). The CASL reading behind
+// by a composite foreign key; a withdrawal is also its own insert-only row. Every firm row here is covered by PF-12's
+// walls (msg_firm, msg_consent_wording, msg_consent, msg_consent_withdrawal, msg_suppression, msg_template,
+// msg_template_version, msg_outbox, msg_event, msg_send_counter). The CASL reading behind
 // "marketing needs express consent on that channel" is Unconfirmed: no counsel. Room is left for PF-18n's
 // msg_notification (later notifications).
 
@@ -124,6 +125,7 @@ model MsgFirm {
   firm             PlatformFirm         @relation(fields: [firmId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   consentWordings  MsgConsentWording[]
   consents         MsgConsent[]
+  withdrawals      MsgConsentWithdrawal[]
   suppressions     MsgSuppression[]
   templates        MsgTemplate[]
   templateVersions MsgTemplateVersion[]
@@ -179,6 +181,8 @@ model MsgConsent {
   locale        String?
   /// A hash of the visitor's address, web form only (AG-2-83 rule 3).
   ipHash        String?           @map("ip_hash")
+  /// The law the consent was taken under (AG-10-26: jurisdiction-aware): ISO country, or country-province (`CA`, `CA-QC`).
+  jurisdiction  String?
   recordedKind  MsgRecorderKind   @map("recorded_kind")
   /// `staff:<id>`, `system:<door>` (a public door, AG-2-83 rule 4) or `seed:<row>`.
   recordedBy    String            @map("recorded_by")
@@ -199,6 +203,28 @@ model MsgConsent {
   @@index([firmId, subjectKind, subjectId, channel, purpose, givenAt])
   @@index([firmId, wordingId])
   @@map("msg_consent")
+}
+
+/// A withdrawal as its own row (AG-10-24 "SHALL write a withdrawal"; AG-2-83 rule 7): every unsubscribe, STOP or staff
+/// withdrawal is stored here, whether or not the person had a live consent, so it blocks every consent of that subject,
+/// channel and purpose given before it (a Link copy with an older time included) until a new consent is given after it.
+/// The live consents it ends also get their withdrawn_at. Insert-only (trigger).
+model MsgConsentWithdrawal {
+  id          String           @id @default(uuid()) @db.Uuid
+  firmId      String           @map("firm_id") @db.Uuid
+  subjectKind MsgSubjectKind   @map("subject_kind")
+  subjectId   String           @map("subject_id") @db.Uuid
+  channel     MsgChannel
+  purpose     MsgPurpose
+  via         MsgWithdrawalVia
+  withdrawnBy String           @map("withdrawn_by")
+  withdrawnAt DateTime         @map("withdrawn_at") @db.Timestamptz
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  firm MsgFirm @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([firmId, subjectKind, subjectId, channel, purpose, withdrawnAt])
+  @@map("msg_consent_withdrawal")
 }
 
 /// An address that gets nothing more from this firm (AG-10-25): EMAIL addresses lower case, WHATSAPP numbers in E.164

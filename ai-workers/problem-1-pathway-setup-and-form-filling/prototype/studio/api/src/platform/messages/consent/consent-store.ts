@@ -9,8 +9,8 @@ import type { AuditPort } from "../../../../../ports/audit.ts";
 import { systemClock, type ClockPort } from "../../../../../ports/clock.ts";
 import {
   AllowsQuery, ConsentRecordInput, ConsentRefused, PublishWordingInput, SuppressInput, WithdrawInput, decide,
-  normaliseAddress, purposeNeeded, sha256Hex,
-  type ConsentDecision, type ConsentPort, type PublishedWording,
+  copyKeeps, normaliseAddress, notInFuture, purposeNeeded, sha256Hex,
+  type ConsentDecision, type ConsentPort, type PublishedWording, type Withdrawn,
 } from "../../../../../ports/consent.ts";
 import { firmScope } from "../../firm-scope.ts";
 import { ensureMessagesFirm } from "./messages-firm.ts";
@@ -18,60 +18,83 @@ import { ensureMessagesFirm } from "./messages-firm.ts";
 type Tx = Prisma.TransactionClient;
 type DbOrTx = PrismaClient | Tx;
 
+/** Writes need the caller's transaction: a bare client would commit the row before its audit line (break report 8). A
+ *  transaction client has no $disconnect; the client has. */
+function inTransaction(tx: Tx): Tx {
+  if ("$disconnect" in (tx as object)) throw new TypeError("ConsentStore: pass the caller's transaction (db.$transaction(tx => …)), not the client");
+  return tx;
+}
+
 export class ConsentStore implements ConsentPort<Tx> {
   constructor(private readonly audit: AuditPort<Tx>, private readonly clock: ClockPort = systemClock) {}
 
-  async record(tx: Tx, input: Parameters<ConsentPort["record"]>[1]): Promise<{ id: string }> {
+  async record(txIn: Tx, input: Parameters<ConsentPort["record"]>[1]): Promise<{ id: string }> {
+    const tx = inTransaction(txIn);
     const c = ConsentRecordInput.parse(input);
     const { firmId } = firmScope(c.firmId);
     await ensureMessagesFirm(tx, firmId);
     if (c.wordingId) {
-      const w = await tx.msgConsentWording.findFirst({ where: firmScope(firmId, { id: c.wordingId, channel: c.channel, purpose: c.purpose }), select: { id: true } });
+      const w = await tx.msgConsentWording.findFirst({ where: firmScope(firmId, { id: c.wordingId.toLowerCase(), channel: c.channel, purpose: c.purpose }), select: { id: true } });
       if (!w) throw new ConsentRefused(`wording ${c.wordingId} is not this firm's ${c.channel} ${c.purpose} wording`);
     }
-    if (c.copiedFromId) {
-      const from = await tx.msgConsent.findFirst({ where: firmScope(firmId, { id: c.copiedFromId }), select: { id: true } });
-      if (!from) throw new ConsentRefused(`consent ${c.copiedFromId} is not in this firm`);
-    }
+    // A Link or Merge copy carries the original's withdrawal (AG-2-83 rule 8: Merge copies withdrawals too), so a copy
+    // of a withdrawn consent is never live.
+    const from = c.copiedFromId
+      ? await tx.msgConsent.findFirst({ where: firmScope(firmId, { id: c.copiedFromId.toLowerCase() }), select: { id: true, channel: true, purpose: true, wordingId: true, givenAt: true, withdrawnAt: true, withdrawnBy: true, withdrawnVia: true } })
+      : null;
+    if (c.copiedFromId && !from) throw new ConsentRefused(`consent ${c.copiedFromId} is not in this firm`);
+    if (from) copyKeeps(from, c);
+    const now = this.clock.now();
+    const givenAt = from ? from.givenAt : notInFuture(c.givenAt ?? now, now, "givenAt");
+    const withdrawal = from?.withdrawnAt
+      ? { withdrawnAt: new Date(Math.max(from.withdrawnAt.getTime(), givenAt.getTime())), withdrawnBy: from.withdrawnBy, withdrawnVia: from.withdrawnVia }
+      : {};
     const row = await tx.msgConsent.create({
       data: {
         firmId, subjectKind: c.subject.kind, subjectId: c.subject.id.toLowerCase(), channel: c.channel, purpose: c.purpose,
-        wordingId: c.wordingId ?? null, basis: c.basis, source: c.source, sourceRef: c.sourceRef ?? null, evidenceRef: c.evidenceRef ?? null,
-        locale: c.locale ?? null, ipHash: c.ipHash ?? null, recordedKind: c.recordedKind, recordedBy: c.recordedBy,
-        copiedFromId: c.copiedFromId ?? null, givenAt: c.givenAt ?? this.clock.now(),
+        wordingId: c.wordingId?.toLowerCase() ?? null, basis: c.basis, source: c.source, sourceRef: c.sourceRef ?? null, evidenceRef: c.evidenceRef ?? null,
+        locale: c.locale ?? null, ipHash: c.ipHash ?? null, jurisdiction: c.jurisdiction ?? null, recordedKind: c.recordedKind, recordedBy: c.recordedBy,
+        copiedFromId: c.copiedFromId ?? null, givenAt, ...withdrawal,
       },
       select: { id: true },
     });
     await this.audit.record(tx, {
       firmId, actor: c.recordedBy, action: "consent.recorded", entity: "msg_consent", entityKey: row.id,
       summary: `Consent recorded: ${c.channel.toLowerCase()} ${c.purpose.toLowerCase()}, from ${c.source.toLowerCase().replace(/_/g, " ")}.`,
-      detail: { subjectKind: c.subject.kind, subjectId: c.subject.id.toLowerCase(), channel: c.channel, purpose: c.purpose, basis: c.basis, source: c.source, wordingId: c.wordingId ?? null, copiedFromId: c.copiedFromId ?? null },
+      detail: { subjectKind: c.subject.kind, subjectId: c.subject.id.toLowerCase(), channel: c.channel, purpose: c.purpose, basis: c.basis, source: c.source, wordingId: c.wordingId ?? null, copiedFromId: c.copiedFromId ?? null, copiedWithdrawn: !!from?.withdrawnAt },
     });
     return row;
   }
 
-  async withdraw(tx: Tx, input: Parameters<ConsentPort["withdraw"]>[1]): Promise<{ withdrawn: number }> {
+  async withdraw(txIn: Tx, input: Parameters<ConsentPort["withdraw"]>[1]): Promise<Withdrawn> {
+    const tx = inTransaction(txIn);
     const w = WithdrawInput.parse(input);
     const { firmId } = firmScope(w.firmId);
-    const at = w.at ?? this.clock.now();
-    // Every live row of the key at once; a row given after `at` (a clock step) is withdrawn at its own given time, so
-    // withdrawn_at never precedes given_at (check).
+    const now = this.clock.now();
+    const at = notInFuture(w.at ?? now, now, "at");
+    const subjectId = w.subject.id.toLowerCase();
+    await ensureMessagesFirm(tx, firmId);
+    // The withdrawal is its own row, whether or not a live consent exists (AG-10-24 "SHALL write a withdrawal").
+    const out = await tx.msgConsentWithdrawal.create({
+      data: { firmId, subjectKind: w.subject.kind, subjectId, channel: w.channel, purpose: w.purpose, via: w.via, withdrawnBy: w.by, withdrawnAt: at },
+      select: { id: true },
+    });
+    // It ends every live consent of the key given at or before it; one given after `at` (a late-processed click) stays.
     const rows = await tx.$queryRaw<{ id: string }[]>`
-      UPDATE "msg_consent" SET "withdrawn_at" = greatest(${at}::timestamptz, "given_at"), "withdrawn_by" = ${w.by}, "withdrawn_via" = ${w.via}::"MsgWithdrawalVia"
-      WHERE "firm_id" = ${firmId}::uuid AND "subject_kind" = ${w.subject.kind}::"MsgSubjectKind" AND "subject_id" = ${w.subject.id.toLowerCase()}::uuid
-        AND "channel" = ${w.channel}::"MsgChannel" AND "purpose" = ${w.purpose}::"MsgPurpose" AND "withdrawn_at" IS NULL
+      UPDATE "msg_consent" SET "withdrawn_at" = ${at}::timestamptz, "withdrawn_by" = ${w.by}, "withdrawn_via" = ${w.via}::"MsgWithdrawalVia"
+      WHERE "firm_id" = ${firmId}::uuid AND "subject_kind" = ${w.subject.kind}::"MsgSubjectKind" AND "subject_id" = ${subjectId}::uuid
+        AND "channel" = ${w.channel}::"MsgChannel" AND "purpose" = ${w.purpose}::"MsgPurpose" AND "withdrawn_at" IS NULL AND "given_at" <= ${at}::timestamptz
       RETURNING "id"::text AS id`;
-    if (rows.length) {
-      await this.audit.record(tx, {
-        firmId, actor: w.by, action: "consent.withdrawn", entity: "msg_consent", entityKey: `${w.subject.kind}:${w.subject.id.toLowerCase()}`,
-        summary: `Consent withdrawn: ${w.channel.toLowerCase()} ${w.purpose.toLowerCase()}, by ${w.via.toLowerCase()} (${rows.length} record${rows.length === 1 ? "" : "s"}).`,
-        detail: { subjectKind: w.subject.kind, subjectId: w.subject.id.toLowerCase(), channel: w.channel, purpose: w.purpose, via: w.via, consentIds: rows.slice(0, 50).map((r) => r.id), count: rows.length },
-      });
-    }
-    return { withdrawn: rows.length };
+    await this.audit.record(tx, {
+      firmId, actor: w.by, action: "consent.withdrawn", entity: "msg_consent_withdrawal", entityKey: out.id,
+      summary: `Consent withdrawn: ${w.channel.toLowerCase()} ${w.purpose.toLowerCase()}, by ${w.via.toLowerCase()} (${rows.length} live record${rows.length === 1 ? "" : "s"} ended).`,
+      detail: { subjectKind: w.subject.kind, subjectId, channel: w.channel, purpose: w.purpose, via: w.via, consentIds: rows.slice(0, 50).map((r) => r.id), count: rows.length },
+    });
+    return { withdrawalId: out.id, withdrawn: rows.length };
   }
 
-  async suppress(tx: Tx, input: Parameters<ConsentPort["suppress"]>[1]): Promise<{ created: boolean }> {
+  async suppress(txIn: Tx, input: Parameters<ConsentPort["suppress"]>[1]): Promise<{ created: boolean }> {
+    const tx = inTransaction(txIn);
     const s = SuppressInput.parse(input);
     const { firmId } = firmScope(s.firmId);
     const address = normaliseAddress(s.channel, s.address);
@@ -96,16 +119,14 @@ export class ConsentStore implements ConsentPort<Tx> {
     const address = normaliseAddress(q.channel, q.address);
     const sup = await db.msgSuppression.findFirst({ where: firmScope(firmId, { channel: q.channel, address }), select: { reason: true } });
     const purpose = purposeNeeded(q.class, q.channel);
-    const rows = q.subject && purpose && !sup
-      ? await db.msgConsent.findMany({
-        where: firmScope(firmId, { subjectKind: q.subject.kind, subjectId: q.subject.id.toLowerCase(), channel: q.channel, purpose }),
-        select: { id: true, givenAt: true, withdrawnAt: true },
-      })
-      : [];
-    return decide(q, sup?.reason ?? null, rows);
+    const key = q.subject && purpose && !sup ? firmScope(firmId, { subjectKind: q.subject.kind, subjectId: q.subject.id.toLowerCase(), channel: q.channel, purpose }) : null;
+    const rows = key ? await db.msgConsent.findMany({ where: key, select: { id: true, givenAt: true, withdrawnAt: true } }) : [];
+    const outs = key ? await db.msgConsentWithdrawal.findMany({ where: key, select: { withdrawnAt: true } }) : [];
+    return decide(q, sup?.reason ?? null, rows, outs.map((o) => o.withdrawnAt));
   }
 
-  async publishWording(tx: Tx, input: Parameters<ConsentPort["publishWording"]>[1]): Promise<PublishedWording> {
+  async publishWording(txIn: Tx, input: Parameters<ConsentPort["publishWording"]>[1]): Promise<PublishedWording> {
+    const tx = inTransaction(txIn);
     const w = PublishWordingInput.parse(input);
     const { firmId } = firmScope(w.firmId);
     await ensureMessagesFirm(tx, firmId);

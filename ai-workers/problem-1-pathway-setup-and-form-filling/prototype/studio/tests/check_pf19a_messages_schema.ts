@@ -17,7 +17,7 @@ import { auditEvent } from "../api/src/platform/audit/audit-event.ts";
 import { seedSampleFirms } from "../api/src/platform/seed-sample-firms.ts";
 import { AuditFailure, fakeAudit } from "../ports/audit.ts";
 import { FakeClock } from "../ports/clock.ts";
-import { fakeConsent, normaliseAddress, sha256Hex, type ConsentPort, type ConsentRecordInput } from "../ports/consent.ts";
+import { ConsentRefused, fakeConsent, normaliseAddress, sha256Hex, type ConsentPort, type ConsentRecordInput } from "../ports/consent.ts";
 
 const STUDIO = join(import.meta.dirname, ".."), MIG = join(STUDIO, "prisma", "migrations"), SCHEMA = join(STUDIO, "prisma", "schema");
 const NEW = "20261114190000_pf19a_platform_messages";
@@ -25,7 +25,7 @@ const BIN = "/opt/homebrew/opt/postgresql@18/bin", PG = ["-h", "127.0.0.1", "-p"
 const EMPTY = `xr_studio_pf19a_empty_${process.pid}`, DEMO = `xr_studio_pf19a_demo_${process.pid}`, BARE = `xr_studio_pf19a_bare_${process.pid}`;
 const urlOf = (db: string) => `postgresql://xr_studio@127.0.0.1:54329/${db}`;
 const WORK = join(STUDIO, "var", `pf19a-check-${process.pid}`);
-const MSG_TABLES = ["msg_firm", "msg_consent_wording", "msg_consent", "msg_suppression", "msg_template", "msg_template_version", "msg_outbox", "msg_event", "msg_send_counter"];
+const MSG_TABLES = ["msg_firm", "msg_consent_wording", "msg_consent", "msg_consent_withdrawal", "msg_suppression", "msg_template", "msg_template_version", "msg_outbox", "msg_event", "msg_send_counter"];
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 400)}` : ""}`); };
@@ -78,8 +78,8 @@ try {
   ok("PF-19a fail: before its migration there is no msg_ table and the schema differs (diff names msg_consent)",
     sql(BARE, `select count(*) from pg_tables where tablename like 'msg\\_%'`) === "0" && msgDiff(BARE).some((l) => /msg_consent/.test(l)));
   for (const d of all) psql(EMPTY, ["-f", join(MIG, d, "migration.sql")]);
-  ok("PF-19a pass: every migration applies to an empty database; the nine msg_ tables exist",
-    sql(EMPTY, `select count(*) from pg_tables where schemaname='public' and tablename = any('{${MSG_TABLES.join(",")}}')`) === "9");
+  ok("PF-19a pass: every migration applies to an empty database; the ten msg_ tables exist",
+    sql(EMPTY, `select count(*) from pg_tables where schemaname='public' and tablename = any('{${MSG_TABLES.join(",")}}')`) === "10");
   ok("PF-19a pass: migrate diff from the migrated empty database to the schema names no msg_ table or type", msgDiff(EMPTY).length === 0, msgDiff(EMPTY));
   ok("PF-19a fail: the migration does not apply twice (it is never re-run silently)", (() => { try { psql(EMPTY, ["-f", join(MIG, NEW, "migration.sql")]); return false; } catch (e) { return /already exists/.test(String((e as { stderr?: string }).stderr)); } })());
 
@@ -189,7 +189,9 @@ try {
   ok("PF-19a pass: allows for marketing with a live consent → true, naming the consent that allows it (AG-10-27)", d1.allowed && d1.reason === "CONSENT" && d1.consentId === c1.id);
   ok("PF-19a fail: a WhatsApp service message without the opt-in → false; marketing email consent never counts for WhatsApp (channel only, AG-2-83 rule 2)",
     !(await mail(P1, "SERVICE", "+1 (416) 555-0100", "WHATSAPP")).allowed && (await mail(P1, "MARKETING", "+14165550100", "WHATSAPP")).reason === "NO_CONSENT");
-  await tx((t) => store.record(t as never, { firmId: firmA, subject: P1, channel: "WHATSAPP", purpose: "SERVICE", wordingId: wWa.id, source: "WHATSAPP_OPT_IN_REPLY", recordedKind: "SELF_SERVICE", recordedBy: "system:whatsapp" }));
+  ok("PF-19a fail (review m3): a transactional WhatsApp message without the opt-in → false (every business-initiated WhatsApp message needs it); transactional email needs none",
+    (await mail(P1, "TRANSACTIONAL", "+14165550100", "WHATSAPP")).reason === "NO_CONSENT" && (await mail(P1, "TRANSACTIONAL")).allowed);
+  await tx((t) => store.record(t as never, { firmId: firmA, subject: P1, channel: "WHATSAPP", purpose: "SERVICE", wordingId: wWa.id, source: "WHATSAPP_OPT_IN_REPLY", recordedKind: "SELF_SERVICE", recordedBy: "system:whatsapp", jurisdiction: "CA" }));
   ok("PF-19a pass: after the opt-in reply, a WhatsApp service message is allowed; WhatsApp marketing still is not (the opt-in is never marketing)",
     (await mail(P1, "SERVICE", "+14165550100", "WHATSAPP")).allowed && !(await mail(P1, "MARKETING", "+14165550100", "WHATSAPP")).allowed);
 
@@ -197,8 +199,14 @@ try {
   await clock.advance({ minutes: 5 });
   const wd = await tx((t) => store.withdraw(t as never, { firmId: firmA, subject: P1, channel: "EMAIL", purpose: "MARKETING", via: "UNSUBSCRIBE", by: "system:unsubscribe" }));
   const d2 = await mail(P1, "MARKETING");
-  ok("PF-19a fail: a withdrawn consent makes allows false at once (WITHDRAWN), and its audit line names the consent", wd.withdrawn === 1 && !d2.allowed && d2.reason === "WITHDRAWN"
-    && sql(DEMO, `select count(*) from audit_event where action = 'consent.withdrawn' and detail->'consentIds' ? '${c1.id}'`) === "1");
+  ok("PF-19a fail: a withdrawn consent makes allows false at once (WITHDRAWN); the withdrawal is its own row and its audit line names the consent it ended",
+    wd.withdrawn === 1 && !d2.allowed && d2.reason === "WITHDRAWN"
+    && sql(DEMO, `select via || ':' || withdrawn_by from msg_consent_withdrawal where id = '${wd.withdrawalId}'`) === "UNSUBSCRIBE:system:unsubscribe"
+    && sql(DEMO, `select count(*) from audit_event where action = 'consent.withdrawn' and entity_key = '${wd.withdrawalId}' and detail->'consentIds' ? '${c1.id}'`) === "1");
+  ok("PF-19a fail: a withdrawal row refuses update, delete and truncate",
+    refused(DEMO, `update msg_consent_withdrawal set via = 'STAFF' where id = '${wd.withdrawalId}'`, /msg_consent_withdrawal is write-once: UPDATE refused/)
+    && refused(DEMO, `delete from msg_consent_withdrawal where id = '${wd.withdrawalId}'`, /msg_consent_withdrawal is write-once: DELETE refused/)
+    && refused(DEMO, `truncate msg_consent_withdrawal`, /write-once: TRUNCATE refused/));
   ok("PF-19a pass: the withdrawal leaves the person's other consents (the WhatsApp opt-in) and transactional mail as they were",
     (await mail(P1, "SERVICE", "+14165550100", "WHATSAPP")).allowed && (await mail(P1, "TRANSACTIONAL")).allowed);
   ok("PF-19a fail: a withdrawn_at is never cleared, changed again, or set with any other column; a consent is never deleted",
@@ -214,8 +222,50 @@ try {
     refused(DEMO, `update msg_consent set withdrawn_at = given_at - interval '1 day', withdrawn_by = '${byR}', withdrawn_via = 'STAFF' where id = '${c1.id}'`, /a withdrawn consent never changes|msg_consent_withdrawal_check/)
     && refused(DEMO, `insert into msg_consent (id, firm_id, subject_kind, subject_id, channel, purpose, wording_id, basis, source, recorded_kind, recorded_by, given_at, withdrawn_at) values (gen_random_uuid(), '${firmA}', 'FO_PERSON', '${u(505)}', 'EMAIL', 'MARKETING', '${w2.id}', 'EXPRESS', 'WEB_FORM', 'SELF_SERVICE', 'system:web-form', now(), now())`, /msg_consent_withdrawal_check/)
     && refused(DEMO, `update msg_consent set withdrawn_at = given_at - interval '1 second', withdrawn_by = '${byR}', withdrawn_via = 'STAFF' where id = '${c1.id}'`, /a withdrawn consent never changes/));
-  const copy = await tx((t) => store.record(t as never, { ...webTick(P1), recordedKind: "SYSTEM", recordedBy: "system:link", copiedFromId: c1.id, givenAt: new Date("2026-11-24T13:00:00Z"), ipHash: undefined, source: "WEB_FORM" }));
-  ok("PF-19a fail: a Link copy with an older time never undoes the later withdrawal (AG-2-83 rule 8)", !!copy.id && (await mail(P1, "MARKETING")).reason === "WITHDRAWN");
+  const copy = await tx((t) => store.record(t as never, { ...webTick(P1), recordedKind: "SYSTEM", recordedBy: "system:link", copiedFromId: c1.id, ipHash: undefined, source: "WEB_FORM" }));
+  ok("PF-19a fail (break 1): a Link copy of the withdrawn consent onto the same person keeps the original's time and its withdrawal: still WITHDRAWN",
+    !!copy.id && (await mail(P1, "MARKETING")).reason === "WITHDRAWN"
+    && sql(DEMO, `select (c.given_at = o.given_at) || ':' || (c.withdrawn_at is not null) from msg_consent c join msg_consent o on o.id = c.copied_from_id where c.id = '${copy.id}'`) === "true:true");
+  ok("PF-19a fail (break 14): a copy that changes channel, purpose, wording or time is refused",
+    await throwsLike(() => tx((t) => store.record(t as never, { firmId: firmA, subject: P1, channel: "WHATSAPP", purpose: "SERVICE", wordingId: wWa.id, source: "WEB_FORM", recordedKind: "SYSTEM", recordedBy: "system:link", copiedFromId: c1.id })), (e) => /keeps the original's channel and purpose/.test(String(e)))
+    && await throwsLike(() => tx((t) => store.record(t as never, { ...webTick(P1, w1.id), recordedKind: "SYSTEM", recordedBy: "system:link", copiedFromId: c1.id, ipHash: undefined })), (e) => /keeps the original's wording/.test(String(e)))
+    && await throwsLike(() => tx((t) => store.record(t as never, { ...webTick(P1), recordedKind: "SYSTEM", recordedBy: "system:link", copiedFromId: c1.id, ipHash: undefined, givenAt: new Date("2026-11-24T13:00:00Z") })), (e) => /keeps the original's time/.test(String(e))));
+  // Review M1: a Merge copy of a withdrawn consent onto another person (now, after the withdrawal) is written withdrawn.
+  const P4 = { kind: "FO_PERSON" as const, id: u(506) };
+  const merged = await tx((t) => store.record(t as never, { ...webTick(P4), recordedKind: "SYSTEM", recordedBy: "system:merge", copiedFromId: c1.id, ipHash: undefined }));
+  ok("PF-19a fail (review M1): a Merge copy of a withdrawn consent is written withdrawn (who and how copied) and never makes the target allowed",
+    sql(DEMO, `select (withdrawn_at is not null) || ':' || withdrawn_via || ':' || withdrawn_by from msg_consent where id = '${merged.id}'`) === "true:UNSUBSCRIBE:system:unsubscribe"
+    && (await mail(P4, "MARKETING")).reason === "WITHDRAWN");
+  // Review M2: an unsubscribe with no live consent is still kept, audited and blocks an older grant copied in later.
+  const P5 = { kind: "FO_PERSON" as const, id: u(507) }, P6 = { kind: "FO_PERSON" as const, id: u(508) };
+  const g6 = await tx((t) => store.record(t as never, webTick(P6)));
+  await clock.advance({ minutes: 1 });
+  const w5 = await tx((t) => store.withdraw(t as never, { firmId: firmA, subject: P5, channel: "EMAIL", purpose: "MARKETING", via: "UNSUBSCRIBE", by: "system:unsubscribe" }));
+  ok("PF-19a fail (review M2): an unsubscribe by a person with no consent writes a withdrawal row and an audit line (AG-10-24)",
+    w5.withdrawn === 0 && sql(DEMO, `select count(*) from msg_consent_withdrawal where id = '${w5.withdrawalId}'`) === "1"
+    && sql(DEMO, `select count(*) from audit_event where action = 'consent.withdrawn' and entity_key = '${w5.withdrawalId}'`) === "1"
+    && (await mail(P5, "MARKETING")).reason === "WITHDRAWN");
+  const g6At = (await db.msgConsent.findUniqueOrThrow({ where: { id: g6.id } })).givenAt;
+  await tx((t) => store.record(t as never, { ...webTick(P5), recordedKind: "SYSTEM", recordedBy: "system:link", copiedFromId: g6.id, ipHash: undefined, givenAt: g6At }));
+  ok("PF-19a fail (review M2): a Link copy of an older live grant, after that unsubscribe, leaves the person WITHDRAWN", (await mail(P5, "MARKETING")).reason === "WITHDRAWN");
+  // Review m1: a withdrawal processed late (its click time is in the past) never ends a consent given after it.
+  const P7 = { kind: "FO_PERSON" as const, id: u(509) };
+  const g7 = await tx((t) => store.record(t as never, webTick(P7)));
+  const late = await tx((t) => store.withdraw(t as never, { firmId: firmA, subject: P7, channel: "EMAIL", purpose: "MARKETING", via: "UNSUBSCRIBE", by: "system:unsubscribe", at: new Date(clock.now().getTime() - 3_600_000) }));
+  ok("PF-19a pass (review m1): a late-processed withdrawal from an hour ago leaves a consent given since live", late.withdrawn === 0 && (await mail(P7, "MARKETING")).consentId === g7.id);
+  ok("PF-19a fail (review m2): a consent given, or a withdrawal made, more than five minutes in the future is refused",
+    await throwsLike(() => tx((t) => store.record(t as never, webTick(P7, w2.id, { givenAt: new Date(clock.now().getTime() + 3_600_000) }))), (e) => e instanceof ConsentRefused && /in the future/.test(String(e)))
+    && await throwsLike(() => tx((t) => store.withdraw(t as never, { firmId: firmA, subject: P7, channel: "EMAIL", purpose: "MARKETING", via: "STAFF", by: byR, at: new Date(clock.now().getTime() + 3_600_000) })), (e) => e instanceof ConsentRefused));
+  ok("PF-19a fail (break 8-10): a bare client in place of the transaction, a time that is not a time (true, 0, year 1500, infinity), a NUL character, or an invisible-only wording is refused cleanly",
+    await throwsLike(() => store.record(db as never, webTick(P7)), (e) => /pass the caller's transaction/.test(String(e)))
+    && (await Promise.all([true, 0, null, new Date("1500-01-01T00:00:00Z")].map((g) => throwsLike(() => tx((t) => store.record(t as never, webTick(P7, w2.id, { givenAt: g as never }))), (e) => /ZodError|a time/.test(String(e)) || (e as { name?: string }).name === "ZodError")))).every(Boolean)
+    && refused(DEMO, `insert into msg_consent (id, firm_id, subject_kind, subject_id, channel, purpose, wording_id, basis, source, recorded_kind, recorded_by, given_at) values (gen_random_uuid(), '${firmA}', 'FO_PERSON', '${u(510)}', 'EMAIL', 'MARKETING', '${w2.id}', 'EXPRESS', 'WEB_FORM', 'SELF_SERVICE', 'system:web-form', 'infinity')`, /msg_consent_times_check/)
+    && await throwsLike(() => tx((t) => store.record(t as never, webTick(P7, w2.id, { sourceRef: "a\u0000b" }))), (e) => /no NUL character/.test(String(e)))
+    && await throwsLike(() => tx((t) => store.publishWording(t as never, { firmId: firmA, channel: "EMAIL", purpose: "MARKETING", locale: "en", text: "\u200b\u200b", by: byR })), (e) => /visible words|too_small/.test(String(e))));
+  ok("PF-19a pass/fail (review m5): a consent keeps its jurisdiction (CA); one that is not a country code is refused",
+    sql(DEMO, `select count(*) from msg_consent where jurisdiction = 'CA' and channel = 'WHATSAPP'`) === "1"
+    && refused(DEMO, `update msg_consent set jurisdiction = 'Canada' where id = '${g7.id}'`, /only the withdrawal is ever set|msg_consent_jurisdiction_check/)
+    && refused(DEMO, `insert into msg_consent (id, firm_id, subject_kind, subject_id, channel, purpose, wording_id, basis, source, recorded_kind, recorded_by, given_at, jurisdiction) values (gen_random_uuid(), '${firmA}', 'FO_PERSON', '${u(510)}', 'EMAIL', 'MARKETING', '${w2.id}', 'EXPRESS', 'WEB_FORM', 'SELF_SERVICE', 'system:web-form', now(), 'Canada')`, /msg_consent_jurisdiction_check/));
   await clock.advance({ minutes: 5 });
   const again = await tx((t) => store.record(t as never, webTick(P1)));
   const d3 = await mail(P1, "MARKETING");
@@ -237,6 +287,12 @@ try {
     refused(DEMO, `insert into msg_suppression (id, firm_id, channel, address, reason, created_by) values (gen_random_uuid(), '${firmA}', 'EMAIL', 'A@B.example.com', 'STAFF', '${byR}')`, /msg_suppression_address_check/)
     && refused(DEMO, `insert into msg_suppression (id, firm_id, channel, address, reason, created_by) values (gen_random_uuid(), '${firmA}', 'WHATSAPP', '416-555-0100', 'STOP', '${byR}')`, /msg_suppression_address_check/)
     && normaliseAddress("WHATSAPP", "+1 416.555 (0100)") === "+14165550100");
+  ok("PF-19a fail (break 5): a suppressed email cannot come back as <…>, with a trailing dot, or with a zero-width space; the database refuses those forms",
+    (await Promise.all(["<lena.park@example.com>", "lena.park@example.com.", "lena.park@example.com\u200b", " LENA.park@EXAMPLE.com "].map((a) => mail(P1, "TRANSACTIONAL", a)))).every((d) => d.reason === "SUPPRESSED")
+    && refused(DEMO, `insert into msg_suppression (id, firm_id, channel, address, reason, created_by) values (gen_random_uuid(), '${firmA}', 'EMAIL', 'x@example.com.', 'STAFF', '${byR}')`, /msg_suppression_address_check/));
+  await tx((t) => store.suppress(t as never, { firmId: firmA, channel: "WHATSAPP", address: "+44 7700 900123", reason: "STOP", by: "system:whatsapp" }));
+  ok("PF-19a fail (break 4): a STOPped UK number cannot come back with its trunk (0): +44 (0)7700 900123 is suppressed too",
+    (await mail(P1, "TRANSACTIONAL", "+44 (0)7700 900123", "WHATSAPP")).reason === "SUPPRESSED" && normaliseAddress("WHATSAPP", "+44 (0)7700 900123") === "+447700900123");
 
   // --------------------------------------------------------------------------------- firm A never reads firm B's consent
   const cB = await tx((t) => store.record(t as never, { firmId: firmB, subject: P3, channel: "EMAIL", purpose: "MARKETING", wordingId: wB.id, source: "STAFF_RECORDED", recordedKind: "USER", recordedBy: "staff:solo-owner" }));
@@ -297,8 +353,12 @@ try {
   seq.push((await fq("MARKETING")).reason, (await fq("TRANSACTIONAL")).reason);
   await fk.suppress(null, { firmId: firmA, channel: "EMAIL", address: "Lena.Park@example.com", reason: "HARD_BOUNCE", by: "system:ses" });
   seq.push((await fq("TRANSACTIONAL")).reason);
-  ok("PF-19a pass: fakeConsent gives the store's answers in the same story (CONSENT, other firm NO_CONSENT, WITHDRAWN, TRANSACTIONAL, SUPPRESSED); its wording hash is the database's",
-    JSON.stringify(seq) === JSON.stringify(["CONSENT", "NO_CONSENT", "WITHDRAWN", "TRANSACTIONAL", "SUPPRESSED"]) && fw.textHash === w1.textHash && !!fc.id, seq);
+  const P8 = { kind: "FO_PERSON" as const, id: u(511) };
+  await fk.withdraw(null, { firmId: firmA, subject: P8, channel: "EMAIL", purpose: "MARKETING", via: "UNSUBSCRIBE", by: "system:unsubscribe" });
+  await fk.record(null, { ...webTick(P8, fw.id), recordedKind: "SYSTEM", recordedBy: "system:merge", copiedFromId: fc.id, ipHash: undefined });
+  seq.push((await fk.allows(null, { firmId: firmA, subject: P8, channel: "EMAIL", address: "p8@example.com", class: "MARKETING" })).reason);
+  ok("PF-19a pass: fakeConsent gives the store's answers in the same story (CONSENT, other firm NO_CONSENT, WITHDRAWN, TRANSACTIONAL, SUPPRESSED, a merge copy after an unsubscribe WITHDRAWN); its wording hash is the database's",
+    JSON.stringify(seq) === JSON.stringify(["CONSENT", "NO_CONSENT", "WITHDRAWN", "TRANSACTIONAL", "SUPPRESSED", "WITHDRAWN"]) && fw.textHash === w1.textHash && !!fc.id, seq);
   ok("PF-19a fail: fakeConsent refuses another firm's wording, as the store does",
     await throwsLike(() => fk.record(null, webTick(P2, fwB.id)), (e) => /not this firm's/.test(String(e))));
   ok("PF-19a: no secret column — no msg_ column is named like a password, secret, token or key",
