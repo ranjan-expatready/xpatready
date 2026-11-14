@@ -1,0 +1,46 @@
+NOTICE:  database "xr_studio_qa_bk18" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.
+isolated qa_bk18 on http://localhost:4471 (xr_studio_qa_bk18), stops itself in 45 min
+PASS A setup: a Study permit case opens (the dialog's default team)
+A TEAM: representative user-R · officers ["user-O"]
+PASS A setup: the review says it was sent by the Representative
+A APPROVE press 1: the dialog says: You prepared this filing yourself: confirm "I prepared and reviewed this filing myself". It is logged as Self-reviewed, never as a second person.
+A APPROVE DIALOG asked "I prepared and reviewed this filing myself": true
+PASS A setup: the Representative approved the filing
+A RECORD: Prepared by · Reviewed by: Self-reviewed by Representative (Sample) (licence R000000), Nov 14, 2026, 01:53 a.m.
+PASS QA-447 W5 fail today: the record reads "Self-reviewed" (the Representative prepared, sent and approved alone)
+PASS QA-447 W5: the record names the Representative's licence number and a time
+PASS QA-447 W5 fail today: the record never names the Case officer as preparer (they did nothing)
+PASS B setup: a Study permit case opens (the Representative as its only officer)
+B TEAM: representative user-R · officers ["user-R"]
+PASS B setup: the review says it was sent by the Representative
+B APPROVE press 1: the dialog says: You prepared this filing yourself: confirm "I prepared and reviewed this filing myself". It is logged as Self-reviewed, never as a second person.
+B APPROVE DIALOG asked "I prepared and reviewed this filing myself": true
+PASS B setup: the Representative approved the filing
+B RECORD: Prepared by · Reviewed by: Self-reviewed by Representative (Sample) (licence R000000), Nov 14, 2026, 01:53 a.m.
+PASS contrast B: with the Representative as the case's only officer, the record reads "Self-reviewed"
+all passed
+EXIT=0
+PASS A setup: a Study permit case opens (the dialog's default team)
+A TEAM: representative user-R · officers ["user-O"]
+PASS A setup: the review says it was sent by the Representative
+A APPROVE press 1: the dialog says: You prepared this filing yourself: confirm "I prepared and reviewed this filing myself". It is logged as Self-reviewed, never as a second person.
+A APPROVE DIALOG asked "I prepared and reviewed this filing myself": true
+PASS A setup: the Representative approved the filing
+A RECORD: Prepared by · Reviewed by: Self-reviewed by Representative (Sample) (licence R000000), Nov 14, 2026, 01:53 a.m.
+PASS QA-447 W5 fail today: the record reads "Self-reviewed" (the Representative prepared, sent and approved alone)
+PASS QA-447 W5: the record names the Representative's licence number and a time
+PASS QA-447 W5 fail today: the record never names the Case officer as preparer (they did nothing)
+PASS B setup: a Study permit case opens (the Representative as its only officer)
+B TEAM: representative user-R · officers ["user-R"]
+PASS B setup: the review says it was sent by the Representative
+B APPROVE press 1: the dialog says: You prepared this filing yourself: confirm "I prepared and reviewed this filing myself". It is logged as Self-reviewed, never as a second person.
+B APPROVE DIALOG asked "I prepared and reviewed this filing myself": true
+PASS B setup: the Representative approved the filing
+B RECORD: Prepared by · Reviewed by: Self-reviewed by Representative (Sample) (licence R000000), Nov 14, 2026, 01:53 a.m.
+PASS contrast B: with the Representative as the case's only officer, the record reads "Self-reviewed"
+all passed
+EXIT=0
+stopped qa_bk18 (database and files removed; log in var/isolated-logs/qa_bk18-api.log)

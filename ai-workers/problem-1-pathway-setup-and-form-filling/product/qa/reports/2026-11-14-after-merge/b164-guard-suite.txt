@@ -1,0 +1,66 @@
+PASS  B164: pass: no combination key, program name, form number or slice guard in engine/ or api/src/ outside the allow-list (270 files read, 53 fixture files left out)
+PASS  B164: pass: every allow-list entry still matches the code (a removed guard takes its entry with it)
+PASS  B164: pass: the scan reads the keys from the data (vv.single, sp.outside, individual.visitors.visitor_visa)
+PASS  B164: pass: each entry names its guard and the row that removes it (M3-S1 to M3-S5, BK-n; fixtures BK-12); only reader content names none
+PASS  B164: pass: this file's own ALLOW block reads back as JSON (so origin/main's copy is read, never skipped)
+PASS  B164: pass: nothing added over origin/main's allow-list (7 there, 7 here)
+PASS  B164: fail: an entry added over the base is named
+PASS  B164: fail: an entry nothing matches is stale
+PASS  B164: fail: a combination key in a branch is caught (export const f = (k: string) => (k === "sp.outside" ? 1 : 0);)
+PASS  B164: fail: a new combination of a known program is caught (const k = 'wp.open_spouse';)
+PASS  B164: fail: a new program's combination is caught (const k = "ee.fsw";)
+PASS  B164: fail: a key built in a template is caught (const k = `vv.${kind}`;)
+PASS  B164: fail: a pathway key is caught (if (p === "individual.study_permits") go();)
+PASS  B164: fail: a key inside a template's ${…} part is caught (const w = `${x === "sv.super_visa" ? "a" : "b"}`;)
+PASS  B164: fail: a program named in code is caught (const isStudyPermit = (x: string) => x.length > 0;)
+PASS  B164: fail: a program in a string is caught (const label = "Work permit";)
+PASS  B164: fail: a form number in a branch is caught (if (form === "IMM 5257") skip();)
+PASS  B164: fail: a guide number is caught (const g = "Guide 5709";)
+PASS  B164: fail: a form number with its schedule is caught (if (f === "IMM 0008 SCH4A") x();)
+PASS  B164: fail: a key in a regular expression is caught (const vv = (k: string) => /^vv\./.test(k);)
+PASS  B164: fail: a full key in a regular expression is caught (const a = /sp\.outside/.test(k);)
+PASS  B164: fail: a program code read from a key is caught (const sp = key.split(".")[0] === "sp";)
+PASS  B164: fail: a program code as a prefix is caught (if (key.startsWith("pnp")) go();)
+PASS  B164: fail: a form number with IRCC's suffix is caught (if (f === "IMM5257E") go();)
+PASS  B164: fail: a form's file name is caught (const f = "imm5257e.pdf";)
+PASS  B164: fail: a form number in a regular expression is caught (const r = /IMM ?5257/;)
+PASS  B164: fail: an escaped key is caught (const k = "\u0076v.single";)
+PASS  B164: fail: a key after a brace inside a template's string is caught (const w = `${x === "}" ? "a" : "b"}`; const k = "wp.family";)
+PASS  B164: fail: a slice guard's words is caught (return { why: "Signing is not derived yet for this combination." };)
+PASS  B164: fail: a key in a new API file is caught (P-452)
+PASS  B164: fail: a fixture covers only its own files: a new API file beside them is read
+PASS  B164: fail: a fixture no file matches is stale
+PASS  B164: fail: an entry with no row is refused unless it is reader content
+PASS  B164: fail: an allowed text a second time in its file is caught (review M1: each entry allows its count)
+PASS  B164: fail: an entry that allows more often than origin/main's, or names another row, is added (review M1, m2)
+PASS  B164: fail: an entry allowing two copies when one is left is stale
+PASS  B164: pass: every file is read to its last line of code (270 files)
+PASS  B164: fail: code left after a string that swallows the rest is named
+PASS  B164: fail: a quote inside a regular expression in a template's part does not end the scan (review round 2)
+PASS  B164: pass: a form number with a space before its language letter is caught ("IMM 5257 E")
+PASS  B164: fail: a form's file at the end of a path is caught
+PASS  B164: pass: a module named like a program code is not a key (import … from "fs")
+PASS  B164: pass: not caught (// A comment may say vv.single, Visitor visa, IMM 5257 and "not derived yet for this combination".)
+PASS  B164: pass: not caught (/* sp.outside, Study permit */ const a = 1;)
+PASS  B164: pass: not caught (const fact = "person.date_of_birth", c = "case.application_date", f = "expected.people", h = "holder.spouse";)
+PASS  B164: pass: not caught (const host = "www.canada.ca", file = "manifest.json", e = "exempt.under_age";)
+PASS  B164: pass: not caught (const re = /\b(IMM|IRM) ?\d{4}\b/; const n = a / b / c;)
+PASS  B164: pass: not caught (const r = { role: "spouse_or_partner", words: "Changing the principal is not worked out yet for " };)
+PASS  B164: pass: not caught (export function imm5476() { return "IMM form number"; })
+PASS  B164: pass: not caught (const w = "That is not a form number: a form number looks like IMM 5257.";)
+PASS  B164: pass: not caught (const u = "https://www.canada.ca/en/immigration-refugees-citizenship/services.html", d = "Immigration, Refugees and Citizenship Canada";)
+PASS  B164: pass: a line number is the string's own line
+PASS  B164: pass: our XFA engine's source and its adapter name no form and no recorded box in code (225 engine files outside its test folders, 2 adapter files, 559 box paths and runs of their names from the form records and the engine's 142 fixture boxes)
+PASS  B164: pass: engine files the scan reads only in part hold no form number or box path anywhere outside comment lines
+PASS  B164: fail: a form number inside a longer string in the engine is caught
+PASS  B164: fail: a form number in an engine regular expression is caught
+PASS  B164: fail: a recorded box path in the engine or the adapter is caught
+PASS  B164: fail: a recorded one-word box as a whole string is caught
+PASS  B164: fail: part of a real form's box path in the engine is caught (review Major 2: "PersonalDetails.ApplicationValidatedFlag")
+PASS  B164: fail: part of a real form's box path in the engine is caught (review Major 2: "ButtonsHeader.ValidateButton[0]")
+PASS  B164: fail: part of a real form's box path in the engine is caught (review Major 2: "Page1.PersonalDetails.ServiceIn")
+PASS  B164: fail: part of a real form's box path in the engine is caught (review Major 2: "xfa.form.form1.Barcodes")
+PASS  B164: pass: comments and XFA's own words are not caught ("app.alert", a cited form in a comment)
+
+63 passed, 0 failed
+EXIT=0
