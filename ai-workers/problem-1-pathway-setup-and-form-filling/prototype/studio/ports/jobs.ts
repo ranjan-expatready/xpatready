@@ -10,8 +10,10 @@ export const JobName = z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/,
 /** What a job carries: plain JSON (ids and facts; never a secret, a card number or a person's details). */
 export const JobPayload = z.record(z.string(), z.json());
 export type JobPayload = z.infer<typeof JobPayload>;
-/** `key` is the job's own idempotency key (`booking:<id>:reminder-24h`): a key never queues twice, even after its job ran
- *  or was cancelled; the firm is the tenant the job works for. */
+/** `key` is the job's own idempotency key (`booking:<uuid>:reminder-24h`): a key never queues twice, even after its job ran
+ *  or was cancelled. Keys are one space across every firm and queue (and `cancel` takes only the key), so a key must
+ *  carry a uuid or the firm id: never a per-firm number alone (`invoice:INV-0001` of firm B would be lost behind firm
+ *  A's). The firm is the tenant the job works for. */
 export const JobOptions = z.strictObject({ key: z.string().min(1).max(200), firmId: FirmId });
 export type JobOptions = z.infer<typeof JobOptions>;
 /** A recurring schedule: five cron fields (minute hour day-of-month month day-of-week) read in an IANA zone. */
@@ -117,7 +119,10 @@ export function fakeJobs(clock: FakeClock): FakeJobs {
 // ---------------------------------------------------------------------------------------------- cron, for the fake only
 const FIELDS = [["minute", 0, 59], ["hour", 0, 23], ["day", 1, 31], ["month", 1, 12], ["weekday", 0, 7]] as const;
 
-/** Five fields, each `*`, `n`, `a-b`, a list of those, any with `/step`. Weekday 0 and 7 are Sunday. */
+/** Five fields, each `*`, `n`, `a-b`, a list of those, any with `/step`. Weekday 0 and 7 are Sunday. The fake reads each
+ *  UTC minute's wall time in the zone, so across a daylight-saving change a time that happens twice (fall back, e.g.
+ *  01:30 in Toronto on 1 Nov 2026) runs twice and a time that does not happen (spring forward, 02:30 on 8 Mar) is
+ *  skipped; schedule recurring work outside 01:00-03:00 local. */
 export function parseCron(cron: string): { sets: Set<number>[]; dayAny: boolean; weekdayAny: boolean } {
   const parts = cron.trim().split(/\s+/);
   if (parts.length !== 5) throw new Error(`cron "${cron}": five fields`);
@@ -132,13 +137,16 @@ export function parseCron(cron: string): { sets: Set<number>[]; dayAny: boolean;
     }
     return out;
   });
-  return { sets, dayAny: parts[2] === "*", weekdayAny: parts[4] === "*" };
+  return { sets, dayAny: parts[2].startsWith("*"), weekdayAny: parts[4].startsWith("*") };   // Vixie cron: a field starting with * makes the day rule AND
 }
 
 const WEEKDAY: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 /** Whether the minute `at` matches, read in `zone` (cron's day rule: when both day and weekday are restricted, either). */
+const formats = new Map<string, Intl.DateTimeFormat>();
 export function cronMatches(c: ReturnType<typeof parseCron>, at: Date, zone: string): boolean {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: zone, hourCycle: "h23", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", weekday: "short" }).formatToParts(at).map((p) => [p.type, p.value]));
+  let f = formats.get(zone);
+  if (!f) formats.set(zone, (f = new Intl.DateTimeFormat("en-US", { timeZone: zone, hourCycle: "h23", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", weekday: "short" })));
+  const parts = Object.fromEntries(f.formatToParts(at).map((p) => [p.type, p.value]));
   const [mi, h, d, mo, wd] = [Number(parts.minute), Number(parts.hour), Number(parts.day), Number(parts.month), WEEKDAY[parts.weekday]];
   const dayOk = c.dayAny || c.weekdayAny ? c.sets[2].has(d) && c.sets[4].has(wd) : c.sets[2].has(d) || c.sets[4].has(wd);
   return c.sets[0].has(mi) && c.sets[1].has(h) && c.sets[3].has(mo) && dayOk;

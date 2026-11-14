@@ -1,7 +1,7 @@
 // PF-0p (rows rev 16): the file store port (documents, signed copies, uploads). Every file belongs to one firm; another
-// firm's key reads as absent. A key is written once: the same bytes again are accepted (a retry), other bytes are
-// refused, so a stored document never changes under its key. FO-5 builds the real adapter. This folder imports only zod
-// and its own files (sha256 by the platform's Web Crypto, a global: no import).
+// firm's key reads as absent. A key is written once: the same bytes and type again are accepted (a retry), other bytes
+// or another type are refused, so a stored document never changes under its key. FO-5 builds the real adapter. This
+// folder imports only zod and its own files (sha256 by the platform's Web Crypto, a global: no import).
 import { z } from "zod";
 import { FirmId } from "./audit.ts";
 
@@ -24,9 +24,9 @@ export interface FilesPort {
   exists(firmId: string, key: string): Promise<boolean>;
 }
 
-/** Refused: the key already holds other bytes. */
+/** Refused: the key already holds other bytes or another content type. */
 export class FileKeyTaken extends Error {
-  constructor(readonly key: string) { super(`file key ${key} already holds other bytes`); this.name = "FileKeyTaken"; }
+  constructor(readonly key: string) { super(`file key ${key} already holds other content`); this.name = "FileKeyTaken"; }
 }
 
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
@@ -42,7 +42,7 @@ export function fakeFiles(): FilesPort & { readonly count: number } {
     async put(firmId, key, bytes, contentType) {
       const p = FilePut.parse({ firmId, key, bytes, contentType });
       const sha256 = await sha256Hex(p.bytes), at = id(p.firmId, p.key), had = store.get(at);
-      if (had && had.sha256 !== sha256) throw new FileKeyTaken(p.key);
+      if (had && (had.sha256 !== sha256 || had.contentType !== p.contentType)) throw new FileKeyTaken(p.key);
       if (!had) store.set(at, { key: p.key, bytes: new Uint8Array(p.bytes), contentType: p.contentType, sha256 });
       return { key: p.key, sha256 };
     },

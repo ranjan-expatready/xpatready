@@ -3,6 +3,7 @@
 // (req.platform); services take it as an argument, so a row can be written and tested before PF-4 is on main.
 import { z } from "zod";
 import { FirmId } from "./audit.ts";
+import { FAKE_NOW, type ClockPort } from "./clock.ts";
 
 /** PF-4's duty words (keys.ts DUTY_KEYS): `represent` holds the three sign-off keys, `case` works on cases, `firm_admin`
  *  runs the firm's staff. Derived from keys by PF-4; a fake states them. */
@@ -28,12 +29,13 @@ export type StaffContext = { staffId: string; firmId: string; firmKey: string; r
 export const FAKE_FIRM_ID = "00000000-0000-4000-8000-0000000f0001";
 export const FAKE_STAFF_ID = "00000000-0000-4000-8000-0000000f0101";
 
-/** A valid StaffContext for tests: the Sample firm's Owner with no keys, signed in now through the local stand-in;
+/** A valid StaffContext for tests: the Sample firm's Owner with no keys, signed in through the local stand-in at the
+ *  clock's now (`clock`, else FAKE_NOW: never the wall clock, so a step-up test gives the same answer any day);
  *  `partial` replaces any field (and is checked, so a fake can never hold a shape the guard would not give). */
-export function fakeStaff(partial: Partial<StaffContext> = {}): StaffContext {
+export function fakeStaff(partial: Partial<StaffContext> = {}, clock?: ClockPort): StaffContext {
   return StaffContext.parse({
     staffId: FAKE_STAFF_ID, firmId: FAKE_FIRM_ID, firmKey: "sample-firm", roles: ["OWNER"], keys: [], duties: [],
-    authTime: Math.floor(Date.now() / 1000), via: "local", ...partial,
+    authTime: Math.floor((clock ? clock.now() : new Date(FAKE_NOW)).getTime() / 1000), via: "local", ...partial,
   });
 }
 

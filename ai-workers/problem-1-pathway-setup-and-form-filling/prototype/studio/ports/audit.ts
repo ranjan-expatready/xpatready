@@ -59,14 +59,17 @@ export type FakeAudit = AuditPort<unknown> & {
 };
 
 /** The fake: validates like the real adapter, records in memory, and throws AuditFailure when `failOn` matches, so each
- *  row can prove "a forced audit failure rolls the change back" (call it inside the row's real transaction). */
-export function fakeAudit(opts: { failOn?: (e: z.output<typeof AuditEntry>) => boolean } = {}): FakeAudit {
+ *  row can prove "a forced audit failure rolls the change back" (call it inside the row's real transaction and check the
+ *  database). `entries` does not follow a real transaction's rollback: lines recorded earlier in a Prisma transaction
+ *  that then rolls back stay listed unless the test calls `discard(tx)` with that transaction (it is the `tx` the row's
+ *  code passed; `failOn` receives it too). */
+export function fakeAudit(opts: { failOn?: (e: z.output<typeof AuditEntry>, tx: unknown) => boolean } = {}): FakeAudit {
   const rows: { tx: unknown; entry: z.output<typeof AuditEntry> }[] = [];
   let failures = 0;
   const fake: FakeAudit = {
     async record(tx, entry) {
       const e = AuditEntry.parse(entry);
-      if (opts.failOn?.(e)) { failures++; throw new AuditFailure(entry); }
+      if (opts.failOn?.(e, tx)) { failures++; throw new AuditFailure(entry); }
       rows.push({ tx, entry: e });
     },
     get entries() { return rows.map((r) => r.entry); },

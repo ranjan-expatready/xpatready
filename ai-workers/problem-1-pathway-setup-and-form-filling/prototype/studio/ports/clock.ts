@@ -8,13 +8,17 @@ export interface ClockPort {
 /** The real clock (no service behind it, so it lives with the port). */
 export const systemClock: ClockPort = { now: () => new Date() };
 
+/** Where every fake starts unless told otherwise (FakeClock, fakeStaff's sign-in time, fakeMail's sent time): one fixed
+ *  moment, so a fake's defaults never depend on the day a test runs (contracts §0.3: fakes are deterministic). */
+export const FAKE_NOW = "2026-11-24T14:00:00.000Z";
+
 type Listener = (now: Date) => Promise<void> | void;
 
 /** A clock a test moves. `set` and `advance` wait for whatever listens (fakeJobs runs due jobs then): await them. */
 export class FakeClock implements ClockPort {
   private at: number;
   private readonly listeners: Listener[] = [];
-  constructor(start: Date | string = "2026-11-24T14:00:00.000Z") { this.at = toMs(start); }
+  constructor(start: Date | string = FAKE_NOW) { this.at = toMs(start); }
   now(): Date { return new Date(this.at); }
   /** Moves the clock to `to` (either way). */
   async set(to: Date | string): Promise<void> { this.at = toMs(to); await this.tell(); }

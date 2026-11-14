@@ -3,6 +3,7 @@
 // and its own files.
 import { z } from "zod";
 import { FirmId } from "./audit.ts";
+import { FAKE_NOW, type ClockPort } from "./clock.ts";
 
 /** Why the email is sent: TRANSACTIONAL (a person's own action: a code, a link, a receipt), SERVICE (about the firm's
  *  account or a case: reminders, notices) or MARKETING (needs consent; the consent store, PF-19a, decides). */
@@ -44,15 +45,16 @@ export type FakeMail = MailPort & {
   inbox(address: string): SentMail[];
 };
 
-/** The fake: checks each email like the real adapter, keeps it in a list, and fails when `failOn` matches. */
-export function fakeMail(opts: { failOn?: (m: z.output<typeof MailMessage>) => boolean; now?: () => Date } = {}): FakeMail {
+/** The fake: checks each email like the real adapter, keeps it in a list, and fails when `failOn` matches. `sentAt` is the
+ *  clock's now (`clock`, else FAKE_NOW: never the wall clock). */
+export function fakeMail(opts: { failOn?: (m: z.output<typeof MailMessage>) => boolean; clock?: ClockPort } = {}): FakeMail {
   const sent: SentMail[] = [];
   return {
     async send(message) {
       const m = MailMessage.parse(message);
       if (opts.failOn?.(m)) throw new Error(`forced mail failure: ${m.subject}`);
       const messageId = `fake-${String(sent.length + 1).padStart(6, "0")}`;
-      sent.push({ ...m, firmId: m.firmId.toLowerCase(), to: m.to.toLowerCase(), messageId, sentAt: opts.now?.() ?? new Date() });
+      sent.push({ ...m, firmId: m.firmId.toLowerCase(), to: m.to.toLowerCase(), messageId, sentAt: opts.clock ? opts.clock.now() : new Date(FAKE_NOW) });
       return { messageId };
     },
     get sent() { return [...sent]; },

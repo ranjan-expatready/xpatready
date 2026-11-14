@@ -12,12 +12,15 @@ import { AuditEntry, type AuditPort } from "../../../../ports/audit.ts";
 type Tx = Prisma.TransactionClient;
 export const PLATFORM_AUDIT_WORKSPACE = "platform-audit";
 
-/** The platform's audit workspace row, made on first use inside the caller's transaction (an upsert on the unique key,
- *  so two first writers never both create it; no cache, so a rolled-back first write leaves no stale id). */
+/** The platform's audit workspace row, made on first use inside the caller's transaction. INSERT … ON CONFLICT DO NOTHING
+ *  (createMany with skipDuplicates; Prisma's upsert is not ON CONFLICT here, review M1): a second first writer waits for
+ *  the first's commit and then reads its row, instead of failing on the unique key; if the first rolls back, the second's
+ *  insert goes ahead. No cache, so a rolled-back first write leaves no stale id. */
 export async function platformAuditWorkspaceId(tx: Tx): Promise<string> {
-  const w = (await tx.workspace.findUnique({ where: { key: PLATFORM_AUDIT_WORKSPACE }, select: { id: true } }))
-    ?? (await tx.workspace.upsert({ where: { key: PLATFORM_AUDIT_WORKSPACE }, update: {}, create: { key: PLATFORM_AUDIT_WORKSPACE, label: "Platform audit lines (firm staff, roles, settings; never reset)" }, select: { id: true } }));
-  return w.id;
+  const found = await tx.workspace.findUnique({ where: { key: PLATFORM_AUDIT_WORKSPACE }, select: { id: true } });
+  if (found) return found.id;
+  await tx.workspace.createMany({ data: [{ key: PLATFORM_AUDIT_WORKSPACE, label: "Platform audit lines (firm staff, roles, settings; never reset)" }], skipDuplicates: true });
+  return (await tx.workspace.findUniqueOrThrow({ where: { key: PLATFORM_AUDIT_WORKSPACE }, select: { id: true } })).id;
 }
 
 export class AuditEventAdapter implements AuditPort<Tx> {

@@ -12,9 +12,9 @@ import { join } from "node:path";
 import { ZodError } from "zod";
 import { auditEvent, PLATFORM_AUDIT_WORKSPACE } from "../api/src/platform/audit/audit-event.ts";
 import { AuditEntry, AuditFailure, fakeAudit } from "../ports/audit.ts";
-import { FakeClock, systemClock } from "../ports/clock.ts";
+import { FAKE_NOW, FakeClock, systemClock } from "../ports/clock.ts";
 import { FileKeyTaken, fakeFiles } from "../ports/files.ts";
-import { fakeJobs, type JobRun } from "../ports/jobs.ts";
+import { cronMatches, fakeJobs, parseCron, type JobRun } from "../ports/jobs.ts";
 import { fakeMail, MailMessage } from "../ports/mail.ts";
 import { fakeRender } from "../ports/render.ts";
 import { FAKE_FIRM_ID, fakeStaff, StaffContext, staffActor } from "../ports/staff.ts";
@@ -34,12 +34,12 @@ const entry = (over: Record<string, unknown> = {}) => ({ firmId: FAKE_FIRM_ID, a
 
 // ------------------------------------------------------------------------------------------------- the folder's own rule
 /** The import lines of a ports file that are not zod or one of the folder's own files (case-side contract v0.1 §1 rule 3). */
-const foreignImports = (text: string) => [...text.matchAll(/(?:^|\n)\s*(?:import|export)\b[^;]*?\bfrom\s*["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)/g)].map((m) => m[1] ?? m[2]).filter((s) => s !== "zod" && !/^\.\/[a-z0-9-]+(\.port)?\.ts$/.test(s));
+const foreignImports = (text: string) => [...text.matchAll(/(?:^|\n)\s*(?:import|export)\b[^;]*?\bfrom\s*["']([^"']+)["']|(?:^|\n)\s*import\s*["']([^"']+)["']|\b(?:import|require)\(\s*["']([^"']+)["']\s*\)/g)].map((m) => m[1] ?? m[2] ?? m[3]).filter((s) => s !== "zod" && !/^\.\/[a-z0-9-]+(\.port)?\.ts$/.test(s));
 const portFiles = readdirSync(PORTS).filter((f) => f.endsWith(".ts"));
 ok("PF-0p pass: the seven ports are in studio/ports/ (audit, staff, clock, jobs, mail, files, render)", ["audit", "staff", "clock", "jobs", "mail", "files", "render"].every((p) => portFiles.includes(`${p}.ts`)), portFiles);
 const bad = portFiles.flatMap((f) => foreignImports(readFileSync(join(PORTS, f), "utf8")).map((s) => `${f}: ${s}`));
 ok("PF-0p pass: every file in studio/ports/ imports only zod and its own files", bad.length === 0, bad);
-ok("PF-0p fail: the import check catches a Prisma, a Nest, a node and an app import", foreignImports(`import { z } from "zod";\nimport type { Prisma } from "@prisma/client";\nimport { Injectable } from "@nestjs/common";\nimport { createHash } from "node:crypto";\nexport { x } from "../api/src/core.ts";\nconst e = await import("../engine/runtime/team.ts");`).length === 5);
+ok("PF-0p fail: the import check catches a Prisma, a Nest, a node, an app, a dynamic, a side-effect and a require import", foreignImports(`import { z } from "zod";\nimport { FirmId } from "./audit.ts";\nimport type { Prisma } from "@prisma/client";\nimport { Injectable } from "@nestjs/common";\nimport { createHash } from "node:crypto";\nexport { x } from "../api/src/core.ts";\nconst e = await import("../engine/runtime/team.ts");\nimport "../api/src/main.ts";\nconst r = require("pg");`).length === 7);
 
 // ------------------------------------------------------------------------------------------------------------- audit
 {
@@ -59,6 +59,10 @@ ok("PF-0p fail: the import check catches a Prisma, a Nest, a node and an app imp
   ok("audit fail: failOn matching throws AuditFailure and records nothing", await rejects(() => f.record("tx", entry()), (e) => e instanceof AuditFailure) && f.entries.length === 0 && f.failures === 1);
   await f.record("tx", entry({ action: "retainer.viewed" }));
   ok("audit pass: failOn not matching records", f.entries.length === 1);
+  const seen: unknown[] = [], g = fakeAudit({ failOn: (_e, tx) => { seen.push(tx); return false; } }), handle = { prismaTx: 1 };
+  await g.record(handle, entry());
+  g.discard(handle);
+  ok("audit pass: failOn receives the caller's tx, and discard(tx) drops that transaction's lines", seen[0] === handle && g.entries.length === 0);
   const t = fakeAudit({ failOn: (e) => e.entityKey === "r-2" });
   const thrown = await rejects(() => t.transaction(async (tx) => { await t.record(tx, entry()); await t.record(tx, entry({ entityKey: "r-2" })); }), (e) => e instanceof AuditFailure);
   await t.transaction(async (tx) => { await t.record(tx, entry({ entityKey: "r-3" })); });
@@ -72,6 +76,9 @@ ok("PF-0p fail: the import check catches a Prisma, a Nest, a node and an app imp
   const pf4Keys = ["staffId", "firmId", "firmKey", "roles", "keys", "duties", "authTime", "via"];   // PF-4 keys.ts StaffContext, in its order
   ok("staff pass: StaffContext has exactly PF-4's fields", JSON.stringify(Object.keys(StaffContext.shape)) === JSON.stringify(pf4Keys) && JSON.stringify(Object.keys(s)) === JSON.stringify(pf4Keys));
   const p = fakeStaff({ firmId: FIRM_B, keys: ["agent/staff:manage"], duties: ["firm_admin"], via: "cognito" });
+  ok("staff pass: fakeStaff's sign-in time is FAKE_NOW, the FakeClock's start (never the wall clock: review M2)", s.authTime === Date.parse(FAKE_NOW) / 1000 && s.authTime === new FakeClock().now().getTime() / 1000);
+  const later = new FakeClock(); await later.advance({ minutes: 6 });
+  ok("staff fail: a sign-in 6 minutes before the clock's now is stale for a 5-minute step-up, whatever the day the test runs", (later.now().getTime() / 1000 - fakeStaff().authTime) > 300 && fakeStaff({}, later).authTime === later.now().getTime() / 1000);
   ok("staff pass: fakeStaff takes a partial", p.firmId === FIRM_B && p.keys[0] === "agent/staff:manage" && p.duties[0] === "firm_admin" && p.via === "cognito" && staffActor(p) === `staff:${p.staffId}`);
   const { firmId: _f, ...noFirm } = s;
   ok("staff fail: a StaffContext without firmId is refused", !StaffContext.safeParse(noFirm).success);
@@ -139,6 +146,7 @@ ok("PF-0p fail: the import check catches a Prisma, a Nest, a node and an app imp
   ok("jobs pass: a recurring job runs at its minute in its zone (Fri 09:00 Toronto = 14:00 UTC)", sweeps.length === 1 && sweeps[0].runAt.toISOString() === "2026-11-27T14:00:00.000Z" && sweeps[0].firmId === null);
   await rc.advance({ days: 3 });   // Sat, Sun skipped; Mon 30 Nov 09:00
   ok("jobs pass: across a weekend it runs Monday only", sweeps.length === 2 && sweeps[1].runAt.toISOString() === "2026-11-30T14:00:00.000Z");
+  ok("jobs fail: a day field starting with * and a restricted weekday both have to match (Vixie cron: Mon 30 Nov is not an odd day)", !cronMatches(parseCron("0 9 */2 * 1"), new Date("2026-11-30T14:00:00Z"), "America/Toronto") && cronMatches(parseCron("0 9 */2 * 1"), new Date("2026-11-23T14:00:00Z"), "America/Toronto") && cronMatches(parseCron("0 9 1 * 1"), new Date("2026-11-30T14:00:00Z"), "America/Toronto"));
   ok("jobs fail: a bad cron or zone is refused", await rejects(() => rj.recurring("x.sweep", "0 9 * *", "America/Toronto")) && await rejects(() => rj.recurring("x.sweep", "61 9 * * *", "America/Toronto")) && await rejects(() => rj.recurring("x.sweep", "0 9 * * *", "Mars/Olympus")));
 }
 
@@ -149,6 +157,7 @@ ok("PF-0p fail: the import check catches a Prisma, a Nest, a node and an app imp
   await m.send({ ...base, to: "someone.else@example.com", subject: "Other" });
   await m.send({ ...base, subject: "Second", class: "SERVICE", templateKey: "booking.reminder" });
   await m.send({ ...base, subject: "Third" });
+  ok("mail pass: sentAt is FAKE_NOW by default and the clock's now when given one", m.sent[0].sentAt.toISOString() === FAKE_NOW && await (async () => { const c = new FakeClock("2026-12-01T10:00:00Z"), mm = fakeMail({ clock: c }); await mm.send({ ...base, subject: "x" }); return mm.sent[0].sentAt.toISOString() === "2026-12-01T10:00:00.000Z"; })());
   ok("mail pass: the fake inbox keeps the order sent, per address (lower case)", m.inbox("client.a@example.com").map((x) => x.subject).join() === "First,Second,Third" && m.sent.length === 4 && m.sent[2].templateKey === "booking.reminder");
   const { firmId: _f, ...noFirm } = { ...base, subject: "x" };
   ok("mail fail: a message without firmId is refused (nothing sent)", await rejects(() => m.send(noFirm as never), zodSays("firmId")) && m.sent.length === 4);
@@ -167,7 +176,7 @@ ok("PF-0p fail: the import check catches a Prisma, a Nest, a node and an app imp
   ok("files pass: get returns the same bytes and type; exists is true", !!g && Buffer.from(g.bytes).equals(Buffer.from(bytes)) && g.contentType === "application/pdf" && await fs.exists(FAKE_FIRM_ID, "retainers/r-1/v1.pdf"));
   ok("files fail: another firm's key reads as absent", (await fs.get(FIRM_B, "retainers/r-1/v1.pdf")) === null && !(await fs.exists(FIRM_B, "retainers/r-1/v1.pdf")) && !(await fs.exists(FAKE_FIRM_ID, "retainers/r-1/v2.pdf")));
   ok("files pass: the same bytes again under the key are accepted (a retry)", (await fs.put(FAKE_FIRM_ID, "retainers/r-1/v1.pdf", bytes, "application/pdf")).sha256 === r.sha256 && fs.count === 1);
-  ok("files fail: other bytes under a used key are refused (write once)", await rejects(() => fs.put(FAKE_FIRM_ID, "retainers/r-1/v1.pdf", new Uint8Array([9]), "application/pdf"), (e) => e instanceof FileKeyTaken));
+  ok("files fail: other bytes, or the same bytes as another type, under a used key are refused (write once)", await rejects(() => fs.put(FAKE_FIRM_ID, "retainers/r-1/v1.pdf", new Uint8Array([9]), "application/pdf"), (e) => e instanceof FileKeyTaken) && await rejects(() => fs.put(FAKE_FIRM_ID, "retainers/r-1/v1.pdf", bytes, "text/plain"), (e) => e instanceof FileKeyTaken) && (await fs.get(FAKE_FIRM_ID, "retainers/r-1/v1.pdf"))?.contentType === "application/pdf");
   ok("files fail: a missing firmId and a path-escaping key are refused", await rejects(() => fs.put(undefined as never, "a.pdf", bytes, "application/pdf"), zodSays("firmId")) && await rejects(() => fs.put(FAKE_FIRM_ID, "../other/a.pdf", bytes, "application/pdf")) && await rejects(() => fs.put(FAKE_FIRM_ID, "a/../b.pdf", bytes, "application/pdf")) && fs.count === 1);
 }
 
@@ -242,6 +251,26 @@ try {
   const wsGone = sql(`select count(*) from workspace where key = '${PLATFORM_AUDIT_WORKSPACE}'`) === "0";
   await db.$transaction(async (tx) => { await auditEvent.record(tx, entry({ entityKey: "r-14" })); });
   ok("adapter pass: a rolled-back first line leaves no workspace and no stale id; the next line remakes it", wsGone && lines() === 1);
+
+  // Review M1: two first writers at once on a database with no audit workspace yet. The second waits for the first's
+  // commit and then uses its row; both lines land, one workspace. Then the same with the first rolling back.
+  const reset = () => sql(`delete from audit_event where workspace_id in (select id from workspace where key = '${PLATFORM_AUDIT_WORKSPACE}'); delete from workspace where key = '${PLATFORM_AUDIT_WORKSPACE}'`);
+  const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const db2 = new PrismaClient({ adapter: new PrismaPg({ connectionString: urlOf(DB), options: "-c TimeZone=UTC" }) });
+  try {
+    reset();
+    const both = await Promise.allSettled([
+      db.$transaction(async (tx) => { await auditEvent.record(tx, entry({ entityKey: "race-a" })); await pause(800); }, { timeout: 20_000 }),
+      pause(200).then(() => db2.$transaction(async (tx) => { await auditEvent.record(tx, entry({ entityKey: "race-b" })); }, { timeout: 20_000 })),
+    ]);
+    ok("adapter pass: two first writers at once both commit, one workspace (review M1)", both.every((r) => r.status === "fulfilled") && lines() === 2 && sql(`select count(*) from workspace where key = '${PLATFORM_AUDIT_WORKSPACE}'`) === "1", both.map((r) => r.status === "rejected" ? String(r.reason).slice(0, 200) : "ok"));
+    reset();
+    const firstFails = await Promise.allSettled([
+      db.$transaction(async (tx) => { await auditEvent.record(tx, entry({ entityKey: "race-c" })); await pause(800); throw new Error("first writer rolls back"); }, { timeout: 20_000 }),
+      pause(200).then(() => db2.$transaction(async (tx) => { await auditEvent.record(tx, entry({ entityKey: "race-d" })); }, { timeout: 20_000 })),
+    ]);
+    ok("adapter fail: when the first writer rolls back, the waiting second still commits its line (one line, one workspace)", firstFails[0].status === "rejected" && firstFails[1].status === "fulfilled" && lines() === 1 && sql(`select count(*) from audit_event where entity_key = 'race-d'`) === "1", firstFails.map((r) => r.status === "rejected" ? String(r.reason).slice(0, 200) : "ok"));
+  } finally { await db2.$disconnect(); }
 } finally {
   await db.$disconnect();
   execFileSync(join(BIN, "dropdb"), [...PG, "--if-exists", DB]);
