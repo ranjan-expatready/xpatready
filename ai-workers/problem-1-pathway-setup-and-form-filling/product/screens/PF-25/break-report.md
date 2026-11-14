@@ -44,19 +44,49 @@ Expected (the row): the change is made "with a reason, audited". Actual: the rea
 - When `busy` through `busy-50` are all taken, the suggestion is `null`.
 - Each such unauthenticated call makes up to 100 sequential queries (16.6 ms against 1.4 ms) (`service.ts:29,85`).
 
-**m9. The reason accepts bidirectional-text controls and newlines.** `"ok ‮gnp.exe"` was accepted and stored (`service.ts:47` covers C0 controls except tab, newline and carriage return). The reason is shown to staff later.
+**m9. The reason accepts bidirectional-text controls and newlines.** `"ok \u202egnp.exe"` was accepted and stored (`service.ts:47` covers C0 controls except tab, newline and carriage return). The reason is shown to staff later.
 
 **m10. Any firm whose key starts with `sample-` gets its key as its address when it is inserted, whatever its status** (the `platform_firm_web_address_sample` trigger). Inserting `sample-x` as PROVISIONING gave it `sample-x` with `set_by seed:PF-25`. Nothing reserves the prefix (`platform_firm_key_check` is `^[a-z][a-z0-9-]{1,62}$`), so a real firm with such a key would get 409 "already has a web address" from its own `claimAtSignUp`.
 
 ## What held
-- Database shape checks: `mäple`, `éée`, `ab٣`, `Maple`, `XN--abc`, a newline, `maple.`, `ma_ple`, leading and trailing spaces, 2 characters and 64 characters were all refused; 63 characters were accepted.
-- Database rules: the history is insert-only (update, delete and truncate refused). An address never moves firm and is never deleted or truncated. An update needs this transaction's matching record: a record in a rolled-back savepoint does not count, a record for another new address is refused, and going back without a record is refused. Two hops in one transaction are accepted. A hold on another firm's address is refused, and `changed_at` cannot be backdated.
-- Service: keys `agent/*` and `" system/firm:address"` give 403 and write nothing. An array reason or an object address gives 422. An unknown firm gives 404. An upper-case firm id is lower-cased. The same address gives 409.
-- Races: rename against take-old ×10 gave a 409 every time and the old address was never taken. Two firms grabbing one address: one got 409. Two firms swapping addresses: both got 409, with no deadlock. A sign-up claim in REPEATABLE READ during a rename got 409.
-- Firm status: only TRIAL and ACTIVE serve the address or redirect. PROVISIONING, PAYMENT_HOLD, SECURITY_LOCK, ABANDONED and DELETED answer unknown, both for the new address and the held one.
-- Host reading: upper case, a trailing dot and a port are handled. IPv6 and IP hosts, `localhost` and `expatready.com` are main. Two-deep hosts, `-x`, `xn--abc` and `user@…` give the plain 404. Reserved names never serve a firm. X-Forwarded-Host, Forwarded, X-Original-URL, X-Rewrite-URL and `?firm=` are ignored, and firm A never served firm B.
-- Path tricks never reached the studio's API on a firm's address: `..`, `%2e%2e`, `%2E%2E`, `.%2e`, `%2f`, `//`, `/API`, `/Api/Public`, `;`, `..;/`. POST, PUT, DELETE, PATCH, OPTIONS and TRACE got 404, and `/api/demo/reset` got 404.
-- Raw bytes `\xff`, `\x7f` and a tab in the request target got 400 from Node, and the server stayed up.
-- Redirects: `%0d%0a` stays encoded (no header injection). `//evil`, `/\evil` and `?next=https://evil` stay on the new firm host. The redirect is always https under expatready.com, keeps the port, and carries `no-store`. An expired hold gives the same 126 B as an unknown address.
-- Availability: arrays and objects give `empty`, and a POST gets 404. On a firm's address the route gives the plain 404.
-- Timing: the gap between a known and an unknown address (about 1.0–1.4 ms against 1.45 ms) was smaller than the variation between runs; it is not usable.
+- **Database:** every bad address shape was refused (`mäple`, `éée`, `ab٣`, `Maple`, `XN--abc`, a newline, `maple.`, `ma_ple`, edge spaces, 2 and 64 characters); 63 characters accepted. History is insert-only. An address never moves firm and is never deleted or truncated. An update needs this transaction's matching record (one in a rolled-back savepoint does not count; going back without a record is refused). A hold on another firm's address is refused, and `changed_at` cannot be backdated.
+- **Service and races:** `agent/*` and `" system/firm:address"` keys give 403. A bad reason or address gives 422, an unknown firm 404, the same address 409; an upper-case firm id is lower-cased. Rename against take-old ×10, two firms grabbing one address, and a swap all gave 409, and nothing was stolen. Only TRIAL and ACTIVE firms serve or redirect.
+- **HTTP:** upper case, a trailing dot and ports are handled. IPv6 and IP hosts are main. Two-deep, `-x`, `xn--` and `user@` hosts give the plain 404. Forwarded headers and `?firm=` are ignored, and A never served B. No path trick (`..`, `%2e`, `%2f`, `//`, case, `;`, other methods) reached the studio's API. Raw bytes in the target get 400 from Node and the server stays up. Redirects keep `%0d%0a` encoded and stay on the firm's host, use https under expatready.com, and carry `no-store`. Expired holds give the same bytes as an unknown address. Availability treats arrays and objects as `empty`.
+
+## Round 2 (head `1c1bb096e`, 14 Nov)
+I re-attacked only `git diff 79107bf0..1c1bb096` and re-ran every round-1 reproduction. Setup was as before: scratch database `xr_studio_brk_pf25_r2`, and the isolated copy on :4523 started and stopped in one command. Both databases were dropped at the end. Suite: **58 passed, 0 failed**.
+
+**Totals for round 2: 0 Blocker · 0 Major · 6 Minor.**
+
+**Round-1 findings now fixed** (each re-run): **M1** (`/api/public/site?ref=a%2Fb` and `?back=/./home&p=C:%5C` return 200) · **M2** (a first set writes history `NULL → pee-one` with `until` NULL and the reason, plus an audit line with its `historyId`) · **m1** (an empty port, `:0`, `:65536`, `:0004523`, `:4523:4523`, `..` and `:4523/` give the plain 404; `:04523` redirects to `:4523`) · **m2**, Location part (an absolute URI keeps only its path and query; `*` redirects to `/`) · **m3** (`/api/public/zzz`, `site;x`, `//site`, `site/` and `SITE` all give the plain 126 B).
+**m4** for ordinary requests (`/book/x`, `/assets/`, `/assets/index-*.js`, `/brand/` and `/` give 404) · **m5** (two changes of one firm run one after the other; a claim against a change gives 409, no deadlock) · **m6** (REPEATABLE READ and SERIALIZABLE writes refused with `25000`; `until` forced to 90 days, so the 1-second hold became 90 days and B was refused; a single record with no change refused at commit; reasons padded with tabs or non-breaking spaces refused).
+**m7** (the service answers 409 with the fake clock 91 days ahead; accepted as documented) · **m8** (a busy suggestion takes 2.6 ms instead of 16.6 ms) · **m9** (U+202E refused) · **m10** (`sample-firm-2` refused with the `sample` reason, suggestion `firm-2`).
+Every other round-1 reproduction still holds.
+
+**N1 (Minor): a request in absolute form still reaches the studio's app shell on a firm's address.** `pathAndQuery` normalises the target with WHATWG `new URL()` (`host.ts:54`), but Express routes on the raw path. Requests on raw sockets with `Host: sample-firm.localhost:4523`:
+- `GET http://x/foo/../api/public/site`, `GET http://x/%2e%2e/api/public/site`, `GET http://x/a\..\api/public/site` and `GET http://x/assets/index-PNCnNHos.js/../../api/public/site` each return **200 with the Product Studio `index.html`** (the app's catch-all route).
+- The same request on an unknown host gets the plain 404.
+
+The check passes the normalised `/api/public/site`, then a different handler answers. No studio API route matched (I checked the GET routes that take several parameters), and browsers never send absolute form. Expected: an absolute-form target whose path changes when normalised gets the plain not-found, or the check reads exactly what Express routes on.
+
+**N2 (Minor): a round trip in one transaction still creates a hold with no visible change** (the round-1 m6(c) case, by another route). One transaction inserts history (A `aaa-two → zzz-squat`), updates the address, inserts history (`zzz-squat → aaa-two`) and updates back. Both rows pass `platform_firm_address_history_followed`, because each "moved on" in the same transaction. A's address is still `aaa-two`, but `zzz-squat` is held for A for 90 days and firm C is refused it. This takes raw database access; the service makes one move per transaction.
+
+**N3 (Minor): invisible and direction characters still pass the reason rule, and the database is looser than the service.**
+- Accepted by both: `E'\u200c\u200d\u2060a'` (ZWNJ, ZWJ and word joiner plus one letter), `E'\u180e\u180eab'`, and `E'ok \u061c x'` (U+061C is the Arabic letter mark, a direction mark).
+- Refused by `readReason` but accepted by `platform_web_address_reason_ok`: `E'\u1680\u1680ab'` (Ogham space mark). JavaScript `\s` covers it; PostgreSQL `\s` does not.
+
+**N4 (Minor): the `until` CHECK gives a different answer depending on the session TimeZone** (`until = changed_at + interval '90 days'`; PostgreSQL assumes CHECK conditions never change their answer).
+- A row written in an `Africa/Casablanca` session has `until - changed_at = 90 days 01:00:00`.
+- Re-checking the same CHECK under `PGTZ=UTC` (`alter table … add constraint revalidate_utc check (…)` in a rolled-back transaction) fails "violated by some row". It also fails under Casablanca for rows the app wrote in UTC.
+- The app writes in UTC (`core.ts:34`), but the database's own zone is America/Toronto (`cloud-setup.sh:131`). A psql session or a dump restored there would fail on any row whose 90 days cross a daylight-saving change, and `COPY` would reject the whole history table.
+- Expected: compare in a fixed zone, for example `until = (changed_at at time zone 'UTC' + interval '90 days') at time zone 'UTC'`, or store `until` without a CHECK.
+
+**N5 (Minor, rest of m1): some host forms still fall back to "main".** `Host: sample-firm.localhost\t:4523`, `sample-firm.localhost :4523` and `sample-firm.localhost,x` get 401 from the studio's own API (`rules.ts`: the name before the first `:` keeps the space, tab or comma, so it matches no suffix). Browsers never send these.
+
+**N6 (Minor, rest of m2, unchanged): routing still reads the first Host header.** A target in absolute form still routes by its Host header (`GET http://sample-firm.localhost:4523/api/public/site` with `Host: sample-solo…` returns `sample-solo`). With two Host headers the first still wins, where 400 is expected.
+
+**Not counted:**
+- A known address now answers in about 0.9 ms against about 1.44 ms for an unknown one, steady across runs (one query against two). Which addresses exist is public through the availability route anyway.
+- A sign-up claim under REPEATABLE READ now fails with a raw `25000`. That is intended and is a programmer's error.
+- m10's trigger still gives any firm whose *key* starts with `sample-` its key as its address (accepted; it depends on PF-5's key rule).
+- Non-Latin names still get `my-firm` (Sample, accepted).
