@@ -1,0 +1,3 @@
+# STATE hand-over item 3 moved word for word (Lead 48, 20:1x IST 14 Nov, STATE under 12 KB)
+
+3. **Board:** version 29 (18:23): target line, Top 3 updated. Inputs in Lead 47's scratchpad `cockpit/` (`/private/tmp/claude-501/-Users-ranjansingh-Desktop-Xpatready/9339489c-543a-431b-8a4c-f08477566caf/scratchpad/cockpit/`): copy `lead-input.json`, update `as_of` (from the clock), sessions (add the 9 lanes), `top3`; run `cockpit-data.py` **as a foreground `run_in_background` command with allowed_domains** (a detached `&` child lost the network at 18:1x); 109 s to 1,024 s. Health red: records PR to `main` overdue; 8 old Majors.
