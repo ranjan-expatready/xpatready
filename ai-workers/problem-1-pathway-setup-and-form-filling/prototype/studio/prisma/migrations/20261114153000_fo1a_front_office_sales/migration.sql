@@ -23,7 +23,7 @@
 --   "FoPipeline", "FoStageKind", "FoReasonKind", "FoContactRole", "FoWonVia", "FoMoveCause", "FoCallDirection",
 --   "FoCallOutcome", "FoNoteVisibility", "FoClickIdKind"; DROP FUNCTION fo_sales_setup_firm_exists(), fo_sales_firm_fixed(),
 --   fo_sales_insert_only(), fo_sales_next_number(uuid, text), fo_lead_number(), fo_prospect_number(), fo_sales_number_fixed(),
---   fo_owner_in_firm(), fo_prospect_rules(), fo_prospect_contact_linked(), fo_company_contact_still_linked(),
+--   fo_sales_owner_in_firm(), fo_prospect_rules(), fo_prospect_contact_linked(), fo_company_contact_still_linked(),
 --   fo_stage_fixed(), fo_reason_fixed(), fo_sales_setup_forward(), fo_sales_has_word(text), fo_lead_stays_engaged(),
 --   fo_stage_move_matches(), fo_prospect_lead_engaged();
 --   delete this folder's row from _prisma_migrations.
@@ -684,15 +684,15 @@ ALTER TABLE "fo_prospect" ADD CONSTRAINT "fo_prospect_number_check" CHECK ("numb
 
 -- A staff member named as owner is a staff member of the same firm (platform_staff; checked here, not by a foreign key,
 -- so platform.prisma needs no more lines). Staff rows are never deleted (deactivated, PF-4) and never move firm (PF-3).
-CREATE FUNCTION fo_owner_in_firm() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE FUNCTION fo_sales_owner_in_firm() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW."owner_staff_id" IS NOT NULL AND NOT EXISTS (SELECT 1 FROM "platform_staff" s WHERE s."firm_id" = NEW."firm_id" AND s."id" = NEW."owner_staff_id") THEN
     RAISE EXCEPTION '%: owner % is no staff member of this firm', TG_TABLE_NAME, NEW."owner_staff_id" USING ERRCODE = 'foreign_key_violation';
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER "fo_lead_owner_in_firm" BEFORE INSERT OR UPDATE OF "owner_staff_id", "firm_id" ON "fo_lead" FOR EACH ROW EXECUTE FUNCTION fo_owner_in_firm();
-CREATE TRIGGER "fo_prospect_owner_in_firm" BEFORE INSERT OR UPDATE OF "owner_staff_id", "firm_id" ON "fo_prospect" FOR EACH ROW EXECUTE FUNCTION fo_owner_in_firm();
+CREATE TRIGGER "fo_lead_owner_in_firm" BEFORE INSERT OR UPDATE OF "owner_staff_id", "firm_id" ON "fo_lead" FOR EACH ROW EXECUTE FUNCTION fo_sales_owner_in_firm();
+CREATE TRIGGER "fo_prospect_owner_in_firm" BEFORE INSERT OR UPDATE OF "owner_staff_id", "firm_id" ON "fo_prospect" FOR EACH ROW EXECUTE FUNCTION fo_sales_owner_in_firm();
 
 -- A person: email lower case with no space (as platform emails); a readable phone is E.164 (AG-2-84 rule 5; BR-18); one
 -- that could not be read is kept as typed with phone_readable false.

@@ -10,7 +10,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { onFirmCreated, REASONS, seedCreatedFirms, seedFirmFrontOffice, seedSampleFirmsFrontOffice, STAGES } from "../api/src/front-office/firm-seed.ts";
 import { seedSampleFirms } from "../api/src/platform/seed-sample-firms.ts";
 
@@ -413,13 +413,40 @@ try {
   sql(DEMO, `insert into module_event (id, firm_id, type, subject_id, payload) values ('${u(131)}', '${FAILF}', 'firm.created', '${FAILF}', '{}');
     create function fo1a_test_boom() returns trigger language plpgsql as $f$ begin raise exception 'test: this firm''s seed fails'; end $f$;
     create trigger fo1a_test_boom before insert on fo_stage for each row when (new.firm_id = '${FAILF}') execute function fo1a_test_boom();`);
-  const runSeed = () => spawnSync(join(STUDIO, "node_modules", ".bin", "tsx"), [join(STUDIO, "api/src/front-office/firm-seed.ts")], { cwd: STUDIO, encoding: "utf8", env: { ...process.env, DATABASE_URL: urlOf(DEMO) } });
+  // The head of stderr (the error's own line and the lines under it), not the tail: a stack's tail names only the loader.
+  const errHead = (e: string) => { const l = e.split("\n"); const i = Math.max(0, l.findIndex((x) => /^\s*([A-Za-z]*Error\b|error:)/.test(x))); return l.slice(i, i + 6).join("\n").slice(0, 800); };
+  // run-suites.sh starts each suite as `tsx --tsconfig <repo-relative path>`, and tsx hands that path to child processes in
+  // TSX_TSCONFIG_PATH. The command runs in studio/, where a repo-relative path names nothing and tsx stops before the
+  // script runs (#1742's second red run: empty output, exit 1). The child gets it as an absolute path.
+  const childEnv = (tsconfig = process.env.TSX_TSCONFIG_PATH) => ({ ...process.env, DATABASE_URL: urlOf(DEMO), ...(tsconfig ? { TSX_TSCONFIG_PATH: resolve(tsconfig) } : {}) });
+  const runSeed = (env = childEnv()) => spawnSync(join(STUDIO, "node_modules", ".bin", "tsx"), [join(STUDIO, "api/src/front-office/firm-seed.ts")], { cwd: STUDIO, encoding: "utf8", env });
   const bad = runSeed();
   const badOut = (() => { try { return JSON.parse(bad.stdout.trim().split("\n").pop() ?? "{}"); } catch { return {}; } })() as { failed?: { firmId: string; error: string }[] };
-  ok("FO-1a fail: a firm whose seed fails is named in the command's output, and the command exits 1 (Devin review)", bad.status === 1 && badOut.failed?.length === 1 && badOut.failed[0].firmId === FAILF && /this firm's seed fails/.test(badOut.failed[0].error), { status: bad.status, out: bad.stdout.slice(-300), err: bad.stderr.slice(-300) });
+  ok("FO-1a fail: a firm whose seed fails is named in the command's output, and the command exits 1 (Devin review)", bad.status === 1 && badOut.failed?.length === 1 && badOut.failed[0].firmId === FAILF && /this firm's seed fails/.test(badOut.failed[0].error), { status: bad.status, out: bad.stdout.slice(-300), err: errHead(bad.stderr) });
   sql(DEMO, `drop trigger fo1a_test_boom on fo_stage; drop function fo1a_test_boom()`);
   const good = runSeed();
-  ok("FO-1a pass: run again once the cause is gone, the command seeds that firm and exits 0", good.status === 0 && counts(FAILF) === `16:14:1:${SERVICE}`, { status: good.status, out: good.stdout.slice(-300), err: good.stderr.slice(-300) });
+  ok("FO-1a pass: run again once the cause is gone, the command seeds that firm and exits 0", good.status === 0 && counts(FAILF) === `16:14:1:${SERVICE}`, { status: good.status, out: good.stdout.slice(-300), err: errHead(good.stderr) });
+  // The way CI runs it (#1742): the suite's tsconfig given relative to the repository root, as run-suites.sh does.
+  const fromRoot = join(STUDIO, "api", "tsconfig.json").slice(resolve(STUDIO, "..", "..", "..", "..").length + 1);
+  const ci = (() => { const cwd = process.cwd(); try { process.chdir(resolve(STUDIO, "..", "..", "..", "..")); return runSeed(childEnv(fromRoot)); } finally { process.chdir(cwd); } })();
+  ok("FO-1a pass: the command runs when the suite was started with a repo-relative --tsconfig, as run-suites.sh does (#1742 second red run)", ci.status === 0 && /"failed":\[\]/.test(ci.stdout), { status: ci.status, out: ci.stdout.slice(-300), err: errHead(ci.stderr) });
+  const raw = runSeed({ ...process.env, DATABASE_URL: urlOf(DEMO), TSX_TSCONFIG_PATH: fromRoot });
+  ok("FO-1a fail: handed on unresolved, that path stops tsx before the script runs (the cause, kept visible)", raw.status !== 0 && raw.stdout.trim() === "" && /Cannot resolve tsconfig/.test(raw.stderr), { status: raw.status, err: errHead(raw.stderr) });
+  ok("FO-1a pass: an error the seed does not expect is printed as JSON on stdout, exit 1, never an unhandled rejection", (() => {
+    const r = runSeed({ ...childEnv(), DATABASE_URL: "postgresql://xr_studio@127.0.0.1:54329/xr_studio_fo1a_no_such_db" });
+    try { return r.status === 1 && typeof JSON.parse(r.stdout.trim().split("\n").pop() ?? "").error === "string"; } catch { return false; }
+  })());
+
+  // ------------------------------------------------------------------------- function names (rows rev 15.2, #1742)
+  // This area's database functions carry its prefix (fo_sales_) or say their table; another fo_ name is FO-1b's.
+  const FO1B_FUNCTIONS = ["fo_availability_zone", "fo_booking_token_write", "fo_booking_void_tokens", "fo_booking_write", "fo_consultation_type_hosts", "fo_distinct_modes", "fo_distinct_uuids", "fo_firm_fixed", "fo_zone_ok"];
+  const FO1A_TABLE_NAMED = ["fo_company_contact_still_linked", "fo_lead_number", "fo_lead_stays_engaged", "fo_prospect_contact_linked", "fo_prospect_lead_engaged", "fo_prospect_number", "fo_prospect_rules", "fo_reason_fixed", "fo_stage_fixed", "fo_stage_move_matches"];
+  const strayNames = (d: string) => sql(d, `select coalesce(string_agg(proname, ',' order by proname), '') from pg_proc where pronamespace = 'public'::regnamespace and proname like 'fo\\_%' and proname not like 'fo\\_sales\\_%'
+    and proname <> all(array[${[...FO1B_FUNCTIONS, ...FO1A_TABLE_NAMED].map((n) => `'${n}'`).join(",")}])`);
+  ok("FO-1a pass: every fo_ function is this area's (fo_sales_ or named for its table) or FO-1b's; no old generic name is left", strayNames(DEMO) === "", strayNames(DEMO));
+  sql(DEMO, `create function fo_next_number() returns int language sql as 'select 1'`);
+  ok("FO-1a fail: a generic fo_ function (an old name) is named by the same check", strayNames(DEMO) === "fo_next_number", strayNames(DEMO));
+  sql(DEMO, `drop function fo_next_number()`);
 } finally {
   for (const d of dbs) await d.$disconnect().catch(() => undefined);
   for (const db of [EMPTY, DEMO, BARE]) execFileSync(join(BIN, "dropdb"), [...PG, "--if-exists", "--force", db]);

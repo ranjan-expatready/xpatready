@@ -147,12 +147,15 @@ export async function seedCreatedFirms(db: PrismaClient): Promise<FirmSeedResult
 }
 
 /** Once for the two Sample firms (they are written by PF-3's seed, which raises no event). A Sample firm that is not
- *  there yet is named in `missing`, not an error: run PF-3's seed first. */
-export async function seedSampleFirmsFrontOffice(db: PrismaClient): Promise<{ results: FirmSeedResult[]; missing: string[] }> {
+ *  there yet is named in `missing`, not an error: run PF-3's seed first. A firm whose seed fails is named in `failed`
+ *  and the other still runs (one firm never stops the seed; #1742, Lead B). */
+export async function seedSampleFirmsFrontOffice(db: PrismaClient): Promise<{ results: FirmSeedResult[]; missing: string[]; failed: { firmId: string; error: string }[] }> {
   const firms = await db.platformFirm.findMany({ where: { key: { in: [...SAMPLE_FIRM_KEYS] } }, select: { id: true, key: true }, orderBy: { key: "asc" } });
-  const results: FirmSeedResult[] = [];
-  for (const f of firms) results.push(await db.$transaction((tx) => seedFirmFrontOffice(tx, f.id)));
-  return { results, missing: SAMPLE_FIRM_KEYS.filter((k) => !firms.some((f) => f.key === k)) };
+  const results: FirmSeedResult[] = [], failed: { firmId: string; error: string }[] = [];
+  for (const f of firms) {
+    try { results.push(await db.$transaction((tx) => seedFirmFrontOffice(tx, f.id))); } catch (e) { failed.push({ firmId: f.id, error: String(e).slice(0, 300) }); }
+  }
+  return { results, missing: SAMPLE_FIRM_KEYS.filter((k) => !firms.some((f) => f.key === k)), failed };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -164,8 +167,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const sample = await seedSampleFirmsFrontOffice(db), created = await seedCreatedFirms(db);
     // The failures are printed by name (an array's extra property is dropped by JSON.stringify; Devin review on #1742),
     // and any failure ends the command with exit code 1.
-    const failed = created.failed ?? [];
+    const failed = [...sample.failed, ...(created.failed ?? [])];
     console.log(JSON.stringify({ sample, created: [...created], failed }));
     if (failed.length) process.exitCode = 1;
+  } catch (e) {
+    // Never an unhandled rejection (#1742, Lead B): the error is printed as JSON on stdout, exit code 1.
+    console.log(JSON.stringify({ error: String(e).slice(0, 1000) }));
+    process.exitCode = 1;
   } finally { await db.$disconnect(); }
 }
