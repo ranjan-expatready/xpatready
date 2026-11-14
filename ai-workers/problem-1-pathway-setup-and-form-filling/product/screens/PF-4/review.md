@@ -122,3 +122,23 @@ A real Cognito pool (PF-4b); any browser or screen reader (no screen); an intend
 No Blocker or Major is open at 6b84dbd81faa38f8f902f9247a4d456f3d1518a5. The journey score rises from 8 to 9 / 10: Correct data and Error recovery are now 1.
 
 **Verdict: Approve 6b84dbd81faa38f8f902f9247a4d456f3d1518a5**
+
+## Round 3: head dba1b50d (diff from 6b84dbd8 only, P-277)
+
+**The change:** `recordSignIn` now always writes the another-device revocation at `at - 1`; before, it wrote it only when the person had a session already (`service.ts`, recordSignIn). One new fail test covers r2-m1 in the Cognito section.
+
+**Checks run:**
+* `check_pf4_identity.ts 4543` on a fresh `pf4rev` copy (stopped afterwards; no test databases left): **107/107**.
+* **Mutation** on a scratch copy of dba1b50d: with `if (hadSession)` put back, the new test goes red (101/103 in part A, which is 102/103 unmutated). The failing line is "device B (newer) calls first, then device A … is refused": A got 200.
+* **A first-ever local sign-in still works** (in process, scratch database; user-S, `last_sign_in_at` null):
+  * sign-in → 200 and `/me` → 200;
+  * one revocation, "another-device", 1 ms before the session's time (revoked at …200, signed in at …201), so the token is not refused by its own revocation;
+  * a change made with that token passes the firm-lock re-check: it reached the seat check (409 `PLAN_LIMIT_REACHED` on the solo plan), not 401 `SESSION_REVOKED`;
+  * a second sign-in ends the first session (401 `SIGNED_IN_ELSEWHERE`) and the new one works.
+* The new test's person is in firm B and is deactivated afterwards, so later seat counts are unchanged.
+
+**r2-m1 fixed.** Nothing else changed. Open as before, both Minor and with the tech lead: round 1's m1 (the platform-audit workspace against d1 on a shared copy) and m5 (`graph.mjs` and `decorate()`). One cost to note, not a finding: one revocation row per sign-in (at about 100 firms, P-562, this is small).
+
+No Blocker or Major is open at dba1b50db02bbbfc7d0262b5e134c0b269750f91. The journey score stays 9 / 10.
+
+**Verdict: Approve dba1b50db02bbbfc7d0262b5e134c0b269750f91**
