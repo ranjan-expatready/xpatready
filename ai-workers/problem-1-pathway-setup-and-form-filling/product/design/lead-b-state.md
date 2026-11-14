@@ -184,3 +184,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
   * PF-0p #1752 approved round 3 (job keys unique per job name).
   * Rows rev 16.3; FO-7b brief updated.
 * 14 Nov 19:35 IST: Lead 48 agreed FO-7a round 3 as proposed (diff-only, same reviewer, plus a breaker re-run). A new Major goes to Lead 48 before any round 4 (comment 6878449242). PF-0p #1752 is labelled on green at 8f64ca4e5. Rev 16.3's sha (b01906236) sent.
+* 14 Nov 19:41 IST: FO-3 #1760 round 3 agreed by Lead 48 as Lead B proposed: diff-only, same reviewer, breaker re-checks B-3 and R2-1. A new Major goes to Lead 48 first (comment 6878537086).
