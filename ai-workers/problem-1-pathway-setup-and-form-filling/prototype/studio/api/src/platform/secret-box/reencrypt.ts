@@ -113,7 +113,7 @@ export async function versionCounts(box: SecretBoxPort, stores: SealedValueStore
   const pageSize = pageSizeOf(size, 500);
   const out: Record<string, Record<string, number>> = {};
   for (const store of stores) {
-    const counts: Record<string, number> = (out[store.name] = {});
+    const counts: Record<string, number> = (out[store.name] ??= {});   // two stores with one name add up, never overwrite (PR review)
     for (const firmId of await store.firms()) {
       for (let after: string | null = null; ;) {
         const rows = await store.page(firmId, after, pageSize);

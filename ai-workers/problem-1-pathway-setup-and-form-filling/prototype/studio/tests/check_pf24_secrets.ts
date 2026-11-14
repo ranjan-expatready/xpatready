@@ -169,6 +169,7 @@ const owner = (firmId: string, purpose = "zoom", personId: string | null = null)
     throwsLike(() => box.open(owner(FIRM_B), sealed), (e) => e instanceof SecretRefused && e.code === "TAMPERED_OR_OTHER_OWNER")
     && throwsLike(() => box.open(owner(FIRM_A, "calendar"), sealed), (e) => e instanceof SecretRefused)
     && throwsLike(() => box.open(owner(FIRM_A, "zoom", "person-1"), sealed), (e) => e instanceof SecretRefused));
+  ok("fail (PR review): a person id with a lone surrogate or other non-id characters is refused", ["p\uD800", "p\uD801", "person 1", "ä"].every((p) => throwsLike(() => box.seal(owner(FIRM_A, "calendar", p), token), (e) => e instanceof SecretRefused)));
   const personal = box.seal(owner(FIRM_A, "calendar", "person-1"), token);
   ok("fail: a person's own credential never opens for another person of the same firm", box.open(owner(FIRM_A, "calendar", "person-1"), personal) === token && throwsLike(() => box.open(owner(FIRM_A, "calendar", "person-2"), personal), (e) => e instanceof SecretRefused));
   ok("fail: an owner without a firm, or with a bad purpose, is refused before anything is sealed", throwsLike(() => box.seal({ firmId: "", purpose: "zoom" }, token), (e) => e instanceof SecretRefused) && throwsLike(() => box.seal({ firmId: FIRM_A, purpose: "Zoom Tokens" }, token), (e) => e instanceof SecretRefused) && throwsLike(() => box.seal(owner(FIRM_A), ""), (e) => e instanceof SecretRefused));
@@ -218,6 +219,9 @@ console.log("== 4. a key change: the re-encrypt job moves every value; the old k
   ok("pass: every value is now on version 2 and still opens to the same token", all().every((r) => both.versionOf(r.sealed) === 2) && [...zoom.rows.values()].every((r) => newOnly.open(r.owner, r.sealed) === plain.get(`zoom/${r.id.slice(1)}`)) && [...cal.rows.values()].every((r) => newOnly.open(r.owner, r.sealed) === plain.get(`cal/${r.id.slice(1)}`)));
   ok("fail (after the job): the old key then reads nothing", opensAll(oldOnly) === 0 && all().every((r) => throwsLike(() => oldOnly.open(r.owner, r.sealed), (e) => e instanceof SecretRefused)));
   const counts = await versionCounts(both, stores);
+  const twin = memorySealedStore("zoom-tokens"); twin.put("t1", owner(FIRM_A), v1.seal(owner(FIRM_A), "twin-token-value"));
+  const twinCounts = await versionCounts(both, [zoom, twin]);
+  ok("fail (PR review): two stores sharing a name add their counts; an old-version value in the first is never hidden by the second", twinCounts["zoom-tokens"]?.v1 === 1 && twinCounts["zoom-tokens"]?.v2 === 6, twinCounts);
   ok("pass: the runbook's check counts no value left on version 1", JSON.stringify(counts) === JSON.stringify({ "zoom-tokens": { v2: 6 }, "calendar-tokens": { v2: 2 } }), counts);
   const second = await runReencrypt({ firmId: FIRM_A, toVersion: 2 }, { box: both, stores });
   ok("pass: running the job again changes nothing (idempotent)", second.moved === 0 && second.already === 4);

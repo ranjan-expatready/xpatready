@@ -18,7 +18,7 @@ export const SecretOwner = z.object({
   /** The firm's id (a uuid, as platform_firm and PF-0p's FirmId); compared in lower case, so one firm is one key. */
   firmId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "a firm id (uuid)").transform((s) => s.toLowerCase()),
   /** A person's own credential (a staff member's calendar); null or absent for a firm-wide one. */
-  personId: z.string().min(1).max(100).nullish(),
+  personId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,99}$/, "a person id: letters, digits and _ . : -").nullish(),
   /** What the credential is for, e.g. "zoom", "calendar", "mailbox" (lower-case words and dashes). */
   purpose: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/, "purpose: lower-case letters, digits and dashes"),
 });
