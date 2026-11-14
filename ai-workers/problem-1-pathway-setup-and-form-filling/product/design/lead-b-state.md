@@ -1,6 +1,6 @@
 # Lead B — state and hand-over (P-557: always committed, always resumable)
 
-**Lead B (2) (session `f68b2550…`) stopped new work at ~45% context, 14 Nov 09:31 IST (P-565); Lead 41 starts Lead B (3) from this file at the founder's next typed turn.** Lead B (2) ran from 14 Nov 07:56 IST. Hand-over written 14 Nov 07:53 IST by Lead B (1) (session `local_9bced770…`) at ~52% context, per P-565. A fresh Lead B starts here, on branch `lead-b-front-office` (GitHub), in its own worktree. Do not run `/lead` (the release holder's skill).
+**Lead B (3) (session `local_59938793…`, worktree `lead-b-front-office-238861`) took over 14 Nov 09:44 IST from Lead B (2) (`local_0dd43ee4…`, stopped at ~45% context, P-565; idle and clean when checked).** Lead B (2) ran from 14 Nov 07:56 IST. Hand-over written 14 Nov 07:53 IST by Lead B (1) (session `local_9bced770…`) at ~52% context, per P-565. A fresh Lead B starts here, on branch `lead-b-front-office` (GitHub), in its own worktree. Do not run `/lead` (the release holder's skill).
 
 ## Who is who
 * **Lead B** owns the new platform (firm sign-up, plans, subscriptions, staff sign-in and roles, walking skeleton) and front-office (enquiry → lead → prospect → booking → retainer → e-signature → payment) modules, all fenced (P-550, P-558). Writes rows and briefs on this branch; never edits `STATE.md`, `RULES.md`, `DECISIONS.md`, `BACKLOG.md`.
@@ -118,3 +118,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 09:28 IST: P-578 (founder: payment plans and saved-card autopay for earned fees kept) cited in FO-7p. Rev 11 copied; order of work accepted; account openings on the founder's list.
 * 14 Nov 09:30 IST: rows rev 12 (P-579): FO-13 schema, FO-13c conflict check (blocks Send/Convert/Signed offline without a check), FO-13k complaints, FO-13i identity check (warns, never blocks), FO-13s screens; duties read at the Code (s. 5, 15, 16, 24, 29, 35, 37; current to 2026-10-19); the College's by-laws not yet read (FO-13k reads them first).
 * 14 Nov 09:31 IST: FO-5 and FO-3 briefs written. Lead B (2) stops new work (~45% context, P-565); hand-over above is current.
+* 14 Nov 09:44 IST: Lead B (3) took over at Lead 41's start: told Lead B (2) to stop; it was idle with a clean worktree and nothing new pushed after 37bd72a9e. Read this file, RULES (as of P-581) and P-580 to P-582. FO-5 and FO-3 briefs were already pushed. Now: rows rev 13 for P-581's minimums (dup check done against BACKLOG, `main` and the 11 open PRs: none).
