@@ -48,3 +48,23 @@ FO-3 is API only: no screen. The "user" is the person booking a free consultatio
 5. m9: name the double click (words).
 
 **Not tested:** a real screen reader or browser (no page yet); an intended user's unaided walk (D17/D20 stay with the founder); the staff routes over HTTP (PF-4 is not on main); a restart of the copy (the fake arrival and jobs are in memory by design until FO-2 and PF-14).
+
+## Round 2 (4843bc16, :4431 restarted on it)
+I re-walked journeys 1, 3, 4, 6 and 7 live, and ran the suite: 101/101.
+* **Book:** 201 with no ids.
+* **Double click:** "That time is not available any more".
+* **Line break in a name:** 400 with the field named.
+* **Same-time reschedule:** nothing written, same link.
+* **Zone-only change:** the label is in the new zone, with one audit line and no event.
+* **Move:** sequence 1, and the old link gives 404.
+* **Cancel:** no ids; every link is voided.
+
+| Criterion | Round 1 | Round 2 | Evidence |
+|---|---|---|---|
+| Plain words | ½ | 1 | Neutral 409 text |
+| Feedback and state | ½ | 1 | A same-time move answers the unchanged booking |
+| Correct data | ½ | 1 | One event per change (`:0`, `:1`, `:2`), one audit line each, links voided |
+| Error recovery | ½ | ½ | 400 for bad names now, but a failed confirmation email is still not retried (m3) |
+| Trust and sources | ½ | 1 | Public answers carry no ids |
+
+The other criteria are unchanged (task 1, next step 1, speed 1; three N/A). **Round 2: 7.5 of 8 applicable = 9.4 / 10. Pass.**

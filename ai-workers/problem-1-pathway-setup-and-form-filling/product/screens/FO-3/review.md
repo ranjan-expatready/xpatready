@@ -94,3 +94,43 @@ Each Done-when line has a pass and a fail case and holds, except two:
 
 **Verdict: Block.** Fix M1, M2, M3 and M4; the Minors may follow.
 Reviewer: Block cdb70253b45f3d66ad3d86de96c46eec63b3b0c8
+
+## Round 2 (diff only, P-277): cdb70253..4843bc16
+Read: `git diff cdb70253..4843bc16` (service.ts, ports/arrival.ts, the test). The integration copy matches 4843bc16 file for file.
+
+**What I ran**
+* **Suite:** **101 passed, 0 failed**.
+* **Mutation:** I removed `audit.record` from reschedule and attendance; the suite gave **97 passed, 4 failed** (the fail and pass of each). The file is restored.
+* **Live app** at :4431, restarted on this head: book, double click, the same-time reschedule, a zone-only change, a move, the old link, cancel; then the rows read with psql.
+
+**Round-1 findings**
+* **M1: fixed.**
+  * `publicView` (`service.ts:549-551`) is the answer of book, reschedule and cancel.
+  * Live: the 201, the 200s and the cancel answer carry status, mode, times, zone and label (plus the link for book and reschedule), with no id.
+  * Tested pass and fail.
+* **M2: fixed.**
+  * A move to the booking's own time writes nothing (`service.ts:347-353`), and `afterCommit` runs only on a real move (`service.ts:362`).
+  * Live: the same-time move returned the same link and nothing was written. A zone-only change gave one `booking.zone_changed` audit line and no event. The real move gave sequence 1, and the old link then gave 404.
+  * Rows: events `:0`, `:1`, `:2`, each once; one audit line per change; 0 of 2 links live after the cancel.
+  * The test asserts no event, no audit line, sequence 0, both links live and 3 jobs waiting.
+* **M3: fixed.** Each of reschedule, cancel and attendance has a forced-failure rollback (row unchanged, no event) and a pass of exactly one audit line plus one event. My own mutation turns them red.
+* **M4: fixed.**
+  * `StaffBookingBody` has no `prospectId` (strict: 400).
+  * `ArrivalPort.bookingForPerson` (`ports/arrival.ts:55-58`) moves the only open prospect, and null gives 404. Firm B's person gives 404 with nothing saved, and the move to Consult with its cause is tested.
+* **Minors fixed:**
+  * m1: a name with a line break gives 400 "givenNames: no line breaks or control characters" (live); bidi and invisible-only names are refused too.
+  * m2: a per-firm limit on slots, and the booking limit now counts only stamped forms.
+  * m4: the `as unknown as Tx` cast is gone.
+  * m5: strict uuid; m6: `BookingEvent.parse`; m9: neutral 409 text.
+  * New zone, year, firm-key and slug shapes are subsets of main's database checks (`platform_firm_key_check` `^[a-z][a-z0-9-]{1,62}$`, FO-1b's slug and zone checks), so no valid row is refused.
+* **Still open, Minor, listed for Lead B in the PR:**
+  * m3: no retry for after-commit mail.
+  * m4: the port's breadth. `bookingForPerson` is in the brief's spirit (the prospect move stays FO-2's), but `contactOf` and `bookingConsentWording` still widen it.
+  * m7: the token in the GET path, and returned on book and reschedule. Note: `staffCreate` (`service.ts:246`) also returns the person's `manageToken` to staff; fold this into m7.
+  * m8: the prospect logic is tested on the fake.
+  * Trust proxy is main.ts's: agreed, it is not this row's.
+
+**No new Blocker or Major.** Journey score updated: **9.4 / 10** (7.5 of 8 applicable; error recovery stays ½ for m3); see the journey report.
+
+**Verdict: Approve.** No open Blocker or Major at 4843bc16; the Minors m3, m4, m7 and m8 go to Lead B as the PR lists.
+Reviewer: Approve 4843bc16b73beae3d15d80bc0dcf4a314b0c865a
