@@ -97,4 +97,48 @@ m1 to m5 are recommended. They can be fixed in this PR or listed for FO-3v and P
 
 Re-review reads only the diff (P-277).
 
-Verdict: Changes needed
+Round 1 verdict: Changes needed (superseded by Round 2 below).
+
+## Round 2: heads 4f24a8473, then d0531d698 (re-review of the diff only, P-277)
+Read `git diff c52912741 4f24a8473` and the breaker's re-check `git diff 4f24a8473 d0531d698`. The working tree was at d0531d698 for the runs.
+* `check_pf24_secrets.ts 18524 runtime_pf24rv`: **68 passed, 0 failed**.
+* `typecheck.mjs`: **PASS, no new type errors** (15 known, 0 fixed).
+* My own isolated copy `runtime_pf24rv2` :18526: `check_s7_reset` **4/4** (C10.1 included), `check_d1_reset_to_six` **25/25**.
+
+### Round 1 findings
+| # | Status | Evidence |
+|---|---|---|
+| M1 | **fixed** | `tests/check_pf24_secrets.ts:55` declares `without: Record<string, string>`; the type gate is clean. |
+| M2 | **fixed** | `RUNBOOK-secrets.md` §3 step 1 now uses two login roles that take turns: set a password on the role not in use, point `DATABASE_URL` at it, deploy, then in step 4 give the retired role a random password. It also says never to run `ALTER ROLE … PASSWORD` on the role in use. The order is right for a rolling deploy at minimum healthy 100%. |
+| m1 | **fixed** | The job key now carries a round (`reencryptJobKey(firm, v, round)`, `:r<n>`). One job makes up to 3 passes and resets its per-pass counters, while `moved` keeps adding up. If a value is still on the old version after the last pass, the job fails and names the next round. Runbook §4 step 4 says what to do. Tests: a writer that keeps putting the old value back fails round 1; round 2 queues and moves the value once that writer stops; a round of 0, -1, 1.5 or NaN is refused. |
+| m2 | **fixed** | Runbook §4 step 3 says the enqueue command arrives with the first store (FO-3v); until then there is nothing to move. |
+| m3 | open, Minor | Still GET routes only, with `DATABASE_URL` left out of the seeded values. The PR body's test table says "145 GET routes", but it does not list "non-GET routes and `DATABASE_URL` not swept" as later work, which the coordinator's note said it would. Add one line under "left for a later row". Not blocking. |
+| m4 | **fixed** | `SecretOwner.firmId` (`ports/secret-box.ts:18-19`) must be a uuid and is lower-cased, so HKDF and the AAD always see one spelling. `personId` is capped at 100 characters. `enqueueReencrypt` checks every payload before it queues the first. |
+| m5 | **fixed (listed)** | The PR body lists `core.ts:17`, `front-office/booking-seed.ts:66` and PF-4's `PLATFORM_*` settings, including `PLATFORM_LOCAL_SECRET`, under "left for a later row". |
+
+### Breaker fixes in this diff
+Each has a pass or fail test, and each fails if its fix is removed.
+* **Secrets removed from `process.env` after load** (`settings.ts`, `platformConfig()`, using `SCRUBBED_FROM_ENV`). `DATABASE_URL` stays on purpose, because `core.ts` still reads it. The test spawns a child process after the load and finds none of the scrubbed values in its environment.
+  * Removal only happens after a successful load, and nothing on `main` reads these names from `process.env` later, so nothing breaks. The reset suites above pass with it.
+  * The leftover risk is that a child running as the same user can still read `/proc/<ppid>/environ`. The runbook now names this and leaves it open for PF-8. I agree with that: the image runs no untrusted-file reader today.
+* **No value echoed for an unknown `PLATFORM_ENVIRONMENT`**: the refusal says "not recognised". Fixed.
+* **An AWS task without `PLATFORM_ENVIRONMENT` is refused** (detected by `ECS_CONTAINER_METADATA_URI(_V4)` or `AWS_EXECUTION_ENV`). It is never treated as local, where every secret is optional. None of these variables is set in this cloud session or by the local compose file, and the isolated start passed.
+* **Key ring:**
+  * keys must be canonical base64, compared as bytes, and not low-variety (more than 8 distinct byte values, which rules out an all-zero key);
+  * the ring is now a frozen read-only view over a private Map, so `Map.prototype.set.call` on it throws as well.
+* **Sealed values:** each base64url part must be canonical, and a credential with a lone surrogate is refused, so what opens is always exactly what was sealed.
+* **`pageSize` is a whole number from 1 to 10 000**, so a page size of 0 can no longer loop forever.
+* **`enqueueReencrypt` returns only newly queued firms**: the second enqueue now returns `[]`, and the test asserts it.
+
+The crypto core (AES-256-GCM, 12-byte iv, 16-byte tag, owner and version in the AAD, HKDF per firm) is unchanged from round 1.
+
+### New Minors (not blocking)
+* **n1, `RUNBOOK-secrets.md` §3 step 1.** With two login roles, a table created by a migration while `app_a` is active is owned by `app_a`. `app_b` then cannot use it after the switch, and the first request that touches it errors. Fix: one sentence saying migrations run with `SET ROLE <owning role>` (or the owning role sets `ALTER DEFAULT PRIVILEGES`), so every object belongs to the shared role.
+* **n2, `tests/check_pf24_secrets.ts`, the break-m2 case.** The "same key spelled two ways" clause only runs when `sameBytes` is true, and it rarely is. In canonical base64 the 43rd character is one of 16 values whose index is a multiple of 4. XOR-ing its char code with 1 gives a respelling with the same bytes only for `0`, `4` and `8`, which flip their index from 52, 56 or 60 to the next one up. `A` becomes `@`, which is not base64, and every other letter becomes the previous letter, which changes the high bits. So in about 13 of 16 runs the clause passes without testing anything; the all-zero clause still runs every time. Fix: respell by base64 index (index + 1, which stays inside the unused low 2 bits) so the clause always runs.
+* **n3, `reencrypt.ts`, `registerReencryptJob`.** When a job has both a changed-meanwhile value and a refused value, the failure message names only the first. The refused ids are still in the `done` result. Fix: put both counts in the message.
+
+Open Blocker or Major: none. The re-encrypt job still fits PF-0p's `JobPort` (the type and payload shape are unchanged apart from the optional `round`, and keys stay at most 200 characters).
+
+This approval covers head **d0531d698** (code reviewed at 4f24a8473 plus the d0531d698 diff; 68/68 and the type gate run at d0531d698).
+
+Verdict: Approve
