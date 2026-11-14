@@ -7,15 +7,11 @@
 // A route with none of these stops the start-up with its name (guard.ts, assertEveryRouteDeclared). Firm routes accept
 // only agent/* keys (SA-6-4, BR-4: platform roles hold system/* keys and the two never mix): a firm route naming another
 // key stops the start-up, and the guard reads only a person's agent/* keys.
-// Each declaration also marks the route OpenRead for core.ts's ConfigReadGuard (its own decorator for a route that guards
-// itself): without it, that guard would read a platform GET as a configuration read and ask for a simulated person.
-// The token travels in `X-Staff-Session: Bearer <token>` (STAFF_SESSION_HEADER): core.ts refuses an Authorization Bearer
-// header on every path but /api/link/ (C6.16), and that file is outside PF-4 (question for the tech lead on the PR: one
-// line there would let the guard read `Authorization: Bearer` as well; the guard already accepts it when it arrives).
+// core.ts's ConfigReadGuard leaves these paths to this guard (its one line, Lead 43's OK on #1744); the staff session
+// travels as `Authorization: Bearer <token>`.
 // Nest's decorators are applied as calls in this folder, not with @ syntax: api/tsconfig.json compiles decorators only for
-// src/*.ts and src/features/**, and that file is outside PF-4 (question for the tech lead: add "src/platform/**/*.ts").
-import { HttpException, HttpStatus, SetMetadata, applyDecorators } from "@nestjs/common";
-import { OpenRead } from "../../core.ts";
+// src/*.ts and src/features/** (adding src/platform/** is a later row for Lead B, Lead 43 on #1744).
+import { HttpException, HttpStatus, SetMetadata } from "@nestjs/common";
 
 export const PLATFORM_ACCESS = "platform:access";
 export type PlatformAccess = { kind: "keys"; keys: string[] } | { kind: "any-staff"; why: string } | { kind: "sign-in"; why: string };
@@ -25,8 +21,7 @@ export const PLATFORM_PATH = /^\/api\/(platform|front-office)(\/|$)/;
 /** Firm routes (every path the guard owns today) accept only the firm plane's keys. */
 export const FIRM_KEY = /^agent\/[a-z][a-z0-9-]*:[a-z][a-z0-9.-]*$/;
 
-export const STAFF_SESSION_HEADER = "x-staff-session";
-const declare = (a: PlatformAccess) => applyDecorators(SetMetadata(PLATFORM_ACCESS, a), OpenRead("a platform route: the platform guard checks the staff session and the permission keys"));
+const declare = (a: PlatformAccess) => SetMetadata(PLATFORM_ACCESS, a);
 export const PermissionKeys = (...keys: string[]) => {
   if (!keys.length) throw new Error("PermissionKeys: name at least one key (or use AnyStaff with a reason)");
   return declare({ kind: "keys", keys });

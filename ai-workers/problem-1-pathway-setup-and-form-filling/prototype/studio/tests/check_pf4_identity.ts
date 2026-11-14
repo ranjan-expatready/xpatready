@@ -15,7 +15,7 @@ import { APP_GUARD, NestFactory } from "@nestjs/core";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { execFileSync } from "node:child_process";
-import { createSign, generateKeyPairSync, randomUUID } from "node:crypto";
+import { createSign, generateKeyPairSync, randomBytes, randomUUID } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -37,7 +37,7 @@ for (const s of [process.stdout, process.stderr]) { const w = s.write.bind(s); s
 type Res = { status: number; body: any };
 const call = async (base: string, method: string, path: string, o: { token?: string; auth?: string; actor?: string; body?: unknown } = {}): Promise<Res> => {
   const headers: Record<string, string> = { "content-type": "application/json" };
-  if (o.token) headers["x-staff-session"] = `Bearer ${o.token}`;
+  if (o.token) headers.authorization = `Bearer ${o.token}`;
   if (o.auth) headers.authorization = o.auth;
   if (o.actor) headers["x-actor"] = o.actor;
   const r = await fetch(`${base}${path}`, { method, headers, body: o.body === undefined ? undefined : JSON.stringify(o.body) });
@@ -136,16 +136,22 @@ try {
   ok("PF-4 fail: user-O (Case Officer, no licence) has the case duty but neither represent nor firm_admin",
     meO.status === 200 && meO.body.duties.join() === "case" && meO.body.licensed === false, meO.body);
   ok("PF-4 pass: every key the guard reads is a firm key (agent/*); none is system/*", [...meR.body.keys, ...meO.body.keys].every((k: string) => k.startsWith("agent/")));
-  const noToken = await call(L.base, "GET", "/api/platform/me", { actor: "user-R" });
-  ok("PF-4 fail: a platform route with only the simulated-person header (no staff session) is refused 401", noToken.status === 401 && noToken.body.code === "NOT_SIGNED_IN", noToken);
+  const noToken = await Promise.all(["user-R", "representative", "user-A"].map((actor) => call(L.base, "GET", "/api/platform/me", { actor })));
+  ok("PF-4 fail (Lead 43's condition on core.ts's line): the simulated-person header alone (X-Actor: user-R, its persona name, a configuration person) is refused 401 on a platform route",
+    noToken.every((r) => r.status === 401 && r.body.code === "NOT_SIGNED_IN"), noToken.map((r) => [r.status, r.body.code]));
+  // An adult's link session token has exactly this shape (person-link.ts: 32 random bytes, base64url, 43 characters).
+  const linkToken = randomBytes(32).toString("base64url");
+  const asLink = await Promise.all([call(L.base, "GET", "/api/platform/me", { auth: `Bearer ${linkToken}` }), call(L.base, "GET", "/api/platform/staff/invitations", { auth: `Bearer ${linkToken}`, actor: "user-R" })]);
+  ok("PF-4 fail (Lead 43's condition on core.ts's line): a link-session Bearer token on GET /api/platform/me is refused 401 (also with a simulated person beside it)",
+    linkToken.length === 43 && asLink.every((r) => r.status === 401 && r.body.code === "TOKEN_REFUSED"), asLink.map((r) => [r.status, r.body.code]));
   const missingKey = await call(L.base, "GET", "/api/platform/staff/invitations", { token: tO });
   ok("PF-4 fail: a route's declared key that the person lacks is refused 403 (default deny)", missingKey.status === 403 && missingKey.body.code === "MISSING_PERMISSION", missingKey);
 
   // ----------------------------------------------------- every other route and the simulated-person header as before
-  const probe = await Promise.all([call(L.base, "GET", "/api/probe", { actor: "user-A" }), call(L.base, "GET", "/api/probe"), call(L.base, "GET", "/api/probe", { actor: "user-O" }), call(L.base, "GET", "/api/probe", { auth: `Bearer ${tR}` }), call(L.base, "GET", "/api/probe", { token: tR })]);
+  const probe = await Promise.all([call(L.base, "GET", "/api/probe", { actor: "user-A" }), call(L.base, "GET", "/api/probe"), call(L.base, "GET", "/api/probe", { actor: "user-O" }), call(L.base, "GET", "/api/probe", { token: tR }), call(L.base, "GET", "/api/probe", { token: tR, actor: "user-A" })]);
   ok("PF-4 pass: an existing route still reads the simulated-person header (user-A 200)", probe[0].status === 200);
-  ok("PF-4 fail: an existing route still refuses nobody (401), a case person on a configuration read (403), and a Bearer header (403 link-only); a staff session gives no access there",
-    probe[1].status === 401 && probe[2].status === 403 && probe[3].status === 403 && /link/i.test(JSON.stringify(probe[3].body)) && probe[4].status === 401, probe.map((p) => p.status));
+  ok("PF-4 fail: an existing route still refuses nobody (401), a case person on a configuration read (403), and any Bearer header (403 link-only), so a staff session gives no access outside the platform paths",
+    probe[1].status === 401 && probe[2].status === 403 && probe[3].status === 403 && /link/i.test(JSON.stringify(probe[3].body)) && probe[4].status === 403, probe.map((p) => p.status));
 
   // --------------------------------------------------------------------------------- the Cognito path (test keys)
   const { publicKey, privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -386,8 +392,11 @@ else {
   const me = sR.status === 200 ? await call(BASE, "GET", "/api/platform/me", { token: sR.body.token }) : sR;
   ok("PF-4 pass: on the real server, user-R signs in through the local stand-in as a Case Manager with a licence; duties include represent",
     me.status === 200 && me.body.roles.includes("CASE_MANAGER") && me.body.licensed === true && me.body.duties.includes("represent"), me);
-  const asBearer = await call(BASE, "GET", "/api/platform/me", { auth: `Bearer ${sR.body.token}` });
-  ok("PF-4 fail: core.ts's link-only rule is unchanged — an Authorization Bearer header is still refused 403 there (the staff session travels in X-Staff-Session; question for the tech lead)", asBearer.status === 403, asBearer);
+  const linkOnCopy = await call(BASE, "GET", "/api/platform/me", { auth: `Bearer ${randomBytes(32).toString("base64url")}` });
+  const actorOnCopy = await call(BASE, "GET", "/api/platform/me", { actor: "user-R" });
+  const staffElsewhere = await call(BASE, "GET", "/api/structure", { token: sR.body.token, actor: "user-A" });
+  ok("PF-4 fail: on the real server, a link-shaped Bearer token or the simulated-person header alone on /api/platform/me → 401; the staff session on an existing route → 403 link-only, as before",
+    linkOnCopy.status === 401 && actorOnCopy.status === 401 && staffElsewhere.status === 403, [linkOnCopy.status, actorOnCopy.status, staffElsewhere.status]);
   const team = await call(BASE, "GET", "/api/session", { actor: "user-A" });
   const sessionNobody = await call(BASE, "GET", "/api/structure");
   ok("PF-4 pass/fail: existing routes behave as before on the real server (who-am-I opens; a configuration read without a person is 401)", team.status === 200 && sessionNobody.status === 401, [team.status, sessionNobody.status]);

@@ -2,13 +2,14 @@
 // bearer token → staff member, grants and keys (PF-3's tables) → a deactivated person or a session started before the
 // person's last revocation is refused at once (401) → the route's declared permission keys, all of them (403 otherwise)
 // → { staffId, firmId, keys, duties } on the request (req.platform; read with staffOf). Any other path is left exactly as
-// it was: this guard returns at once and the simulated-person header keeps its own guard (core.ts ConfigReadGuard).
+// it was: this guard returns at once and the simulated-person header keeps its own guard (core.ts ConfigReadGuard, which
+// in turn leaves these paths to this guard). The simulated-person header gives nothing here: no bearer token is a 401.
 // At start-up every route under those paths must declare its access (keys.ts); one that does not, or a firm route naming
 // a key outside agent/*, stops the start-up with its name.
 import { Inject, Injectable, type CanActivate, type ExecutionContext, type OnModuleInit } from "@nestjs/common";
 import { METHOD_METADATA, PATH_METADATA } from "@nestjs/common/constants.js";
 import { ModulesContainer, Reflector } from "@nestjs/core";
-import { FIRM_KEY, PLATFORM_ACCESS, PLATFORM_PATH, STAFF_SESSION_HEADER, forbidden, type PlatformAccess, type StaffContext } from "./keys.ts";
+import { FIRM_KEY, PLATFORM_ACCESS, PLATFORM_PATH, forbidden, type PlatformAccess, type StaffContext } from "./keys.ts";
 import { PlatformIdentity } from "./service.ts";
 
 const METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "ALL", "OPTIONS", "HEAD", "SEARCH"];
@@ -57,8 +58,7 @@ export class PlatformGuard implements CanActivate, OnModuleInit {
     const access = this.reflector.getAllAndOverride<PlatformAccess>(PLATFORM_ACCESS, [ctx.getHandler(), ctx.getClass()]);
     if (!access) forbidden("This route declares no permission keys, so it is refused (default deny).", "AUTHZ_UNCONFIGURED");
     if (access.kind === "sign-in") return true;
-    // The staff session's bearer token: X-Staff-Session today (keys.ts says why), or Authorization once core.ts lets it through.
-    const h = req.headers[STAFF_SESSION_HEADER] ?? req.headers.authorization, auth = Array.isArray(h) ? h[0] : h;
+    const h = req.headers.authorization, auth = Array.isArray(h) ? h[0] : h;
     const m = typeof auth === "string" ? /^Bearer\s+(\S+)$/i.exec(auth.trim()) : null;
     const staff = await this.identity.authenticate(m?.[1]);
     if (access.kind === "keys") {
