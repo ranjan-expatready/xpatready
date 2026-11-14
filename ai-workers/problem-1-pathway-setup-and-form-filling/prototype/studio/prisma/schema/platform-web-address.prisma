@@ -1,0 +1,44 @@
+// platform-web-address.prisma — each firm's own web address and its change history (PF-25). Owner: Lead B (platform).
+// PF-25 (SA-2-27, SA2-D8, AG-4-16, AG-4-17, AG01-1): `<address>.expatready.com`. Its own file (P-600 (1)); platform_firm
+// gets only its two back-relations, on PF-25's own slot line in platform.prisma. The address is a table of its own rather
+// than a platform_firm column, so platform_firm's columns stay as they are: a client generated with a new platform_firm
+// column could no longer read platform_firm on a copy migrated only up to an earlier row (every check that seeds the
+// Sample firms there). Rules Prisma cannot say (shape and reserved names, a change only with its redirect record, a held
+// address never taken by another firm, never removed, insert-only history, the Sample firms' address from their key) are
+// in the migration 20261114230000_pf25_web_address. Read and written only through api/src/platform/web-address/.
+
+/// A firm's web address (SA-2-27): one per firm, unique. Set at sign-up (PF-5) or, for a Sample firm, from its key;
+/// afterwards changed only by ExpatReady staff, each change with its redirect record. Never removed.
+model PlatformFirmWebAddress {
+  firmId    String   @id @map("firm_id") @db.Uuid
+  address   String   @unique
+  setBy     String   @map("set_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  firm PlatformFirm @relation(fields: [firmId], references: [id], onDelete: Restrict)
+
+  @@map("platform_firm_web_address")
+}
+
+/// One change of a firm's web address by ExpatReady staff (SA-2-27), with its reason (their own words) and who
+/// (`staff:<id>`). The old address redirects (301) to the firm's current one until `until` (90 days after changed_at, set
+/// by the database, SA2-D8) and no other firm may take it before then. A first address set by staff has no old address
+/// and no until. Insert-only (a trigger refuses update, delete and truncate).
+model PlatformFirmAddressHistory {
+  id         String   @id @default(uuid()) @db.Uuid
+  firmId     String   @map("firm_id") @db.Uuid
+  oldAddress String?  @map("old_address")
+  newAddress String   @map("new_address")
+  until      DateTime? @db.Timestamptz
+  reason     String
+  changedBy  String   @map("changed_by")
+  changedAt  DateTime @default(now()) @map("changed_at") @db.Timestamptz
+
+  firm PlatformFirm @relation(fields: [firmId], references: [id], onDelete: Restrict)
+
+  @@index([firmId, changedAt])
+  /// The host resolver's lookup (an old address to its firm, while held): a request names an address, not a firm.
+  @@index([oldAddress, until])
+  @@map("platform_firm_address_history")
+}
