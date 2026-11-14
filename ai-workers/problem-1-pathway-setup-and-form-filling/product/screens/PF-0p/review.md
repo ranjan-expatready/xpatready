@@ -44,3 +44,30 @@ Met: the seven port files and their fakes; AuditEntry fields with summary ≤ 60
 Yes, with a pass and a fail per fake. The rollback check would fail if the adapter wrote outside `tx`, because the line count would change. The slot check's fail case deletes a separator and a line. The import check has a negative sample, though with the gap in item 9. Missing: a two-writer race on the adapter (M1) and a determinism check on the fakes' defaults (M2).
 
 **Reviewer: Changes requested**: fix M1 (adapter first-writer race) and M2 (`fakeStaff` authTime against the wall clock); Minors 3–10 are recommended in the same pass, especially 3 (doc line) and 5 (one line). Re-review reads only the diff, including `458b7fd49`.
+
+## Round 2 (diff `3adcc2faf..0e7772bbc5ce47803ad3fc55c07755dc93ed0065`, two commits; P-277: only the diff was read)
+**Ran:** `check_pf0p_ports.ts` gives **66 passed, 0 failed** (exit 0). `typecheck.mjs` passes with no new errors (15 known). I re-ran the round-1 probes against the new code:
+* fakeStaff's sign-in age under the default FakeClock is now 0 s (it was 866,325 s).
+* A 90-day advance with 3 schedules now takes 1.9 s (it was 22.1 s).
+* `*/2` with weekday 1 now uses AND, as Vixie cron does.
+* Re-putting the same bytes under another content type is now refused.
+* The DST behaviour is unchanged, as now documented.
+
+**`458b7fd49`:** `JobRun.attempt` counts from 1, and the fake always gives 1. It is a field addition that the test covers, and I have no finding on it.
+
+**Round-1 findings:**
+* **M1 is closed.** `audit-event.ts` now runs findUnique, then `createMany({ skipDuplicates: true })` (INSERT … ON CONFLICT DO NOTHING), then `findUniqueOrThrow`. This is the fix I probed in round 1. The two new tests both run on a second PrismaClient:
+  * In the first, both writers commit and there is one workspace.
+  * In the second, the first writer rolls back and the waiting second still commits.
+
+  A sends its first statement 200 ms before B and holds its transaction open for 800 ms, so B does block on the key. The coordinator reports that the first test fails with P2002 on the old upsert code.
+  * Note, not a finding: the fix relies on READ COMMITTED, Prisma's default. A caller running a REPEATABLE READ or SERIALIZABLE transaction would get a serialization error instead. That is acceptable for an interim adapter; AUD-1 should know.
+* **M2 is closed.** `FAKE_NOW` (`clock.ts`) is FakeClock's default start. `fakeStaff(partial, clock?)` and `fakeMail({ clock })` default to it and never read the wall clock. The 6-minute stale step-up test gives the same result whatever day it runs.
+* **Minors 3-9 are closed** as listed by the builder: the key doc line, the DST doc plus the Vixie AND rule with its test, the cached formatter, mail `sentAt`, refusing another content type, `failOn(e, tx)` plus the `entries` doc, and the import check now catching side-effect imports and `require` (its fail sample has 7 imports and expects all 7). Two remarks, neither asking for a change:
+  * `fakeMail`'s `now` option became `clock`. No caller exists yet, so nothing breaks.
+  * Under DST the fake still runs a repeated time twice and skips a missing one. That is documented, with the advice to schedule outside 01:00-03:00 local.
+* **Minor 10** stays a note for the Lead (main's pre-existing `migrate diff` drift). The round-1 Lead notes stand: the `limit 1` workspace pickers, `*.port.ts` naming, and the mixed audit trail for AUD-1.
+
+**New findings in the diff:** none.
+
+**Reviewer: Approve 0e7772bbc5ce47803ad3fc55c07755dc93ed0065**
