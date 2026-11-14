@@ -16,7 +16,7 @@ import { z } from "zod";
 import type { ArrivalPort } from "../../../../ports/arrival.ts";
 import type { AuditPort } from "../../../../ports/audit.ts";
 import type { ClockPort } from "../../../../ports/clock.ts";
-import { EVENT } from "../../../../ports/events.ts";
+import { BookingEvent, EVENT } from "../../../../ports/events.ts";
 import type { JobPort, JobRun } from "../../../../ports/jobs.ts";
 import type { MailPort } from "../../../../ports/mail.ts";
 import type { StaffContext } from "../../../../ports/staff.ts";
@@ -36,7 +36,8 @@ const MIN = 60_000, DAY = 24 * 60 * MIN;
 const TX = { maxWait: 10_000, timeout: 20_000 };
 
 export type BookingPorts = {
-  audit: AuditPort<Tx>; clock: ClockPort; jobs: JobPort; mail: MailPort; arrival: ArrivalPort<Tx>;
+  /** The arrival port's reads (consent wording, contact) run on the client outside a write, its writes inside one. */
+  audit: AuditPort<Tx>; clock: ClockPort; jobs: JobPort; mail: MailPort; arrival: ArrivalPort<Tx | PrismaClient>;
   /** Where the public pages live (the firm's address once PF-25 lands): the self-service link is `<base>/book/<firm>/manage#<token>`. */
   publicBaseUrl: string;
   /** Public-door limits (contracts §0.6): requests per IP and per firm in a rolling window. */
@@ -46,8 +47,8 @@ export type BookingPorts = {
   /** Where after-commit failures are told (never thrown). */
   warn?: (msg: string) => void;
 };
-type Limits = { slotsPerIp: number; bookPerIp: number; bookPerFirm: number; tokenPerIp: number; windowMinutes: number; minFillSeconds: number };
-const LIMITS: Limits = { slotsPerIp: 120, bookPerIp: 10, bookPerFirm: 200, tokenPerIp: 30, windowMinutes: 10, minFillSeconds: 3 };
+type Limits = { slotsPerIp: number; slotsPerFirm: number; bookPerIp: number; bookPerFirm: number; tokenPerIp: number; windowMinutes: number; minFillSeconds: number };
+const LIMITS: Limits = { slotsPerIp: 120, slotsPerFirm: 3000, bookPerIp: 10, bookPerFirm: 200, tokenPerIp: 30, windowMinutes: 10, minFillSeconds: 3 };
 
 // ------------------------------------------------------------------------------------------------------------- problems
 const problem = (status: number, slug: string, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -56,17 +57,27 @@ const problem = (status: number, slug: string, title: string, detail: string, ex
  *  rule 3; AG-4-36): nothing in it tells which. */
 export const notFound = () => problem(404, "not-found", "Not found", "This booking page or link is not available.");
 const refused = (detail: string, issues: string[] = []) => problem(400, "booking-refused", "Not booked", detail, issues.length ? { issues } : {});
-const slotTaken = (slots: PublicSlot[]) => problem(409, "slot-taken", "That time was just taken", "Someone else booked that time a moment ago. Please choose another time.", { code: "SLOT_TAKEN", slots });
+/** The time asked is not free (taken a moment ago, or never offered): one neutral answer with fresh times (AG-4-27). */
+const slotTaken = (slots: PublicSlot[]) => problem(409, "slot-taken", "That time is not available", "That time is not available any more. Please choose another time.", { code: "SLOT_TAKEN", slots });
 const tooLate = () => problem(409, "too-close-to-meeting", "Too close to the meeting", "Your meeting starts soon, so it can no longer be changed here. Please reply to your confirmation email or call the firm.", { code: "SELF_SERVICE_CLOSED" });
 const forbidden = (key: string) => problem(403, "forbidden", "Not allowed", `This needs the permission ${key}.`);
 const tooMany = () => problem(429, "too-many-requests", "Too many requests", "Please wait a few minutes and try again.");
 
 // -------------------------------------------------------------------------------------------------------------- inputs
-const ZONE_NAME = /^(UTC|[A-Z][A-Za-z]+(\/[A-Z0-9][A-Za-z0-9_+-]*)+)$/;
-export const isZone = (s: string) => { if (!ZONE_NAME.test(s)) return false; try { new Intl.DateTimeFormat("en-CA", { timeZone: s }); return true; } catch { return false; } };
-const Zone = z.string().max(64).refine(isZone, "an IANA time zone, e.g. America/Toronto");
-const Instant = z.iso.datetime({ offset: true }).transform((s) => new Date(s));
-const Name = z.string().trim().min(1, "required").max(100);
+// The database's zone shape (FO-1b's fo_zone_ok), so a zone the API takes is one the database takes; the spelling is the
+// one IANA uses (a case-only difference such as America/TORONTO is put right; break B-10).
+const ZONE_NAME = /^(UTC|Etc\/GMT[+-][0-9]{1,2}|[A-Z][A-Za-z_-]*(\/[A-Z][A-Za-z_-]*)+)$/;
+const resolvedZone = (s: string) => { try { return new Intl.DateTimeFormat("en-CA", { timeZone: s }).resolvedOptions().timeZone; } catch { return null; } };
+export const isZone = (s: string) => ZONE_NAME.test(s) && resolvedZone(s) !== null;
+const Zone = z.string().max(64).transform((s) => { const r = resolvedZone(s); return r && r.toLowerCase() === s.toLowerCase() ? r : s; }).refine(isZone, "an IANA time zone, e.g. America/Toronto");
+/** A moment with its offset, between 2000 and 2100 (a year PostgreSQL cannot pad is refused here, never a 500; break B-2). */
+const Instant = z.iso.datetime({ offset: true }).transform((s) => new Date(s)).refine((d) => d.getTime() >= Date.UTC(2000, 0, 1) && d.getTime() < Date.UTC(2100, 0, 1), "a time between 2000 and 2100");
+/** A person's name: no line break, control, bidirectional or invisible-only text (breaks B-2, B-9). */
+const Name = z.string().trim().min(1, "required").max(100)
+  .refine((v) => !/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(v), "no line breaks or control characters")
+  .refine((v) => /[\p{L}\p{N}]/u.test(v), "a name with letters");
+const FIRM_KEY = /^[a-z0-9][a-z0-9-]{0,79}$/, SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MODES = ["VIDEO", "PHONE", "IN_PERSON"] as const;
 
 export const PublicBookingBody = z.strictObject({
@@ -85,7 +96,7 @@ export const PublicBookingBody = z.strictObject({
   formStamp: z.string().max(200),
 });
 export const StaffBookingBody = z.strictObject({
-  typeId: z.uuid(), personId: z.uuid(), prospectId: z.uuid().optional(), mode: z.enum(MODES), startsAt: Instant, timeZone: Zone,
+  typeId: z.uuid(), personId: z.uuid(), mode: z.enum(MODES), startsAt: Instant, timeZone: Zone,
 });
 export const RescheduleBody = z.strictObject({ startsAt: Instant, timeZone: Zone.optional() });
 export const SlotsQuery = z.object({ from: Instant.optional(), to: Instant.optional(), tz: Zone.optional() });
@@ -127,7 +138,7 @@ export class BookingService {
   // ================================================================================================== the public door
   /** The type a public page names: an ACTIVE or TRIAL firm's active free-consultation type, by slug; else the one 404. */
   private async publicType(db: Tx | PrismaClient, firmKey: unknown, slug: unknown) {
-    if (typeof firmKey !== "string" || typeof slug !== "string" || firmKey.length > 80 || slug.length > 80) throw notFound();
+    if (typeof firmKey !== "string" || typeof slug !== "string" || !FIRM_KEY.test(firmKey) || !SLUG.test(slug)) throw notFound();
     const firm = await db.platformFirm.findUnique({ where: { key: firmKey }, select: { id: true, key: true, status: true, operatingName: true, contactEmail: true } });
     if (!firm || !["ACTIVE", "TRIAL"].includes(firm.status)) throw notFound();
     const type = await db.foConsultationType.findFirst({ where: firmScope(firm.id, { slug, active: true, purpose: "FREE_CONSULT" as const }) });
@@ -140,6 +151,7 @@ export class BookingService {
   async publicSlots(firmKey: string, slug: string, query: unknown, ip: string) {
     this.limit(`slots:ip:${ip}`, this.limits.slotsPerIp);
     const { firm, type } = await this.publicType(this.db, firmKey, slug);
+    this.limit(`slots:firm:${firm.id}`, this.limits.slotsPerFirm);
     const q = parse(SlotsQuery, query);
     const firmZone = await readSetting<string>(this.db, firm.id, TIME_ZONE.key);
     const tz = q.tz ?? firmZone;
@@ -147,7 +159,7 @@ export class BookingService {
     const from = q.from ?? now, to = q.to ?? new Date(from.getTime() + 14 * DAY);
     if (!(from < to) || to.getTime() - from.getTime() > 62 * DAY) throw refused("Ask for at most 62 days of times, from before to.");
     const slots = await this.slotsFor(this.db, firm.id, type, from, to);
-    const consent = await this.ports.arrival.bookingConsentWording(this.db as unknown as Tx, firm.id);
+    const consent = await this.ports.arrival.bookingConsentWording(this.db, firm.id);
     return {
       firm: { name: firm.operatingName },
       type: { name: type.name, minutes: type.minutes, modes: type.modes, phoneNeededFor: ["PHONE"], meetingLink: null },
@@ -162,19 +174,20 @@ export class BookingService {
   async publicBook(firmKey: string, slug: string, body: unknown, ip: string) {
     this.limit(`book:ip:${ip}`, this.limits.bookPerIp);
     const { firm, type } = await this.publicType(this.db, firmKey, slug);
-    this.limit(`book:firm:${firm.id}`, this.limits.bookPerFirm);
     const b = parse(PublicBookingBody, body);
     if (b.website) throw refused("We could not take this booking. Please try again.");
     this.checkStamp(firm.id, b.formStamp);
+    // The firm's limit counts only well-formed, stamped forms, so empty posts cannot close a firm's page (break B-3).
+    this.limit(`book:firm:${firm.id}`, this.limits.bookPerFirm);
     if (!type.modes.includes(b.mode)) throw refused("Please choose one of the ways to meet offered.", ["mode: not offered for this consultation"]);
     if (b.mode === "PHONE" && !b.phone) throw refused("Please give a phone number for a phone call.", ["phone: required for a phone call"]);
-    const wording = await this.ports.arrival.bookingConsentWording(this.db as unknown as Tx, firm.id);
+    const wording = await this.ports.arrival.bookingConsentWording(this.db, firm.id);
     if (!wording) throw notFound();
     if (wording.wordingId.toLowerCase() !== b.consentWordingId.toLowerCase()) throw problem(409, "consent-wording-changed", "Please reload", "The firm's agreement text has changed. Please reload the page and tick the box again.");
     const person = { givenNames: b.givenNames, familyName: b.familyName, email: b.email, ...(b.phone ? { phone: b.phone } : {}) };
     const out = await this.create(firm.id, type, { startsAt: b.startsAt, mode: b.mode, timeZone: b.timeZone }, { word: "system:booking-page" },
       async (tx, bookingId) => this.ports.arrival.bookingArrived(tx, { firmId: firm.id, person, consent: { wordingId: wording.wordingId, givenAt: this.ports.clock.now() }, bookingId }));
-    return out;
+    return { ...this.publicView(out.booking), manageToken: out.token };
   }
 
   /** GET the self-service view by token: what, when, and whether it can still be changed here. */
@@ -205,13 +218,14 @@ export class BookingService {
     this.limit(`token:ip:${ip}`, this.limits.tokenPerIp);
     const b = parse(RescheduleBody, body);
     const { booking } = await this.byToken(this.db, token);
-    return this.move(booking.firmId, booking.id, b.startsAt, b.timeZone, { word: "system:booking-link" }, token);
+    const out = await this.move(booking.firmId, booking.id, b.startsAt, b.timeZone, { word: "system:booking-link" }, token);
+    return { ...this.publicView(out.booking), manageToken: out.token ?? token };
   }
 
   async selfCancel(token: string, ip: string) {
     this.limit(`token:ip:${ip}`, this.limits.tokenPerIp);
     const { booking } = await this.byToken(this.db, token);
-    return this.cancelBooking(booking.firmId, booking.id, { word: "system:booking-link" }, token);
+    return this.publicView(await this.cancelBooking(booking.firmId, booking.id, { word: "system:booking-link" }, token));
   }
 
   // ========================================================================================= staff (services until PF-4)
@@ -221,23 +235,28 @@ export class BookingService {
     const type = await this.db.foConsultationType.findFirst({ where: firmScope(ctx.firmId, { id: b.typeId, active: true }) });
     if (!type) throw notInFirm("consultation type");
     if (!type.modes.includes(b.mode)) throw refused("Please choose one of the ways to meet offered.", ["mode: not offered for this consultation"]);
-    const contact = await this.ports.arrival.contactOf(this.db as unknown as Tx, ctx.firmId, b.personId);
+    const contact = await this.ports.arrival.contactOf(this.db, ctx.firmId, b.personId);
     if (!contact) throw notInFirm("person");
-    return this.create(ctx.firmId, type, { startsAt: b.startsAt, mode: b.mode, timeZone: b.timeZone }, staffActor(ctx),
-      async () => ({ personId: b.personId, ...(b.prospectId ? { prospectId: b.prospectId } : {}) }));
+    // The prospect is the port's to find and move (AG-2-26), never taken from the body: a person of another firm is 404.
+    const out = await this.create(ctx.firmId, type, { startsAt: b.startsAt, mode: b.mode, timeZone: b.timeZone }, staffActor(ctx), async (tx, bookingId) => {
+      const r = await this.ports.arrival.bookingForPerson(tx, { firmId: ctx.firmId, personId: b.personId, bookingId });
+      if (!r) return notInFirm("person");
+      return { personId: b.personId, ...(r.prospectId ? { prospectId: r.prospectId } : {}) };
+    });
+    return { ...this.view(out.booking), manageToken: out.token };
   }
 
   async staffReschedule(ctx: StaffContext, bookingId: string, body: unknown) {
     need(ctx, "agent/booking:edit");
     const b = parse(RescheduleBody, body);
     await this.staffBooking(ctx, bookingId);
-    return this.move(ctx.firmId, bookingId, b.startsAt, b.timeZone, staffActor(ctx));
+    return this.view((await this.move(ctx.firmId, bookingId, b.startsAt, b.timeZone, staffActor(ctx))).booking);
   }
 
   async staffCancel(ctx: StaffContext, bookingId: string) {
     need(ctx, "agent/booking:edit");
     await this.staffBooking(ctx, bookingId);
-    return this.cancelBooking(ctx.firmId, bookingId, staffActor(ctx));
+    return this.view(await this.cancelBooking(ctx.firmId, bookingId, staffActor(ctx)));
   }
 
   /** The attendance answer (AG-4-39): COMPLETED or NO_SHOW, by a person, once the meeting has started; it may be changed
@@ -299,13 +318,14 @@ export class BookingService {
           return { booking, token };
         }, TX);
         await this.afterCommit({ booking: done.booking, type, method: "REQUEST", kind: "booked", token: done.token });
-        return { ...this.view(done.booking), manageToken: done.token, label: wallLabel(done.booking.startsAt, done.booking.visitorTimeZone) };
+        return done;
       } catch (e) {
         // Another booking took the host between the slot check and the write (the database's no-overlap rule, or the
         // deadlock PostgreSQL reports when two writers of one range wait on each other): try again, which re-reads the
         // free hosts; when the retries are spent, the visitor gets fresh times.
         // No free host at that time (read after the host locks): fresh times, read after the transaction has ended.
         if (e instanceof NoSlot) throw slotTaken(await this.nextSlots(firmId, type, at));
+        if (zoneRefused(e)) throw refused("Please choose a time zone from the list.", ["timeZone: not a zone this server knows"]);
         if (!isContention(e)) throw e;
         if (attempt >= type.hostStaffIds.length + 4) throw slotTaken(await this.nextSlots(firmId, type, at));
         await new Promise((r) => setTimeout(r, 5 + Math.floor(Math.random() * 20)));
@@ -322,6 +342,14 @@ export class BookingService {
           const type = await tx.foConsultationType.findFirstOrThrow({ where: firmScope(firmId, { id: b.typeId }) });
           if (token) await this.recheckToken(tx, token, b, type);
           if (!ACTIVE.includes(b.status)) throw problem(409, "not-active", "Not changed", "This booking is no longer active.");
+          // The same time is no move: nothing is written, no event, the links and reminders stay (only a new zone for
+          // the messages is kept, with its audit line).
+          if (startsAt.getTime() === b.startsAt.getTime()) {
+            if (!zone || zone === b.visitorTimeZone) return { booking: b, type, token: undefined, oldSequence: undefined };
+            const z2 = await tx.foBooking.update({ where: { id: b.id }, data: { visitorTimeZone: zone } });
+            await this.ports.audit.record(tx, { firmId, actor: actor.word, action: "booking.zone_changed", entity: "fo_booking", entityKey: b.id, summary: "The time zone for this booking's messages changed.", detail: { bookingId: b.id, sequence: z2.sequence } });
+            return { booking: z2, type, token: undefined, oldSequence: undefined };
+          }
           const slot = await this.freeSlot(tx, firmId, type, startsAt, b.id);
           const staffId = slot.staffIds.includes(b.staffId) ? b.staffId : slot.staffIds[0];
           const after = await tx.foBooking.update({ where: { id: b.id }, data: { startsAt: slot.startsAt, endsAt: slot.endsAt, staffId, status: "RESCHEDULED", ...(zone ? { visitorTimeZone: zone } : {}) } });
@@ -331,9 +359,10 @@ export class BookingService {
           await this.outbox(tx, after, EVENT.BOOKING_RESCHEDULED);
           return { booking: after, type, token: newToken, oldSequence: b.sequence };
         }, TX);
-        await this.afterCommit({ booking: done.booking, type: done.type, method: "REQUEST", kind: "moved", token: done.token, oldSequence: done.oldSequence });
-        return { ...this.view(done.booking), manageToken: done.token, label: wallLabel(done.booking.startsAt, done.booking.visitorTimeZone) };
+        if (done.oldSequence !== undefined) await this.afterCommit({ booking: done.booking, type: done.type, method: "REQUEST", kind: "moved", token: done.token, oldSequence: done.oldSequence });
+        return { booking: done.booking, token: done.token as string | undefined };
       } catch (e) {
+        if (zoneRefused(e)) throw refused("Please choose a time zone from the list.", ["timeZone: not a zone this server knows"]);
         if (!(e instanceof NoSlot) && !isContention(e)) throw e;
         if (e instanceof NoSlot || attempt++ >= 4) {
           const b = await this.db.foBooking.findFirstOrThrow({ where: firmScope(firmId, { id: bookingId }) });
@@ -358,15 +387,16 @@ export class BookingService {
       return { booking: after, type, oldSequence: b.sequence };
     }, TX);
     await this.afterCommit({ booking: done.booking, type: done.type, method: "CANCEL", kind: "cancelled", oldSequence: done.oldSequence });
-    return this.view(done.booking);
+    return done.booking;
   }
 
   /** The outbox row, written last in its transaction (contracts §0.5); keys bookingId and bookingId:sequence (AG-4-47). */
   private async outbox(tx: Tx, b: BookingRow, type: string) {
-    await tx.moduleEvent.create({ data: { firmId: b.firmId, type, subjectId: b.id, occurredAt: this.ports.clock.now(), payload: {
+    const payload = BookingEvent.parse({
       key: `${b.id}:${b.sequence}`, bookingId: b.id, sequence: b.sequence, status: b.status, typeId: b.typeId, staffId: b.staffId, personId: b.personId, prospectId: b.prospectId,
       mode: b.mode, startsAt: b.startsAt.toISOString(), endsAt: b.endsAt.toISOString(), visitorTimeZone: b.visitorTimeZone,
-    } } });
+    });
+    await tx.moduleEvent.create({ data: { firmId: b.firmId, type, subjectId: b.id, occurredAt: this.ports.clock.now(), payload } });
   }
 
   // =================================================================================================== after commit
@@ -389,7 +419,7 @@ export class BookingService {
     const { booking: b, type } = a;
     const firm = await this.db.platformFirm.findUniqueOrThrow({ where: { id: b.firmId }, select: { key: true, operatingName: true, contactEmail: true } });
     const host = await this.db.platformStaff.findFirstOrThrow({ where: firmScope(b.firmId, { id: b.staffId }), select: { email: true, displayName: true } });
-    const person = b.personId ? await this.ports.arrival.contactOf(this.db as unknown as Tx, b.firmId, b.personId) : null;
+    const person = b.personId ? await this.ports.arrival.contactOf(this.db, b.firmId, b.personId) : null;
     const zone = b.visitorTimeZone, when = wallLabel(b.startsAt, zone), how = MODE_WORDS[b.mode as Mode];
     const where = b.mode === "VIDEO" ? (type.meetingLink ?? "Your join link will follow.") : b.mode === "PHONE" ? "The firm will call you." : "At the firm's office.";
     const invite = (attendee: { name: string; email: string }) => ({ filename: "invite.ics", contentType: `text/calendar; charset=utf-8; method=${a.method}`, bytes: new TextEncoder().encode(bookingIcs({
@@ -417,7 +447,7 @@ export class BookingService {
     if (!b || !ACTIVE.includes(b.status) || b.sequence !== p.sequence || !b.personId) return;   // moved, cancelled or answered since
     const type = await this.db.foConsultationType.findFirstOrThrow({ where: firmScope(b.firmId, { id: b.typeId }) });
     const firm = await this.db.platformFirm.findUniqueOrThrow({ where: { id: b.firmId }, select: { operatingName: true, contactEmail: true } });
-    const person = await this.ports.arrival.contactOf(this.db as unknown as Tx, b.firmId, b.personId);
+    const person = await this.ports.arrival.contactOf(this.db, b.firmId, b.personId);
     if (!person) return;
     await this.ports.mail.send({ firmId: b.firmId, to: person.email, replyTo: firm.contactEmail, class: "SERVICE", templateKey: `booking.reminder_${p.kind}`,
       subject: `Reminder: your ${type.name} ${p.kind === "24h" ? "tomorrow" : "in one hour"}`, text: `Hello ${person.givenNames},\n\nThis is a reminder of your ${type.name} with ${firm.operatingName}: ${wallLabel(b.startsAt, b.visitorTimeZone)}. ${MODE_WORDS[b.mode as Mode]}.\n\nReplies to this email reach the firm.` });
@@ -479,7 +509,7 @@ export class BookingService {
 
   private async lock(tx: Tx, firmId: string, bookingId: string): Promise<BookingRow> {
     const id = firmScope(firmId).firmId;
-    if (!/^[0-9a-f-]{36}$/i.test(bookingId)) return notInFirm("booking");
+    if (!UUID.test(bookingId)) return notInFirm("booking");
     await tx.$queryRaw`SELECT id FROM fo_booking WHERE firm_id = ${id}::uuid AND id = ${bookingId}::uuid FOR UPDATE`;
     const b = await tx.foBooking.findFirst({ where: firmScope(firmId, { id: bookingId }) });
     return b ?? notInFirm("booking");
@@ -488,6 +518,9 @@ export class BookingService {
   private async byToken(db: Tx | PrismaClient, token: string) {
     const t = await liveToken(db, token, this.ports.clock.now());
     if (!t) throw notFound();
+    // A firm on hold or locked answers its links like its page: not found (break B-5).
+    const firm = await db.platformFirm.findUnique({ where: { id: t.firmId }, select: { status: true } });
+    if (!firm || !["ACTIVE", "TRIAL"].includes(firm.status)) throw notFound();
     const booking = await db.foBooking.findFirst({ where: firmScope(t.firmId, { id: t.bookingId }) });
     if (!booking || !ACTIVE.includes(booking.status)) throw notFound();
     const type = await db.foConsultationType.findFirstOrThrow({ where: firmScope(t.firmId, { id: booking.typeId }) });
@@ -505,11 +538,16 @@ export class BookingService {
   private selfServiceOpen(b: BookingRow, type: TypeRow) { return this.ports.clock.now().getTime() < b.startsAt.getTime() - type.selfServiceLimitMinutes * MIN; }
 
   private async staffBooking(ctx: StaffContext, bookingId: string) {
-    if (!/^[0-9a-f-]{36}$/i.test(bookingId)) return notInFirm("booking");
+    if (!UUID.test(bookingId)) return notInFirm("booking");
     const b = await this.db.foBooking.findFirst({ where: firmScope(ctx.firmId, { id: bookingId }) });
     if (!b) return notInFirm("booking");
     if (b.staffId !== ctx.staffId && !ctx.keys.includes("agent/booking:list")) return notInFirm("booking");
     return b;
+  }
+
+  /** What the public door answers about a booking: no host, person, prospect or type id (contracts §0.6). */
+  private publicView(b: BookingRow) {
+    return { status: b.status as Status, mode: b.mode, startsAt: b.startsAt.toISOString(), endsAt: b.endsAt.toISOString(), timeZone: b.visitorTimeZone, label: wallLabel(b.startsAt, b.visitorTimeZone) };
   }
 
   private view(b: BookingRow) {
@@ -555,6 +593,9 @@ class NoSlot extends Error {}
 
 export const staffActor = (ctx: StaffContext): Actor => ({ word: `staff:${ctx.staffId}`, staffId: ctx.staffId });
 function need(ctx: StaffContext, key: string) { if (!ctx.keys.includes(key)) throw forbidden(key); }
+
+/** The database refused the visitor's zone (fo_zone_ok knows the server's own zone list). */
+const zoneRefused = (e: unknown) => /is not an IANA time zone/.test(String((e as { message?: string })?.message ?? ""));
 
 /** Two writers of one slot: the database's no-overlap refusal (23P01 on fo_booking_no_overlap), or the deadlock (40P01)
  *  or serialization failure (40001) PostgreSQL may report instead when two inserts wait on each other's range; however

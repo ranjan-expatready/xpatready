@@ -52,6 +52,10 @@ export const arrivalKey = (bookingId: string) => `booking:${bookingId.toLowerCas
 export interface ArrivalPort<Tx = unknown> {
   /** Runs the arrival path for a booking inside `tx` (door BOOKING, key `booking:<bookingId>`). Idempotent by key. */
   bookingArrived(tx: Tx, arrival: BookingArrival): Promise<ArrivalResult>;
+  /** A booking staff make for a person already in front office (AG-4-63): no arrival, no lead; the person's only open
+   *  prospect moves forward to Consult with the cause "consult booked" exactly as bookingArrived does (AG-2-26). Null when
+   *  the person is not a person of the firm (the booking is then refused 404). Idempotent by `booking:<bookingId>`. */
+  bookingForPerson(tx: Tx, booking: { firmId: string; personId: string; bookingId: string }): Promise<{ prospectId?: string } | null>;
   /** The consent sentence the firm's booking form shows now, or null when the firm has none (the public form then takes
    *  no booking: a booking always carries the person's consent). */
   bookingConsentWording(tx: Tx, firmId: string): Promise<ConsentWording | null>;
@@ -91,6 +95,14 @@ export function fakeArrival(opts: { wording?: ConsentWording | null; failOn?: (a
   const people = new Map<string, string>(), contacts = new Map<string, z.output<typeof ArrivalPerson>>(), prospects: (FakeProspect & { tx?: unknown })[] = [], leads: { firmId: string; personId: string; key: string; tx: unknown }[] = [];
   const wording = opts.wording === undefined ? { wordingId: "00000000-0000-4000-8000-00000000c0de", text: "I agree that the firm may use these details to arrange and hold my consultation (Sample wording)." } : opts.wording;
   const pkey = (firmId: string, email: string) => `${firmId.toLowerCase()}|${email.toLowerCase()}`;
+  const staffCalls = new Map<string, { prospectId?: string }>();
+  /** AG-2-26: the person's only open prospect moves forward to CONSULT once, never backward; several move none. */
+  const moveOnly = (personId: string): string | undefined => {
+    const open = prospects.filter((p) => p.personId === personId && p.open);
+    if (open.length !== 1) return undefined;
+    if (STAGE_ORDER.indexOf(open[0].stage as (typeof STAGE_ORDER)[number]) < STAGE_ORDER.indexOf("CONSULT")) { open[0].stage = "CONSULT"; open[0].causes.push("consult booked"); }
+    return open[0].id;
+  };
   const fake: FakeArrival = {
     async bookingArrived(tx, arrival) {
       const a = BookingArrival.parse(arrival);
@@ -103,14 +115,21 @@ export function fakeArrival(opts: { wording?: ConsentWording | null; failOn?: (a
       if (!personId) { personId = crypto.randomUUID(); people.set(k, personId); }
       contacts.set(`${a.firmId.toLowerCase()}|${personId}`, a.person);
       const open = prospects.filter((p) => p.personId === personId && p.open);
-      let prospectId: string | undefined;
-      if (open.length === 1) {
-        prospectId = open[0].id;
-        if (STAGE_ORDER.indexOf(open[0].stage as (typeof STAGE_ORDER)[number]) < STAGE_ORDER.indexOf("CONSULT")) { open[0].stage = "CONSULT"; open[0].causes.push("consult booked"); }
-      } else if (open.length === 0) { newLead = true; leads.push({ firmId: a.firmId.toLowerCase(), personId, key, tx }); }
+      const prospectId = moveOnly(personId);
+      if (open.length === 0) { newLead = true; leads.push({ firmId: a.firmId.toLowerCase(), personId, key, tx }); }
       const result = ArrivalResult.parse({ personId, prospectId });
       calls.push({ ...a, key, result, newLead, tx });
       return result;
+    },
+    async bookingForPerson(_tx, b) {
+      const key = `${b.firmId.toLowerCase()}|${arrivalKey(b.bookingId)}`;
+      const seen = staffCalls.get(key);
+      if (seen) return seen;
+      if (!contacts.has(`${b.firmId.toLowerCase()}|${b.personId.toLowerCase()}`)) return null;
+      const prospectId = moveOnly(b.personId.toLowerCase());
+      const r = prospectId ? { prospectId } : {};
+      staffCalls.set(key, r);
+      return r;
     },
     async bookingConsentWording() { return wording; },
     async contactOf(_tx, firmId, personId) { return contacts.get(`${firmId.toLowerCase()}|${personId.toLowerCase()}`) ?? null; },

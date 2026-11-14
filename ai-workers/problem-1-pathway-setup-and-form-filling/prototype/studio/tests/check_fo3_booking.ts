@@ -93,7 +93,16 @@ try {
     await clock.advance({ seconds: 5 });
     return { givenNames: "Ana", familyName: `Sample ${who}`, email: `${who}@client.example`, mode: "VIDEO", startsAt: iso(startsAt), timeZone: TZ, consent: true, consentWordingId: page.consent!.wordingId, formStamp: page.formStamp, ...extra };
   };
-  const book = async (svc: BookingService, slug: string, startsAt: string, who?: string, extra?: Record<string, unknown>) => svc.publicBook(A.key, slug, await form(svc, slug, startsAt, who, extra), "10.0.0.1");
+  /** A public answer with the booking's own row beside it (the public answer carries no ids: the test reads them from
+   *  the database by the link's selector). */
+  const full = async <R extends { manageToken: string }>(r: R) => {
+    const tok = await db.foBookingToken.findUniqueOrThrow({ where: { id: r.manageToken.split(".")[0] } });
+    const b = await db.foBooking.findUniqueOrThrow({ where: { id: tok.bookingId } });
+    return { ...r, answer: r, id: b.id, staffId: b.staffId, personId: b.personId, prospectId: b.prospectId, sequence: b.sequence };
+  };
+  const book = async (svc: BookingService, slug: string, startsAt: string, who?: string, extra?: Record<string, unknown>) => full(await svc.publicBook(A.key, slug, await form(svc, slug, startsAt, who, extra), "10.0.0.1"));
+  const IDS = ["id", "staffId", "personId", "prospectId", "typeId", "firmId"];
+  const noIds = (x: object) => !Object.keys(x).some((k) => IDS.includes(k)) && !JSON.stringify(x).includes(A1.id) && !JSON.stringify(x).includes(A2.id);
 
   // ------------------------------------------------------------------------------------------------- slots: the rules
   const mon = (await S.publicSlots(A.key, "free", days("2026-10-26 00:00", "2026-10-27 00:00"), "ip")).slots;
@@ -129,6 +138,7 @@ try {
   const nf = async (f: () => unknown) => JSON.stringify((await thrown(f))?.body ?? null);
   const nfs = [await nf(() => S.publicSlots("no-such-firm", "free", {}, "ip")), await nf(() => S.publicSlots(A.key, "no-such-type", {}, "ip")), await nf(() => S.publicSlots(A.key, "retired", {}, "ip")), await nf(() => S.publicSlots(H.key, "free", {}, "ip"))];
   ok("FO-3 door: an unknown firm, an unknown slug, an inactive type and a firm on payment hold give the identical 404", new Set(nfs).size === 1 && JSON.parse(nfs[0]).status === 404, nfs);
+  ok("FO-3 door fail: a firm key with a NUL byte or capitals gives the same identical 404 (break B-7)", await nf(() => S.publicSlots("fo3-a\u0000", "free", {}, "ip")) === nfs[0] && await nf(() => S.publicSlots("FO3-A", "free", {}, "ip")) === nfs[0]);
   ok("FO-3 door pass: a known firm and active type answers its page (no host named)", !JSON.stringify(await S.publicSlots(A.key, "free", {}, "ip")).includes(A1.id));
 
   // ----------------------------------------------------------------------------------------------- booking: the form
@@ -143,7 +153,18 @@ try {
   ok("FO-3 form fail: a forged form stamp → 400", await ref({ ...good, formStamp: `${clock.now().getTime() - 60_000}.forged` }) === 400);
   const fast = await S.publicSlots(A.key, "free", {}, "ip");
   ok("FO-3 form fail: sent 1 s after the page loaded (minimum fill time) → 400", await ref({ ...good, formStamp: fast.formStamp }) === 400);
-  const phoneOk = await S.publicBook(A.key, "free", { ...good, mode: "PHONE", phone: "+1 416 555 0100" }, "ip");
+  ok("FO-3 form fail: an invisible-only name, a right-to-left override, U+2028 → 400 (break B-9)", await ref({ ...good, givenNames: "\u200b" }) === 400 && await ref({ ...good, familyName: "Ann\u202eX" }) === 400 && await ref({ ...good, familyName: "A\u2028B" }) === 400);
+  ok("FO-3 form fail: a zone the database does not take (Etc/GMT0) → 400, never 500 (break B-2)", await ref({ ...good, timeZone: "Etc/GMT0" }) === 400);
+  ok("FO-3 form fail: a start in year 0001 → 400; slots asked from year 0001 → 400 (break B-2)", await ref({ ...good, startsAt: "0001-01-01T10:00:00Z" }) === 400 && (await thrown(() => S.publicSlots(A.key, "free", { from: "0001-01-01T00:00:00Z" }, "ip")))?.status === 400);
+  ok("FO-3 form fail: a line break in a name → 400 (never 500)", await ref({ ...good, givenNames: "Ana\r\nBcc: x@y.example" }) === 400);
+  const phoneOk = await full(await S.publicBook(A.key, "free", { ...good, mode: "PHONE", phone: "+1 416 555 0100" }, "ip"));
+  const caps = await full(await S.publicBook(A.key, "free", { ...(await form(S, "free", "2026-10-29 11:00", "caps")), timeZone: "America/TORONTO" }, "ip"));
+  ok("FO-3 form pass: America/TORONTO is kept in IANA's spelling, America/Toronto (break B-10)", (await db.foBooking.findUniqueOrThrow({ where: { id: caps.id } })).visitorTimeZone === TZ);
+  const lim3 = make({ limits: { bookPerFirm: 3 } });
+  const realForm = await form(lim3.svc, "free", "2026-10-29 10:00", "notblocked");
+  for (let i = 0; i < 10; i++) await thrown(() => lim3.svc.publicBook(A.key, "free", {}, `198.51.100.${i}`));
+  ok("FO-3 door pass: ten empty posts from ten addresses do not use up the firm's limit; a real booking still goes through (break B-3)", (await lim3.svc.publicBook(A.key, "free", realForm, "203.0.113.9")).status === "SCHEDULED");
+  ok("FO-3 door: the public booking answer names no host, person, prospect or type (contracts §0.6); fail-proof: the row has them", noIds(phoneOk.answer) && !!phoneOk.staffId && !!phoneOk.personId, phoneOk.answer);
   ok("FO-3 form pass: phone mode with a phone, consent ticked → booked SCHEDULED", phoneOk.status === "SCHEDULED" && phoneOk.mode === "PHONE" && !!phoneOk.manageToken, phoneOk);
 
   // ------------------------------------------------------------------------------------- 20 at once for one slot
@@ -201,7 +222,7 @@ try {
   ok("FO-3 audit pass: the booking wrote one audit_event line in its transaction (real interim adapter, platform-audit workspace)", lines.length === 1 && lines[0].action === "booking.scheduled" && lines[0].actor === "system:booking-page" && !JSON.stringify(lines[0].detail).includes("@"), lines);
   const ev = await db.moduleEvent.findMany({ where: { subjectId: r1.id } });
   ok("FO-3 event: one booking.scheduled outbox row, key <id>:0, ids only (no name or email)", ev.length === 1 && ev[0].type === EVENT.BOOKING_SCHEDULED && (ev[0].payload as { key: string }).key === `${r1.id}:0` && !JSON.stringify(ev[0].payload).includes("@"), ev);
-  ok("FO-3 audit: every change so far wrote exactly one fake audit line each (main service)", main.audit && (main.audit as ReturnType<typeof fakeAudit>).entries.length === (await db.foBooking.count({ where: { firmId: A.id, id: { in: [susp.id, phoneOk.id, g.id, t1.id, t2.id] } } })));
+  ok("FO-3 audit: each booking made so far wrote exactly one booking.scheduled line (main service)", [susp, phoneOk, caps, g, t1, t2].every((b) => (main.audit as ReturnType<typeof fakeAudit>).entries.filter((e) => e.entityKey === b.id && e.action === "booking.scheduled").length === 1));
 
   // ------------------------------------------------------------------------------- mail after commit, never losing
   const broken = make({ mail: fakeMail({ failOn: () => true }) });
@@ -225,21 +246,39 @@ try {
   const sv = await book(S, "free", "2026-11-04 10:00", "self");
   const second = await db.$transaction((tx) => issueToken(tx, A.id, sv.id, new Date(sv.endsAt)));
   ok("FO-3 tokens pass: two live links for one booking both open it", (await S.manageView(sv.manageToken, "ip")).status === "SCHEDULED" && (await S.manageView(second, "ip")).status === "SCHEDULED");
-  const mv1 = await S.selfReschedule(sv.manageToken, { startsAt: iso("2026-11-04 11:00") }, "ip");
+  // M2 (review): a reschedule to the booking's own time writes nothing: no audit line, no event, the links and reminders stay.
+  const evSame = await db.moduleEvent.count({ where: { subjectId: sv.id } }), audSame = (main.audit as ReturnType<typeof fakeAudit>).entries.length;
+  const same = await S.selfReschedule(sv.manageToken, { startsAt: iso("2026-11-04 10:00") }, "ip");
+  ok("FO-3 reschedule: to its own time → no event, no audit line, sequence 0, both links still live, the reminders still waiting",
+    same.status === "SCHEDULED" && same.manageToken === sv.manageToken && await db.moduleEvent.count({ where: { subjectId: sv.id } }) === evSame && (main.audit as ReturnType<typeof fakeAudit>).entries.length === audSame
+      && (await db.foBooking.findUniqueOrThrow({ where: { id: sv.id } })).sequence === 0 && (await S.manageView(second, "ip")).status === "SCHEDULED"
+      && (main.jobs as ReturnType<typeof fakeJobs>).jobs.filter((j) => j.key.startsWith(`booking:${sv.id}:0:`) && j.status === "waiting").length === 3);
+  const mv1 = await full(await S.selfReschedule(sv.manageToken, { startsAt: iso("2026-11-04 11:00") }, "ip"));
+  ok("FO-3 door: the public reschedule answer names no host, person, prospect or type", noIds(mv1.answer), mv1.answer);
   const nfBody = await nf(() => S.manageView(sv.manageToken, "ip"));
   ok("FO-3 tokens fail: after a reschedule both old links give the identical not-found; pass: the new link works",
     nfBody === nfs[0] && await nf(() => S.manageView(second, "ip")) === nfs[0] && (await S.manageView(mv1.manageToken, "ip")).status === "RESCHEDULED", nfBody);
-  const mv2 = await S.selfReschedule(mv1.manageToken, { startsAt: iso("2026-11-04 14:00") }, "ip");
+  const mv2 = await full(await S.selfReschedule(mv1.manageToken, { startsAt: iso("2026-11-04 14:00") }, "ip"));
   ok("FO-3 reschedule pass: a RESCHEDULED booking reschedules again (sequence 2); the host is kept when free", mv2.status === "RESCHEDULED" && mv2.sequence === 2 && mv2.staffId === A1.id, mv2);
   ok("FO-3 reschedule fail: to a time that is not offered (Sunday) → 409 SLOT_TAKEN with fresh times", (await thrown(() => S.selfReschedule(mv2.manageToken, { startsAt: iso("2026-11-08 10:00") }, "ip")))?.body.code === "SLOT_TAKEN");
   const upd = main.mail.inbox("self@client.example");
   ok("FO-3 ics: the update keeps the UID and carries SEQUENCE:2", upd.length === 3 && icsOf(upd[2]).includes(`UID:${sv.id}@booking.expatready.com`) && icsOf(upd[2]).includes("SEQUENCE:2\r\n"), upd.map((m) => m.subject));
   const garbage = await nf(() => S.manageView("not-a-token", "ip")), forged = await nf(() => S.manageView(`${mv2.manageToken.split(".")[0]}.${"A".repeat(43)}`, "ip"));
   ok("FO-3 tokens fail: a malformed token and a right selector with a wrong verifier give the identical not-found", garbage === nfs[0] && forged === nfs[0]);
-  const cx = await S.selfCancel(mv2.manageToken, "ip");
+  const cxAnswer = await S.selfCancel(mv2.manageToken, "ip");
+  const cx = { ...cxAnswer, ...(await db.foBooking.findUniqueOrThrow({ where: { id: sv.id }, select: { sequence: true } })) };
+  ok("FO-3 door: the public cancel answer names no host, person, prospect or type", noIds(cxAnswer), cxAnswer);
   ok("FO-3 cancel pass: cancelled by link (sequence 3); METHOD:CANCEL with the same UID", cx.status === "CANCELLED" && cx.sequence === 3 && /METHOD:CANCEL\r\n/.test(icsOf(main.mail.inbox("self@client.example")[3])) && icsOf(main.mail.inbox("self@client.example")[3]).includes(`UID:${sv.id}@`));
   ok("FO-3 cancel fail: the used link now gives the identical not-found; pass: the freed 14:00 is offered again",
     await nf(() => S.selfCancel(mv2.manageToken, "ip")) === nfs[0] && has((await S.publicSlots(A.key, "free", days("2026-11-04 00:00", "2026-11-05 00:00"), "ip")).slots, "2026-11-04 14:00"));
+
+  // a firm on hold answers its links like its page (break B-5)
+  const held = await book(S, "free", "2026-11-04 15:00", "held");
+  await db.platformFirm.update({ where: { id: A.id }, data: { status: "PAYMENT_HOLD" } });
+  const heldNf = await nf(() => S.manageView(held.manageToken, "ip")), heldMove = (await thrown(() => S.selfReschedule(held.manageToken, { startsAt: iso("2026-11-04 16:00") }, "ip")))?.status;
+  await db.platformFirm.update({ where: { id: A.id }, data: { status: "ACTIVE" } });
+  ok("FO-3 tokens fail: while the firm is on payment hold its links give the identical not-found and move nothing; pass: back to Active, the link works",
+    heldNf === nfs[0] && heldMove === 404 && (await db.foBooking.findUniqueOrThrow({ where: { id: held.id } })).startsAt.getTime() === at("2026-11-04 15:00").getTime() && (await S.manageView(held.manageToken, "ip")).status === "SCHEDULED");
 
   // the self-service limit (4 h) and the end of the meeting
   const lim = await book(S, "free", "2026-11-05 10:00", "limit");
@@ -294,6 +333,36 @@ try {
   const sb = { typeId: T.base.id, personId: pid, mode: "VIDEO", startsAt: iso("2026-11-09 11:00"), timeZone: TZ };
   ok("FO-3 staff fail: creating without agent/booking:create → 403", (await thrown(() => S.staffCreate(ctxA2, sb)))?.status === 403);
   const sc = await S.staffCreate(ctxA, sb);
+  // M4 (review): a staff booking moves the person's only open prospect to Consult through the port; the prospect is never
+  // taken from the body; a person of another firm is 404.
+  const kim = main.arrival.addPerson(A.id, { givenNames: "Kim", familyName: "Sample", email: "kim@client.example" });
+  const kimPros = main.arrival.addProspect(A.id, "kim@client.example", "ENGAGED");
+  const kb = await S.staffCreate(ctxA, { ...sb, personId: kim, startsAt: iso("2026-11-09 13:00") });
+  const kimNow = main.arrival.prospects.find((p) => p.id === kimPros.id)!;
+  ok("FO-3 staff pass: a staff booking moves the person's only open prospect to Consult with its cause, and names it", kb.prospectId === kimPros.id && kimNow.stage === "CONSULT" && kimNow.causes.join() === "consult booked", { kb, kimNow });
+  const bPerson = main.arrival.addPerson(B.id, { givenNames: "Bo", familyName: "Sample", email: "bo@client.example" });
+  ok("FO-3 staff fail: a prospect id in the body is refused (400); a person of firm B booked by firm A → 404, nothing saved",
+    (await thrown(() => S.staffCreate(ctxA, { ...sb, prospectId: kimPros.id, startsAt: iso("2026-11-09 14:00") })))?.status === 400
+      && (await thrown(() => S.staffCreate(ctxA, { ...sb, personId: bPerson, startsAt: iso("2026-11-09 14:00") })))?.status === 404
+      && await db.foBooking.count({ where: { firmId: A.id, startsAt: at("2026-11-09 14:00") } }) === 0);
+  ok("FO-3 staff fail: a booking id that is not a uuid → 404 (never 500)", (await thrown(() => S.staffGet(ctxA, "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz")))?.status === 404 && (await thrown(() => S.staffCancel(ctxA, "------------------------------------")))?.status === 404);
+
+  // M3 (review): every change writes one audit line in its transaction; a forced audit failure rolls each one back.
+  const auditLines = (id: string, action: string) => (main.audit as ReturnType<typeof fakeAudit>).entries.filter((e) => e.entityKey === id && e.action === action).length;
+  for (const [action, run, check] of [
+    ["booking.rescheduled", (svc: BookingService) => svc.staffReschedule(ctxA, kb.id, { startsAt: iso("2026-11-09 15:00") }), async () => (await db.foBooking.findUniqueOrThrow({ where: { id: kb.id } })).startsAt.getTime() === at("2026-11-09 13:00").getTime()],
+    ["booking.cancelled", (svc: BookingService) => svc.staffCancel(ctxA, kb.id), async () => (await db.foBooking.findUniqueOrThrow({ where: { id: kb.id } })).status !== "CANCELLED"],
+    ["booking.completed", (svc: BookingService) => svc.recordAttendance(ctxA, susp.id, "COMPLETED"), async () => (await db.foBooking.findUniqueOrThrow({ where: { id: susp.id } })).status === "SCHEDULED"],
+  ] as const) {
+    const id = action === "booking.completed" ? susp.id : kb.id;
+    if (action === "booking.completed") await clock.set(at("2026-10-27 15:31"));   // after the meeting began
+    const failing = make({ audit: fakeAudit({ failOn: (e) => e.action === action }), arrival: main.arrival });
+    const ev0 = await db.moduleEvent.count({ where: { subjectId: id } });
+    ok(`FO-3 audit fail: a forced audit failure on ${action} rolls it back (row unchanged, no event)`, String((await thrown(() => run(failing.svc)))?.body.message ?? "").includes("forced audit failure") && await check() && await db.moduleEvent.count({ where: { subjectId: id } }) === ev0);
+    await run(S);
+    ok(`FO-3 audit pass: ${action} wrote exactly one audit line and one event`, auditLines(id, action) === 1 && await db.moduleEvent.count({ where: { subjectId: id } }) === ev0 + 1, auditLines(id, action));
+    if (action === "booking.completed") await clock.set(back);
+  }
   ok("FO-3 staff pass: a staff member with the key books for a person (no arrival run, audit actor staff:<id>)", sc.status === "SCHEDULED" && sc.personId === pid && (main.audit as ReturnType<typeof fakeAudit>).entries.at(-1)?.actor === `staff:${A1.id}`);
   ok("FO-3 staff fail: firm B's staff reading, moving or cancelling firm A's booking → 404 (never 403)",
     (await thrown(() => S.staffGet(ctxB, sc.id)))?.status === 404 && (await thrown(() => S.staffCancel(ctxB, sc.id)))?.status === 404 && (await thrown(() => S.staffReschedule(ctxB, sc.id, { startsAt: iso("2026-11-09 13:00") })))?.status === 404);
