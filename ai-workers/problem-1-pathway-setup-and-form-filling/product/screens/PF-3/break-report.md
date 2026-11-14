@@ -86,3 +86,41 @@ The firm rows, with `status ACTIVE`, carry "Sample" only in their names. The pla
 - `firmScope` against nested `OR`, `AND` and `NOT` with `firmId`, `firmId: { in }`, `{ equals }`, an explicit `undefined`, a `null` where, `__proto__`, and a firm relation filter: no other firm's rows came back (only B-2's missing composite key gets through).
 - Settings: a bad value was refused and nothing was stored. An unset key read its default. A failed audit insert (bad workspace uuid) rolled the value back. A throw in the caller's transaction rolled back both the value and the audit line. Eight concurrent first writes produced 8 audit lines with a consistent `from` → `to` chain, because they wait on the definition row lock.
 - The seed run twice changed nothing. `unmatchedCaseFirmKeys` is empty. An ended grant was not brought back. No licence number appears in any audit detail the seed or settings code writes.
+
+## Round 2: re-check of the fixes at `d5d13ed8`
+Setup: scratch database `xr_studio_pf3_break_r2_*` (dropped afterwards), every migration from `d5d13ed8` applied with psql, the seed and helpers run from a `git archive` of that commit. `prisma migrate diff` shows no platform drift.
+
+**Still Major**
+- **R2-1 (B-6, not fixed): setting values still lose their audit line on reset.** This is unchanged: demo.ts:557 deletes the workspace's `audit_event` rows and the setting rows stay. settings.ts now names the gap. It is an open question for the tech lead / AUD-1, not a regression.
+- **R2-2 (new, caused by the B-2 fix): one UPDATE moves a person and their roles to another firm.** The new composite foreign keys are `ON UPDATE CASCADE` (mig, the `*_firm_id_staff_id_fkey` lines), and `platform_staff.firm_id` has no fixed-value trigger like `key` and `country_code` now have.
+  Repro: `update platform_staff set firm_id=<sample-solo> where actor_id='user-R'` succeeded. user-R's OWNER and CASE_MANAGER grants and licence `R000000` moved with them, so user-R is now OWNER of sample-solo. The rows stay consistent, but the person crosses the firm wall in one statement.
+
+**Minor**
+- **R2-3: the time zone check now refuses current IANA names.** `resolvedOptions().timeZone === s` (settings.ts, `isZone`) compares against ICU's older spellings (Node 22.23, ICU 78.3).
+  - Refused: `Asia/Kolkata`, `Europe/Kyiv`, `Asia/Ho_Chi_Minh`, `Asia/Kathmandu`, `Asia/Yangon`, `America/Argentina/Buenos_Aires`, `America/Nuuk`, `Pacific/Kanton`, `Atlantic/Faroe`, `Etc/UTC`, and the Canadian `America/Atikokan` (ICU's spelling is `America/Coral_Harbour`).
+  - Accepted instead: the deprecated `Asia/Calcutta` and `Europe/Kiev`.
+  - Firefox reports `Asia/Kolkata`. Because `readSettings` is now strict, a stored spelling that a later ICU resolves differently would make every setting of that firm unreadable.
+- **R2-4: the global event lock adds deadlocks and makes event writers wait for each other.**
+  Repro: tx A inserts an event and then updates firm S. Meanwhile tx B updates firm S and then inserts an event. Result: `ERROR: deadlock detected`. Without the lock, these two would simply have run one after the other.
+  Every event-writing transaction on the platform now waits for the previous one to commit.
+- **R2-5: the seed still brings back a person in one case.** A person cleared user-R's `actor_id`, changed their email and set them DEACTIVATED. The seed then created a new ACTIVE user-R with OWNER and CASE_MANAGER and a second credential carrying the same `R000000` (`staffAdded:1, grantsAdded:2, credentialsAdded:1`).
+- **R2-6: the email checks still let some whitespace through.** `btrim` strips spaces only. Accepted next to the seeded address: a trailing tab or newline, or a leading non-breaking space, in a second firm's `contact_email`. A trailing tab in a second staff member's email in the same firm. A plain leading space is now refused.
+- **R2-7: other invitation and firm gaps that remain.**
+  - Invitation `roles` still accepts `{ADMIN,ADMIN}`.
+  - An expired, still-open invitation can be accepted (`accepted_at > expires_at`).
+  - An invitation closed by the trigger gets `revoked_at = expires_at`, which cannot be told apart from a person revoking it.
+  - A childless firm can be deleted and inserted again with the same id under a new key and a new country.
+
+**Fixed and held**
+- **B-1:** I re-ran the round-1 race (slow tx sleeps 3 s, fast tx commits): it now gets 10 / 12 in commit order. An explicit `seq` (1000000) and a `COPY` with seq 999999 were both replaced (1, 2). After a rolled-back tx or a rolled-back savepoint the next number is a plain gap and the lock is released (`pg_locks` shows 0).
+- **B-2:** cross-firm grant, credential and revocation inserts are refused. So are an `UPDATE` of a grant's `firm_id` and of its `staff_id`. `firmScope(S, { staff: { firmId: F } })` returns `[]`.
+- **B-3:** an ENDED subscription is kept (`subscriptionsAdded:0`).
+- **B-4:** renaming the key, including through `ON CONFLICT DO UPDATE`, is refused. A cleared `actor_id` alone no longer makes the seed fail.
+- **B-5:** an expired open invitation is closed by the next insert. When 1 + 8 parallel inserts race on the same firm and email, exactly one succeeds and 7 get `platform_invitation_one_open`, leaving one open invitation.
+- **Minors:** these now hold:
+  - `{ADMIN,NULL}` refused.
+  - Upper-case and non-email `owner_email` / `billing_email` refused.
+  - `america/toronto` refused.
+  - A blank or non-string `by` refused.
+  - An upper-case firm id scopes and `inFirm` finds the firm's own row.
+  - `readSettings` throws on a bad stored value, while `readSetting` of another key still reads.

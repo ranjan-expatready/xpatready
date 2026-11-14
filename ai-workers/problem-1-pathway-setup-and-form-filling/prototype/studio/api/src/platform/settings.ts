@@ -139,8 +139,11 @@ export async function writeSetting(db: DbOrTx, w: SettingWrite): Promise<{ key: 
 // everyone-sees-all, "Require two-step sign-in for all staff". Defaults are Sample unless a source says otherwise.
 const HHMM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "a time as HH:MM (24-hour)");
 const DAY = z.enum(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]);
-// The zone's own spelling only (Intl also takes "america/toronto"; break m-11).
-const isZone = (s: string) => { try { return new Intl.DateTimeFormat("en-CA", { timeZone: s }).resolvedOptions().timeZone === s && (s.includes("/") || s === "UTC"); } catch { return false; } };
+// An IANA name in its own spelling (capitals as IANA writes them: "america/toronto" is refused, break m-11) that this
+// runtime knows. Not compared with Intl's resolved name, which is ICU's older spelling (Asia/Calcutta for Asia/Kolkata;
+// break R2-3).
+const ZONE_NAME = /^(UTC|[A-Z][A-Za-z]+(\/[A-Z0-9][A-Za-z0-9_+-]*)+)$/;
+const isZone = (s: string) => { if (!ZONE_NAME.test(s)) return false; try { new Intl.DateTimeFormat("en-CA", { timeZone: s }); return true; } catch { return false; } };
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && new Date(`${s}T00:00:00Z`).toISOString().startsWith(s);
 
 export const TIME_ZONE = registerSetting({

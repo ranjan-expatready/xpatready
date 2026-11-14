@@ -239,6 +239,21 @@ try {
   const given = await db.$transaction((tx) => evIn(tx, 1000000n));
   ok("PF-3 fail (break B-1): a seq the writer gives is replaced by the next in order", given < 1000000n && given === BigInt(sql(DEMO, `select max(seq) from module_event`)));
   ok("PF-3 pass (break B-1): after both commit, seq increases in commit order", sql(DEMO, `select bool_and(seq > lag) from (select seq, lag(seq) over (order by occurred_at, seq) lag from module_event) x where lag is not null`) === "t");
+  // ------------------------------------------------------------------------------------------ break round 2 (R2-2..R2-7)
+  const solo = firmB;
+  ok("PF-3 fail (break R2-2): a staff member cannot be moved to another firm (their grants and licence never follow)",
+    refused(DEMO, `update platform_staff set firm_id = '${solo}' where actor_id = 'user-R'`, /platform_staff_firm_fixed/)
+    && sql(DEMO, `select count(*) from platform_role_grant g join platform_staff s on s.id = g.staff_id where s.actor_id = 'user-R' and g.firm_id = '${firmA}' and g.role = 'OWNER'`) === "1");
+  ok("PF-3 fail (break R2-2): a grant's firm cannot be changed under its person either", refused(DEMO, `update platform_role_grant set firm_id = '${solo}' where staff_id = (select id from platform_staff where actor_id = 'user-O') and role = 'CASE_OFFICER'`, /platform_role_grant_firm_id_staff_id_fkey/));
+  ok("PF-3 pass (break R2-3): current IANA names are accepted (Asia/Kolkata, Europe/Kyiv, America/Argentina/Buenos_Aires, Etc/UTC)",
+    await (async () => { for (const z of ["Asia/Kolkata", "Europe/Kyiv", "America/Argentina/Buenos_Aires", "Etc/UTC"]) if (!(await writeSetting(db, { firmId: firmC, key: "platform.time_zone", value: z, by: "user-R", workspaceId: WS }).then(() => true, () => false))) return false; return true; })()
+    && await readSetting(db, firmC, "platform.time_zone") === "Etc/UTC");
+  ok("PF-3 fail (break R2-6): an email with a tab, a newline, a non-breaking or zero-width space is refused",
+    ["sp@firm-sp.example.com\t", "sp@firm-sp.example.com\n", "\u00a0sp@firm-sp.example.com", "sp\u200b@firm-sp.example.com"].every((e) => refused(DEMO, newFirm("firm-sp", e), /platform_firm_contact_email_lower/)));
+  ok("PF-3 fail (break R2-7): an invitation listing a role twice, or accepted after it expired, is refused",
+    refused(DEMO, `insert into platform_invitation (id, firm_id, email, roles, token_hash, invited_by, expires_at) values (gen_random_uuid(), '${firmC}', 'dup@firm-c.example.com', '{ADMIN,ADMIN}', 'h-dup', 't', now() + interval '1 hour')`, /platform_invitation_roles_distinct/)
+    && refused(DEMO, `update platform_invitation set accepted_at = now() where id = '${old}'`, /platform_invitation_one_ending|platform_invitation_accepted_in_time/)
+    && refused(DEMO, `insert into platform_invitation (id, firm_id, email, roles, token_hash, invited_by, created_at, expires_at, accepted_at) values (gen_random_uuid(), '${firmC}', 'lateacc@firm-c.example.com', '{ADMIN}', 'h-la', 't', now() - interval '2 hours', now() - interval '1 hour', now())`, /platform_invitation_accepted_in_time/));
   ok("PF-3: no secret column — no PF-3 column is named like a password, secret or raw token",
     sql(DEMO, `select count(*) from information_schema.columns where table_name = any('{${PLATFORM_TABLES.join(",")}}') and column_name ~ '(password|secret|^token$|api_key)'`) === "0");
 } finally {

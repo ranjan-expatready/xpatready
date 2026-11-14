@@ -223,7 +223,7 @@ model PlatformStaffCredential {
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   firm  PlatformFirm  @relation(fields: [firmId], references: [id], onDelete: Restrict)
-  staff PlatformStaff @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict)
+  staff PlatformStaff @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
 
   /// One licence record per person (a staff member is in one firm, so (firm, staff) is the person).
   @@unique([firmId, staffId])
@@ -244,7 +244,7 @@ model PlatformRoleGrant {
   endReason String?      @map("end_reason")
 
   firm  PlatformFirm  @relation(fields: [firmId], references: [id], onDelete: Restrict)
-  staff PlatformStaff @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict)
+  staff PlatformStaff @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([firmId, staffId])
   @@map("platform_role_grant")
@@ -290,7 +290,7 @@ model PlatformSessionRevocation {
   reason    String
 
   firm  PlatformFirm  @relation(fields: [firmId], references: [id], onDelete: Restrict)
-  staff PlatformStaff @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict)
+  staff PlatformStaff @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([firmId, staffId, revokedAt])
   @@map("platform_session_revocation")
