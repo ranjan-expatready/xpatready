@@ -68,3 +68,42 @@ Expected: S3 shows Template as a field of the draft and BR-6 lists it among the 
 **B-22 held — the legitimate flows work.** Draft→send. VIEWED → Edit and resend in one transaction (end v1 UPDATED, DRAFT v2 with a new signer, v2 and its fees, send). CLIENT_SIGNED→SIGNED_OFFLINE with the request ended. A new retainer after EXPIRED. Money: −1, 10,000,000,001, 2^63, USD, `cad`, NULL currency, position 0/51/duplicate and `due_on` without ON_DATE are all refused; NULL amount (draft "missing"), 0 and French/Chinese labels are accepted.
 
 **B-24 held — additive migration and rollback.** A catalog diff before and after the migration (columns, defaults, constraints, indexes, triggers, functions, enums) shows nothing removed or changed and 174 additions. The rollback note's DROPs, run in order, restore the catalog exactly. The note does not mention reverting `platform.prisma`'s three back-relation lines: that is a git revert, not SQL.
+
+## Round 2 — head `e4a001e70` (`git diff 62a981d53..e4a001e70`)
+
+Scratch database `xr_fo5_break_r2_29194` (every migration applied in sorted order; firms A and B; new key and actor shapes), plus one throw-away database for the rollback check. Both are dropped. Lines are `mig:` at e4a001e70.
+
+**Result: the 4 Majors are fixed. B-2, B-9, B-13, B-16, B-17 and B-18 are fixed. B-14 and B-15 are partly fixed and still open (Minor). One new Minor (B-25). B-23 is unchanged by design.**
+
+- **B-6 fixed.** The round-1 race again (S1: fee row into v1 in its own transaction, then sleep; S2: send). S2 commits; S1 gets "fee rows are written in the transaction that wrote their version" (`mig:457`). Variant: S1 bumps to v2, writes v2 and its fees, sleeps, then adds one more fee, while S2 sends v1. S2 is refused ("only the current version (2) is sent"), and S1's late fee commits on the unsent v2. Correct. A fee row in a later transaction, or behind a savepoint after the version's transaction, is refused.
+- **B-7 fixed.** `update fo_retainer_version set sent_at=now() where retainer_id=R2` (v1 superseded and unsent, v2 current) → "only the current version (2) is sent or ended, not version 1" (`mig:421-424`). Ending the superseded v1 later is refused the same way.
+- **B-8 fixed.** All refused at commit by `fo_retainer_state_check` (`mig:464-487`): a retainer with no version; DRAFT→SENT with no version; `current_version=2` without v2; SENT→DRAFT v2→SENT without v2.
+  Bypass attempts, all held:
+  - `SET CONSTRAINTS ALL DEFERRED` still checks at commit. `SET CONSTRAINTS fo_retainer_state_check IMMEDIATE` only covers the retainer-side trigger; the version-side `fo_retainer_version_state_check` still fires at commit.
+  - One UPDATE ending two retainers' requests while only one retainer moves: refused at commit.
+  - A version row whose key names another retainer: refused (`fo_retainer_version_file_key_check`). The lookup is by its own `retainer_id`, so another retainer's row is never "current".
+  - A retainer inserted, its version rolled back to a savepoint, then commit: refused. A status change inside a rolled-back savepoint followed by a real request end: refused.
+- **B-9 fixed.** Ending a SENT retainer's request as DECLINED while it stays SENT: refused at commit. Withdrawing with the request open, or ended as EXPIRED: refused. A SIGNED retainer's version: "a request ends once", or "the request of a … retainer does not change" (`mig:425`).
+- **B-12 fixed.** A DRAFT moves to another active firm-A template by `current_version=2` plus a new v2 with fees in one transaction: COMMIT. The same change without a bump: refused. An edit to firm B's template: refused by the foreign key.
+  Races, all held. The template is read `FOR SHARE` (`mig:360`):
+  - An edit to the template's v2 while a bump to v3 is uncommitted waits, then is refused ("takes the template's current version (3)").
+  - A deactivation waits for an edit that holds the share lock.
+  - A new draft racing a deactivation waits, then is refused ("inactive template").
+- **B-2 fixed.** Keys are named by their own row (`mig:203, 216, 231, 238`). A firm-A template whose key names firm B's template id: refused. Part 2's `FilesPort` still owns the firm prefix.
+- **B-13 fixed.** `due_on='infinity'` → refused (`mig:250`, 2000-01-01..2200-12-31).
+- **B-14 partly fixed, still open, Minor.** Now refused: reasons of `E'\n\t'`, a zero-width space alone, NBSP, word joiner, newlines in labels, labels over 120, empty or free-text actors, `merge_values` over 64 KB.
+  `fo_retainer_text_ok` (`mig:191-194`) still accepts text that is invisible or reorders text: soft hyphen U+00AD, Hangul filler U+3164, braille blank U+2800, U+180E, a lone combining mark U+0301, variation selector U+FE0F, tag U+E0041, and the bidi controls U+202A..U+202E. These pass alone (a label of only U+202E) and inside one-line labels and names (`'Fee ‮dlrow'` displays reversed).
+  Expected: also count `\p{Cf}`/`\p{Mn}`-only text and U+3164/U+2800 as empty, and refuse U+202A-U+202E and U+2066-U+2069 in one-line text.
+- **B-15 partly fixed, still open, Minor.** Now refused as duplicates: `std a` and `STD  A` next to `Std A`.
+  Still accepted next to `Std A` in the same firm: `Std A` (em space is not `[[:space:]]` here), `Std​A`, `Std A​`, `​Std A` (the trim covers only space and NBSP, `mig:200`), `Std­A`, the full-width `Ｓｔｄ Ａ`, `Std A‮`, and a name of only U+3164.
+  Expected: normalise before the unique index on `mig:208` (strip Cf characters, map Zs to a space, NFKC through `normalize(name, NFKC)`).
+- **B-16 fixed.** v3 reusing v1's key → `fo_retainer_template_file_key_check`.
+- **B-17 fixed.** A draft at an older template version → "takes the template's current version (2)". The deactivation race: see B-12.
+- **B-18 fixed.** Retainer and template `id` UPDATEs → "firm_id and id never change" (`mig:257-265`).
+- **B-23 unchanged (by design).** An edit is still a new version, and the fee-row rule now makes that explicit.
+- **B-25 new, Minor — the order of writes matters, despite the header's "whatever order".** `begin; update fo_retainer set status='WITHDRAWN', withdrawn_reason='Client changed mind', withdrawn_at=now(), withdrawn_by='staff:a1' where id=R; update fo_retainer_version set ended_at=now(), end_reason='WITHDRAWN' where retainer_id=R and n=1;` → "the request of a WITHDRAWN retainer does not change" (`mig:425`). The same two writes with the version first: COMMIT. SIGNED_OFFLINE and SIGNED behave the same. Only the deferred check is order-free; the immediate version trigger is not. Expected: part 2 and FO-6 always end the request first, and the header (`mig:13`, `mig:464-466`) says so. Or allow the end in the same transaction.
+- **Held again.** The legitimate flows:
+  - draft and send; VIEWED; Declined and Edit and resend, with a new signer, while the template is now inactive (template kept, which matches BR-1);
+  - Expired, with CLIENT_SIGNED→EXPIRED still refused; CLIENT_SIGNED→SIGNED; Signed offline straight from DRAFT with `retainers/<id>/signed-offline.pdf`.
+  The migration is still purely additive (catalog diff: nothing removed or changed, 186 additions). The new rollback note restores the catalog exactly and now names the `platform.prisma` lines.
+  Out of scope: `xr_studio` is a superuser here, so `session_replication_role=replica` or `ALTER TABLE … DISABLE TRIGGER` would switch every trigger off. That is the environment, not this migration.
