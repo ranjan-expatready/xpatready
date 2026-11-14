@@ -17,7 +17,7 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 ## In flight
 | What | Session | Branch | PR |
 |---|---|---|---|
-| PF-6 concept: fresh challenge (independent agent, in-process subagent of Lead B) → writes `screens/pf-6-staff/challenge.md` | Lead B subagent | `lead-b-front-office` | none |
+| (none) | | | |
 
 ## Next step
 1. Lead 39 asks the founder the five questions in the register §D, one at a time; fold each answer into contracts §7 and rows (FO-6 signer, PF-5 door, PF-4 switch default, FO-5 checklist, FO-7 trust).
@@ -45,3 +45,4 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 * 14 Nov 07:10 IST: Lead 39: founder wants the vendor re-checked (FO-5r: platform vs per-firm accounts, the team's own signer, paid product). Rows rev 4.1: FO-6 vendor-neutral (fake adapter only); vendor adapter held as FO-6v.
 * 14 Nov 07:11 IST: Lead 39: rev 4 copied; FO-6 waits on FO-5r; the email one-time code is an open founder point (P-561 (3) vs AG-5-61 r13), kept in contracts §7 and FO-6 (built behind a setting).
 * 14 Nov 07:12 IST: Lead 39 copied FO-6 (rev 4.1) and FO-6v from d81baea2; the per-account question is inside FO-5r.
+* 14 Nov 07:19 IST: PF-6 challenge (2 Blockers, 9 Majors) answered; concept r2 approved (P-223 (4)); rows rev 5: PF-4b (staff reads, session, accept invitation, step-up, provider email via MailPort) and PF-6 rewritten; founder Q3 reframed with Cognito's per-pool limit: (a) required for all (recommended) vs (b) AG-1-40 as written.
