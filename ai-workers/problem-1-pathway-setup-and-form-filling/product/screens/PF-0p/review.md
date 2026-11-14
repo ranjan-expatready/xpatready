@@ -89,3 +89,43 @@ Yes, with a pass and a fail per fake. The rollback check would fail if the adapt
 **New findings:** none. Rounds 1 and 2 stay closed, and the Lead notes stand.
 
 **Reviewer: Approve c491f25c8f13c338cfe4739a6aeaf9119ad505be**
+
+## Round 4 (CI fix: diff `8f64ca4e5..cfbf4f0c4f685eec80160823398c24ad63b3ffd2`, one commit; only the diff was read)
+**Ran:**
+* `check_case_feed.ts`: **39/39**.
+* `check_pf0p_ports.ts`: **71 passed, 0 failed**.
+* `typecheck.mjs`: passes, with no new type errors (15 known).
+* A probe: a scratch copy of the refactored `sweep()` run on 13 made-up sources (`/tmp/claude-0/pf0p/cf/cf.mts`).
+
+**Tightened, never loosened.**
+* The old two paths behave exactly as before:
+  * `.log(` with five or more arguments, and `auditEvent.create`/`createMany`.
+  * `fieldsOf(arg, "data")` is the old code moved into a helper.
+  * Probe: a `nonsense entity` through `log` and through `create` is still "on no list"; `auditEvent.create(payload)` is still "cannot read".
+  * The 39 existing checks pass unchanged.
+* The only new exemption is narrow: `entity: e.entity` inside `platform/audit/audit-event.ts`. It matches the file and the text exactly, as the existing core.ts exemption does. It is sound for two reasons:
+  * the adapter's input is the zod `AuditEntry`, whose `entity` must now match `AREA_ENTITY` at run time;
+  * its callers (`….record(tx, {...})`) are swept.
+* The new port branch adds refusals: a non-area or case-side entity, a template summary naming a case, and a dynamic entity. The made-up-source tests prove the pass case and all three fail cases.
+* `AREA_ENTITY` in `ports/audit.ts` covers the rev 15.2 prefixes (`fo_sales_`, `fo_booking_` and the rest fall under `fo_`). The new PF-0p test refuses `sign step`, `field`, `case` and `retainer`.
+
+**The coordinator's question, `.record(tx, entry)` with a variable argument:** it **is already refused**. `fieldsOf` pushes "an audit write whose data the sweep cannot read: entry" (probed). A spread-only `{ ...base }` is refused too ("no entity the sweep can read"). Keep both refusals: a variable hides the summary, and the sweep exists to read the summary.
+
+**Remaining blind spots (Minor; none needs fixing before merge):**
+* **Calls the sweep does not see.** Probed, each gives no finding:
+  * a `.record(` with 3 arguments;
+  * a receiver not ending in `audit…` (`this.trail.record`);
+  * an alias (`const a = auditEvent; a.record`);
+  * a destructured `record(…)`;
+  * an element access (`deps["audit"].record`).
+
+  None of these can write a case or configuration entity, because zod's `AREA_ENTITY` refuses one at run time on every AuditPort write. What they escape is only the static "summary names a case" check.
+* **A literal summary naming a case** (`"Retainer for case 1a2b3c4d"`) passes the sweep, which only looks for `case ${`. This matches the old rule for old writes. But `firmMayRead` would then hand that `fo_…` line to the firm owning case `1a2b3c4d`.
+
+The lasting fix belongs outside this row's files: make `case-feed.ts` `firmMayRead` return `false` for any `AREA_ENTITY` entity, just as it already does for `PLATFORM_ENTITIES`, so no area line is ever read as a case line. It is for the Lead (case-feed.ts is the case side's) or AUD-1.
+
+**Scope:** `check_case_feed.ts` is outside the brief's touch list, but CI requires it to change. The edit is additive and the reason is recorded, so it is acceptable. Lead B should know.
+
+**New findings:** no Blocker or Major.
+
+**Reviewer: Approve cfbf4f0c4f685eec80160823398c24ad63b3ffd2**
