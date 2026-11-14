@@ -15,7 +15,7 @@ import { onFirmCreated, REASONS, seedCreatedFirms, seedFirmFrontOffice, seedSamp
 import { seedSampleFirms } from "../api/src/platform/seed-sample-firms.ts";
 
 const STUDIO = join(import.meta.dirname, ".."), MIG = join(STUDIO, "prisma", "migrations"), SCHEMA = join(STUDIO, "prisma", "schema");
-const NEW = "20261114063000_fo1a_front_office_sales", NEWEST_BEFORE = "20261114015002_pf3_platform_tables";
+const NEW = "20261114153000_fo1a_front_office_sales", NEWEST_BEFORE = "20261114120000_fo1b_booking_tables";
 const BIN = "/opt/homebrew/opt/postgresql@18/bin", PG = ["-h", "127.0.0.1", "-p", "54329", "-U", "xr_studio"];
 const EMPTY = `xr_studio_fo1a_empty_${process.pid}`, DEMO = `xr_studio_fo1a_demo_${process.pid}`, BARE = `xr_studio_fo1a_bare_${process.pid}`;
 const urlOf = (db: string) => `postgresql://xr_studio@127.0.0.1:54329/${db}`;
@@ -390,8 +390,8 @@ try {
   sql(DEMO, `insert into fo_company (firm_id, operating_name, normalised_name, created_by, updated_at) values ('${SF}', '株式会社さくら', '株式会社さくら', 'test', now());
     insert into fo_reason (firm_id, kind, key, label, sort_order) values ('${SF}', 'PROSPECT_LOST', 'PRICE_AR', 'السعر', 20);
     insert into fo_service (firm_id, label, sort_order, created_by) values ('${SF}', 'Виза', 20, 'test')`);
-  ok("FO-1a pass: names in any script are names (株式会社さくら, السعر, Виза; break R2-1)", sql(DEMO, `select count(*) from fo_company where operating_name = '株式会社さくら'`) === "1" && sql(DEMO, `select fo_has_word('就労ビザ') and fo_has_word('會議')`) === "t");
-  ok("FO-1a fail: a name of only spaces, punctuation, joiners or the Hangul filler is refused", sql(DEMO, `select fo_has_word(E' \\t\\u00a0\\u200d\\u3164') or fo_has_word('--')`) === "f"
+  ok("FO-1a pass: names in any script are names (株式会社さくら, السعر, Виза; break R2-1)", sql(DEMO, `select count(*) from fo_company where operating_name = '株式会社さくら'`) === "1" && sql(DEMO, `select fo_sales_has_word('就労ビザ') and fo_sales_has_word('會議')`) === "t");
+  ok("FO-1a fail: a name of only spaces, punctuation, joiners or the Hangul filler is refused", sql(DEMO, `select fo_sales_has_word(E' \\t\\u00a0\\u200d\\u3164') or fo_sales_has_word('--')`) === "f"
     && refused(DEMO, `insert into fo_service (firm_id, label, sort_order, created_by) values ('${SF}', E'\\u200b\\u3164', 21, 'test')`, /fo_service_label_check/));
   ok("FO-1a fail: an intake key ending in a no-break or zero-width space is refused", refused(DEMO, `insert into fo_arrival_receipt (firm_id, door, intake_key, payload_hash) values ('${SF}', 'BOOKING', E'booking:b-9\\u00a0', 'h')`, /fo_arrival_receipt_key_check/)
     && refused(DEMO, `insert into fo_arrival_receipt (firm_id, door, intake_key, payload_hash) values ('${SF}', 'BOOKING', E'booking:b-9\\u200b', 'h')`, /fo_arrival_receipt_key_check/));
@@ -404,7 +404,7 @@ try {
   sql(DEMO, `insert into fo_sales_setup (firm_id) values ('${FRESH}')`);
   ok("FO-1a fail: a firm is marked seeded only with its stages, reasons and web form (break R3-3)", refused(DEMO, `update fo_sales_setup set seeded_at = now(), seeded_by = 'x' where firm_id = '${FRESH}'`, /only with its stages/));
   ok("FO-1a fail: a soft hyphen, a Braille blank, a lone combining accent, a variation selector or punctuation alone is no name (break R3-2)",
-    sql(DEMO, `select fo_has_word(E'\\u00ad') or fo_has_word(E'\\u2800') or fo_has_word(E'\\u0301') or fo_has_word(E'\\u034f\\ufe0f') or fo_has_word(E'\\u2014\\u2026\\u3002') or fo_has_word(E'\\u3164\\u115f')`) === "f" && sql(DEMO, `select fo_has_word('é') and fo_has_word('7')`) === "t");
+    sql(DEMO, `select fo_sales_has_word(E'\\u00ad') or fo_sales_has_word(E'\\u2800') or fo_sales_has_word(E'\\u0301') or fo_sales_has_word(E'\\u034f\\ufe0f') or fo_sales_has_word(E'\\u2014\\u2026\\u3002') or fo_sales_has_word(E'\\u3164\\u115f')`) === "f" && sql(DEMO, `select fo_sales_has_word('é') and fo_sales_has_word('7')`) === "t");
   ok("FO-1a fail: an intake key with a soft hyphen or any character outside printable ASCII is refused (break R3-2)", refused(DEMO, `insert into fo_arrival_receipt (firm_id, door, intake_key, payload_hash) values ('${SF}', 'BOOKING', E'booking:b\\u00ad9', 'h')`, /fo_arrival_receipt_key_check/));
   ok("FO-1a pass: an unreadable phone is kept as typed when marked so (AG-2-84 rule 5)", (sql(DEMO, `insert into fo_person (firm_id, phone, phone_readable, created_by, updated_at) values ('${SF}', '416 555', false, 'test', now())`), true));
 

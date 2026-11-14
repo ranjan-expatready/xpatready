@@ -62,7 +62,7 @@ export type FirmSeedResult = { firmId: string; seeded: boolean; stages: number; 
 /** The released, not retired combinations, each named by its place: its program chain from the top down, joined with
  *  " › ", and its own name when that differs from the last step ("Work permit › With an LMIA › Inside Canada", not
  *  "Inside Canada" alone: review m6; the same parts the app's trail shows, without the pathway type). A combination
- *  without a readable name (fo_has_word, the migration's test in any script) is left out (break B6); a loop in the program
+ *  without a readable name (fo_sales_has_word, the migration's test in any script) is left out (break B6); a loop in the program
  *  chain is cut (break R2-8), so one bad row never stops a firm's seed. This is
  *  the firm's "Interested in" list in month one (AG-16-76). */
 export async function releasedCombinations(db: PrismaClient | Prisma.TransactionClient): Promise<{ id: string; label: string }[]> {
@@ -75,9 +75,9 @@ export async function releasedCombinations(db: PrismaClient | Prisma.Transaction
         from up join program_def p on p.workspace_id = up.ws and p.program_node_key = up.parent
        where up.depth < 12 and not p.program_node_key = any(up.seen))
     select c.id::text as id, btrim(c.label) as label,
-           (select array_agg(btrim(u.label) order by u.depth desc) from up u where u.cid = c.id and fo_has_word(u.label)) as chain
+           (select array_agg(btrim(u.label) order by u.depth desc) from up u where u.cid = c.id and fo_sales_has_word(u.label)) as chain
       from combination c
-     where c.retired_at is null and fo_has_word(c.label)
+     where c.retired_at is null and fo_sales_has_word(c.label)
        and exists (select 1 from config_release r where r.combination_id = c.id and r.status = 'RELEASED')`;
   return rows
     .map((r) => { const chain = r.chain ?? []; return { id: r.id, label: (chain.at(-1) === r.label ? chain : [...chain, r.label]).join(" › ") }; })

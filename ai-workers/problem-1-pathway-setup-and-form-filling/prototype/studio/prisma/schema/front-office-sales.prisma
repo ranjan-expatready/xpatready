@@ -13,7 +13,7 @@
 // so platform.prisma needs no more lines; "by" columns are actor strings, as in platform.prisma (a staff id, `seed:FO-1a`
 // or `system:<door>`). Rules Prisma cannot say (L-/P- numbers, write-once and add-only rows, the stage and reason checks,
 // the Corporate primary contact, staff of the same firm, rows never moving firm) are triggers in the migration
-// 20261114063000_fo1a_front_office_sales. Every label seeded here comes from AG-02 (stages AG-2-52, reasons AG-2-80 rule 2
+// 20261114153000_fo1a_front_office_sales. Every label seeded here comes from AG-02 (stages AG-2-52, reasons AG-2-80 rule 2
 // and AG-2-44 rule 2) or from the firm's own released combinations (services, AG-16-76).
 
 /// Doors a lead can arrive by (contracts §2.1: month one WEB_FORM and MANUAL; BOOKING is the booking page's arrival,

@@ -21,10 +21,10 @@
 --   "fo_lead_attribution", "fo_arrival_receipt", "fo_lead", "fo_web_form", "fo_service", "fo_reason", "fo_stage",
 --   "fo_person", "fo_sales_setup" CASCADE; DROP TYPE "FoDoor", "FoArrivalOutcome", "FoLeadState", "FoFirstResponseKind",
 --   "FoPipeline", "FoStageKind", "FoReasonKind", "FoContactRole", "FoWonVia", "FoMoveCause", "FoCallDirection",
---   "FoCallOutcome", "FoNoteVisibility", "FoClickIdKind"; DROP FUNCTION fo_sales_setup_firm_exists(), fo_firm_fixed(),
---   fo_insert_only(), fo_next_number(uuid, text), fo_lead_number(), fo_prospect_number(), fo_number_fixed(),
+--   "FoCallOutcome", "FoNoteVisibility", "FoClickIdKind"; DROP FUNCTION fo_sales_setup_firm_exists(), fo_sales_firm_fixed(),
+--   fo_sales_insert_only(), fo_sales_next_number(uuid, text), fo_lead_number(), fo_prospect_number(), fo_sales_number_fixed(),
 --   fo_owner_in_firm(), fo_prospect_rules(), fo_prospect_contact_linked(), fo_company_contact_still_linked(),
---   fo_stage_fixed(), fo_reason_fixed(), fo_sales_setup_forward(), fo_has_word(text), fo_lead_stays_engaged(),
+--   fo_stage_fixed(), fo_reason_fixed(), fo_sales_setup_forward(), fo_sales_has_word(text), fo_lead_stays_engaged(),
 --   fo_stage_move_matches(), fo_prospect_lead_engaged();
 --   delete this folder's row from _prisma_migrations.
 
@@ -605,11 +605,11 @@ CREATE TRIGGER "fo_sales_setup_forward" BEFORE UPDATE ON "fo_sales_setup" FOR EA
 -- punctuation, symbols such as the Braille blank, combining marks, joiners and other format characters alone are no
 -- name (break R3-2). ICU is in every PostgreSQL 18 the studio runs on (Homebrew on the Mac, pgdg's apt build in CI, the
 -- npm build in cloud copies), so this migration fails loudly on one without it.
-CREATE FUNCTION fo_has_word(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT regexp_replace(t, '[\u115f\u1160\u3164\uffa0]', '', 'g') ~ ('[[:alnum:]]' COLLATE "und-x-icu") $$;
+CREATE FUNCTION fo_sales_has_word(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT regexp_replace(t, '[\u115f\u1160\u3164\uffa0]', '', 'g') ~ ('[[:alnum:]]' COLLATE "und-x-icu") $$;
 
 -- A front-office row never moves to another firm (the (firm_id, id) keys refuse it for rows that are pointed at; this
 -- refuses it for every row, the setup row included).
-CREATE FUNCTION fo_firm_fixed() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE FUNCTION fo_sales_firm_fixed() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW."firm_id" IS DISTINCT FROM OLD."firm_id" THEN
     RAISE EXCEPTION '%: a front-office row never moves to another firm', TG_TABLE_NAME USING ERRCODE = 'check_violation';
@@ -621,13 +621,13 @@ DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY['fo_sales_setup', 'fo_person', 'fo_arrival_receipt', 'fo_lead', 'fo_company', 'fo_company_contact',
     'fo_prospect', 'fo_stage', 'fo_reason', 'fo_call', 'fo_web_form', 'fo_service'] LOOP
-    EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE OF "firm_id" ON %I FOR EACH ROW EXECUTE FUNCTION fo_firm_fixed()', t || '_firm_fixed', t);
+    EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE OF "firm_id" ON %I FOR EACH ROW EXECUTE FUNCTION fo_sales_firm_fixed()', t || '_firm_fixed', t);
   END LOOP;
 END $$;
 
 -- Write-once and add-only rows: lead attribution (AG-2-8a rule 4), notes (AG-13-21, -24) and stage moves (history,
 -- AG-2-26) are never changed or removed; a correction is a new note.
-CREATE FUNCTION fo_insert_only() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE FUNCTION fo_sales_insert_only() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   RAISE EXCEPTION '%: rows are written once, never changed or removed (% refused)', TG_TABLE_NAME, TG_OP USING ERRCODE = 'insufficient_privilege';
 END $$;
@@ -635,8 +635,8 @@ DO $$
 DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY['fo_lead_attribution', 'fo_note', 'fo_stage_move'] LOOP
-    EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE OR DELETE ON %I FOR EACH ROW EXECUTE FUNCTION fo_insert_only()', t || '_insert_only', t);
-    EXECUTE format('CREATE TRIGGER %I BEFORE TRUNCATE ON %I FOR EACH STATEMENT EXECUTE FUNCTION fo_insert_only()', t || '_no_truncate', t);
+    EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE OR DELETE ON %I FOR EACH ROW EXECUTE FUNCTION fo_sales_insert_only()', t || '_insert_only', t);
+    EXECUTE format('CREATE TRIGGER %I BEFORE TRUNCATE ON %I FOR EACH STATEMENT EXECUTE FUNCTION fo_sales_insert_only()', t || '_no_truncate', t);
   END LOOP;
 END $$;
 
@@ -645,7 +645,7 @@ END $$;
 -- transaction: two inserts of one firm wait for each other, so a number never repeats, and a rolled-back insert gives its
 -- number back. A number given by the writer is replaced; past 99999 the number grows a digit (never cut). A number never
 -- changes once given. The unique (firm_id, number) index is the last guard.
-CREATE FUNCTION fo_next_number(firm uuid, which text) RETURNS text LANGUAGE plpgsql AS $$
+CREATE FUNCTION fo_sales_next_number(firm uuid, which text) RETURNS text LANGUAGE plpgsql AS $$
 DECLARE n integer;
 BEGIN
   IF which = 'L' THEN
@@ -654,31 +654,31 @@ BEGIN
     UPDATE "fo_sales_setup" SET "next_prospect_no" = "next_prospect_no" + 1 WHERE "firm_id" = firm RETURNING "next_prospect_no" - 1 INTO n;
   END IF;
   IF n IS NULL THEN
-    RAISE EXCEPTION 'fo_next_number: firm % has no front office set up (fo_sales_setup)', firm USING ERRCODE = 'foreign_key_violation';
+    RAISE EXCEPTION 'fo_sales_next_number: firm % has no front office set up (fo_sales_setup)', firm USING ERRCODE = 'foreign_key_violation';
   END IF;
   RETURN which || '-' || CASE WHEN n < 100000 THEN lpad(n::text, 5, '0') ELSE n::text END;
 END $$;
 CREATE FUNCTION fo_lead_number() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  NEW."number" := fo_next_number(NEW."firm_id", 'L');
+  NEW."number" := fo_sales_next_number(NEW."firm_id", 'L');
   RETURN NEW;
 END $$;
 CREATE FUNCTION fo_prospect_number() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  NEW."number" := fo_next_number(NEW."firm_id", 'P');
+  NEW."number" := fo_sales_next_number(NEW."firm_id", 'P');
   RETURN NEW;
 END $$;
 CREATE TRIGGER "fo_lead_number" BEFORE INSERT ON "fo_lead" FOR EACH ROW EXECUTE FUNCTION fo_lead_number();
 CREATE TRIGGER "fo_prospect_number" BEFORE INSERT ON "fo_prospect" FOR EACH ROW EXECUTE FUNCTION fo_prospect_number();
-CREATE FUNCTION fo_number_fixed() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE FUNCTION fo_sales_number_fixed() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW."number" IS DISTINCT FROM OLD."number" THEN
     RAISE EXCEPTION '%: a number never changes (% stays)', TG_TABLE_NAME, OLD."number" USING ERRCODE = 'check_violation';
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER "fo_lead_number_fixed" BEFORE UPDATE OF "number" ON "fo_lead" FOR EACH ROW EXECUTE FUNCTION fo_number_fixed();
-CREATE TRIGGER "fo_prospect_number_fixed" BEFORE UPDATE OF "number" ON "fo_prospect" FOR EACH ROW EXECUTE FUNCTION fo_number_fixed();
+CREATE TRIGGER "fo_lead_number_fixed" BEFORE UPDATE OF "number" ON "fo_lead" FOR EACH ROW EXECUTE FUNCTION fo_sales_number_fixed();
+CREATE TRIGGER "fo_prospect_number_fixed" BEFORE UPDATE OF "number" ON "fo_prospect" FOR EACH ROW EXECUTE FUNCTION fo_sales_number_fixed();
 ALTER TABLE "fo_lead" ADD CONSTRAINT "fo_lead_number_check" CHECK ("number" ~ '^L-[0-9]{5,}$');
 ALTER TABLE "fo_prospect" ADD CONSTRAINT "fo_prospect_number_check" CHECK ("number" ~ '^P-[0-9]{5,}$');
 
@@ -737,14 +737,14 @@ END $$;
 CREATE TRIGGER "fo_lead_stays_engaged" BEFORE UPDATE OF "state" ON "fo_lead" FOR EACH ROW EXECUTE FUNCTION fo_lead_stays_engaged();
 ALTER TABLE "fo_lead" ADD CONSTRAINT "fo_lead_first_response_check" CHECK (num_nulls("first_response_at", "first_response_by", "first_response_kind") IN (0, 3));
 ALTER TABLE "fo_lead" ADD CONSTRAINT "fo_lead_links_check" CHECK (("possible_match_person_id" IS DISTINCT FROM "person_id") AND ("previous_lead_id" IS DISTINCT FROM "id"));
-ALTER TABLE "fo_lead" ADD CONSTRAINT "fo_lead_source_check" CHECK (fo_has_word("source"));
+ALTER TABLE "fo_lead" ADD CONSTRAINT "fo_lead_source_check" CHECK (fo_sales_has_word("source"));
 
 -- A company contact (AG-2-77 rules 3, 6): the same person and role are never linked twice while live; one live PRIMARY
 -- per company; an end is not before the start.
 CREATE UNIQUE INDEX "fo_company_contact_live_role_key" ON "fo_company_contact" ("firm_id", "company_id", "person_id", "role") WHERE "valid_to" IS NULL;
 CREATE UNIQUE INDEX "fo_company_contact_one_primary_key" ON "fo_company_contact" ("firm_id", "company_id") WHERE "role" = 'PRIMARY' AND "valid_to" IS NULL;
 ALTER TABLE "fo_company_contact" ADD CONSTRAINT "fo_company_contact_dates_check" CHECK ("valid_to" IS NULL OR "valid_to" >= "valid_from");
-ALTER TABLE "fo_company" ADD CONSTRAINT "fo_company_names_check" CHECK (fo_has_word("operating_name") AND fo_has_word("normalised_name"));
+ALTER TABLE "fo_company" ADD CONSTRAINT "fo_company_names_check" CHECK (fo_sales_has_word("operating_name") AND fo_sales_has_word("normalised_name"));
 
 -- A prospect (AG-2-52 rule 2, AG-2-77 rules 4, 6; contracts §7 §2.1): INDIVIDUAL → a person subject who is the primary
 -- contact; CORPORATE → a company subject; the lost reason is from the prospect list; a value is not negative.
@@ -834,12 +834,12 @@ BEGIN
   RETURN NULL;
 END $$;
 CREATE CONSTRAINT TRIGGER "fo_company_contact_still_linked" AFTER UPDATE OR DELETE ON "fo_company_contact" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION fo_company_contact_still_linked();
-CREATE TRIGGER "fo_company_contact_no_truncate" BEFORE TRUNCATE ON "fo_company_contact" FOR EACH STATEMENT EXECUTE FUNCTION fo_insert_only();
+CREATE TRIGGER "fo_company_contact_no_truncate" BEFORE TRUNCATE ON "fo_company_contact" FOR EACH STATEMENT EXECUTE FUNCTION fo_sales_insert_only();
 
 -- Stages (AG-2-52 rule 3): one WON, one LOST and one NURTURE per pipeline; a stage's key, pipeline and kind never change
 -- (reports and the move rules read them); a WON, LOST or NURTURE stage is never removed or turned off.
 CREATE UNIQUE INDEX "fo_stage_one_end_kind_key" ON "fo_stage" ("firm_id", "pipeline", "kind") WHERE "kind" <> 'ACTIVE';
-ALTER TABLE "fo_stage" ADD CONSTRAINT "fo_stage_label_check" CHECK (fo_has_word("label") AND "key" ~ '^[A-Z][A-Z0-9_]*$');
+ALTER TABLE "fo_stage" ADD CONSTRAINT "fo_stage_label_check" CHECK (fo_sales_has_word("label") AND "key" ~ '^[A-Z][A-Z0-9_]*$');
 CREATE FUNCTION fo_stage_fixed() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
@@ -870,7 +870,7 @@ CREATE TRIGGER "fo_stage_fixed" BEFORE UPDATE OR DELETE ON "fo_stage" FOR EACH R
 
 -- Reasons (AG-2-80 rule 2): a reason's key, list and system flag never change; a system reason is never removed or
 -- turned off (its label may be renamed).
-ALTER TABLE "fo_reason" ADD CONSTRAINT "fo_reason_label_check" CHECK (fo_has_word("label") AND "key" ~ '^[A-Z][A-Z0-9_]*$');
+ALTER TABLE "fo_reason" ADD CONSTRAINT "fo_reason_label_check" CHECK (fo_sales_has_word("label") AND "key" ~ '^[A-Z][A-Z0-9_]*$');
 CREATE FUNCTION fo_reason_fixed() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
@@ -892,7 +892,7 @@ CREATE TRIGGER "fo_reason_fixed" BEFORE UPDATE OR DELETE ON "fo_reason" FOR EACH
 -- Calls on exactly one of a lead or a prospect (contracts §2.1); seconds not negative. Notes in at most one context and
 -- never empty. A stage move goes somewhere else.
 ALTER TABLE "fo_call" ADD CONSTRAINT "fo_call_context_check" CHECK (num_nonnulls("lead_id", "prospect_id") = 1 AND "seconds" >= 0);
-ALTER TABLE "fo_note" ADD CONSTRAINT "fo_note_context_check" CHECK (num_nonnulls("lead_id", "prospect_id") <= 1 AND fo_has_word("text"));
+ALTER TABLE "fo_note" ADD CONSTRAINT "fo_note_context_check" CHECK (num_nonnulls("lead_id", "prospect_id") <= 1 AND fo_sales_has_word("text"));
 ALTER TABLE "fo_stage_move" ADD CONSTRAINT "fo_stage_move_check" CHECK ("from_stage_id" IS DISTINCT FROM "to_stage_id");
 -- A stage move records the prospect's own change (review m3): written after it in the same transaction, it moves to the
 -- prospect's stage then; a move between pipelines is Change type and only Change type (contracts §7 §2.1).
@@ -930,5 +930,5 @@ CREATE TRIGGER "fo_stage_move_matches" BEFORE INSERT ON "fo_stage_move" FOR EACH
 -- A web form is turned on only with a consent wording to show (SA-11-29; the wording is the platform's, PF-19a); its
 -- public token is long enough not to be guessed; a service has a name.
 ALTER TABLE "fo_web_form" ADD CONSTRAINT "fo_web_form_consent_check" CHECK (NOT "enabled" OR "consent_wording_version_id" IS NOT NULL);
-ALTER TABLE "fo_web_form" ADD CONSTRAINT "fo_web_form_token_check" CHECK (length("public_token") >= 22 AND fo_has_word("name"));
-ALTER TABLE "fo_service" ADD CONSTRAINT "fo_service_label_check" CHECK (fo_has_word("label"));
+ALTER TABLE "fo_web_form" ADD CONSTRAINT "fo_web_form_token_check" CHECK (length("public_token") >= 22 AND fo_sales_has_word("name"));
+ALTER TABLE "fo_service" ADD CONSTRAINT "fo_service_label_check" CHECK (fo_sales_has_word("label"));
