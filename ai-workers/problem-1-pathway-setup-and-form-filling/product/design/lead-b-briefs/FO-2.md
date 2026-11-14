@@ -13,11 +13,19 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime F
 
 **Outbox (PF-3 review m8):** write any `module_event` row **last** in its transaction.
 
+**The seeds (Lead B's answer on #1742, rev 15.1).** FO-2 is the first row that serves a front-office page, so it wires the seeds.
+* **Demo reset:** it runs PF-3's `seed-sample-firms.ts`, then FO-1a's `seedSampleFirmsFrontOffice`. These are one-line hooks in the reset, a shared file: the release holder's OK; list them under "Shared-file lines".
+* **New firms:** FO-1a's `seedCreatedFirms` (catch-up over `module_event` by `seq`, idempotent) runs once at start. If PF-14 is on `main`, it is also a `JobPort` recurring job (Sample: every minute); if not, PF-14's first user moves it onto `JobPort`.
+* Match `EVENT.FIRM_CREATED` from `ports/events.ts`, never a string.
+* **The web form's message** (#1742 review m12) is the lead's first note (`fo_note`, `INTERNAL`).
+* Add a version column for the stale-save rule only where an edit form needs it (m8).
+* Tests: after a demo reset, both Sample firms have both pipelines; a new `firm.created` seeds that firm once, and a second run adds nothing.
+
 **Must still be true:** every existing suite, the demo reset and the checkpoint load (C10.1) pass unchanged; firm A never reads or writes firm B's rows (`firmScope`).
 
 **Duplicate check (P-526):** before building, search BACKLOG, open PRs, `main`'s code (`git grep -i 'fo_lead\|engage\|take it'` under `api/src`) and BUGS; one `Duplicate check:` line in the PR.
 
 **Breaker: yes (public door, permissions).** The release holder reads the diff first (P-423: permissions).
 
-**Rules (standard, every PF/FO brief):** P-559: firm tables, real sign-in and billing are ours in the PF/FO modules (amends P-335/P-357). One row, one session, one PR; new files only outside the touch list. Opus reviewer (P-303); re-review reads only the diff (P-277); label `review: approved` only after `Reviewer: Approve <sha>` and green CI (P-277, P-385); merge `main` only on a conflict (P-270). Live AI off, US$0, never a priced button (P-175). No real keys or secrets anywhere; outside services only through fakes and test keys in CI. Push after every step (P-557). Questions as a PR comment headed "Question for the tech lead"; report to the current Lead (`tools/current-lead.sh`) for the merge queue and to **Lead B** (row owner, branch `lead-b-front-office`, hand-over `product/design/lead-b-state.md`) for the row. Cross-module port interfaces, their fakes and shared event payload types go in `prototype/studio/ports/` (`zod` only; case-side contract v0.1 §1 rule 3); adapters stay in the module's folder; never import `engine/` or case-side files (rows rev 14.1). Every token earns its outcome (P-556): read only the files named here and the code you change.
+**Rules (standard, every PF/FO brief):** P-559: firm tables, real sign-in and billing are ours in the PF/FO modules (amends P-335/P-357). One row, one session, one PR; new files only outside the touch list. Opus reviewer (P-303); re-review reads only the diff (P-277); label `review: approved` only after `Reviewer: Approve <sha>` and green CI (P-277, P-385); merge `main` only on a conflict (P-270). Live AI off, US$0, never a priced button (P-175). No real keys or secrets anywhere; outside services only through fakes and test keys in CI. Push after every step (P-557). Questions as a PR comment headed "Question for the tech lead"; report to the current Lead (`tools/current-lead.sh`) for the merge queue and to **Lead B** (row owner, branch `lead-b-front-office`, hand-over `product/design/lead-b-state.md`) for the row. Cross-module port interfaces, their fakes and shared event payload types go in `prototype/studio/ports/` (`zod` only; case-side contract v0.1 §1 rule 3); adapters stay in the module's folder; never import `engine/` or case-side files (rows rev 14.1). Event names come from `prototype/studio/ports/events.ts` (`EVENT.*`, FO-1a); add a new name there, never a string literal (rev 15.1). Every token earns its outcome (P-556): read only the files named here and the code you change.
 ---

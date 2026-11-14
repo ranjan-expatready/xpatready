@@ -320,3 +320,47 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
   * it adds no new required job;
   * the PR states the minutes it adds per run (B190, P-589 (2)). Over ~1 minute per run, it goes into an existing job.
 * **The case-side asks** (an exporter for PF-26, an eraser for PF-21d, `LegalHoldPort` before any delete, the four AG-7-39 notices through `NotificationPort`) go into the release holder's CS- rows.
+
+## Rev 15.1 (14 Nov 15:17 IST, Lead B (3)): FO-1a's two questions (#1742); shared event names; qa-testable Done when (P-592)
+
+**FO-1k, new: front-office keys to the platform.** It follows FO-1a (#1742), and Lead B answered its question 1 on the PR (comment 6875438964).
+* **What it changes:**
+  * Three one-line hooks on `platform.prisma`:
+    * `PlatformFirm.frontOfficeSales FoSalesSetup?`;
+    * `PlatformStaff.ownedLeads FoLead[] @relation("LeadOwner")`;
+    * `PlatformStaff.ownedProspects FoProspect[] @relation("ProspectOwner")`.
+  * Lead B owns both files, so this is the contracts §9 exception.
+  * One migration with the foreign keys, all RESTRICT:
+    * `fo_sales_setup (firm_id) → platform_firm (id)`;
+    * `(firm_id, owner_id) → platform_staff (firm_id, id)` for leads and prospects.
+  * It drops `fo_sales_setup_firm_exists` and `fo_owner_in_firm`.
+* **Touch:** those three lines, the matching relation fields on `front-office-sales.prisma`, one migration folder, and `tests/check_fo1k_keys.ts`.
+* **Done when** (a pass and a fail each):
+  * deleting a firm or staff row that has front-office rows → refused (closes review m2, break B5);
+  * an owner from another firm → 23503;
+  * migration on empty and demo-data copies, with `migrate diff` empty;
+  * every FO-1a and PF-3 test unchanged.
+* **Waits on:** FO-1a.
+* **Schema slot:** the next free one after PF-19a and FO-7a, ahead of FO-13 (the release holder may rule otherwise). PF-19a also touches `platform.prisma` and `front-office-sales.prisma`: the second to merge re-applies its lines.
+* **Breaker:** yes (schema).
+* **Size:** S, 1 PR.
+
+**FO-2, amended (FO-1a question 2; brief updated):**
+* The demo reset runs PF-3's sample seed, then `seedSampleFirmsFrontOffice`. These are one-line hooks, and need the release holder's OK.
+* `seedCreatedFirms` runs once at start, and as a `JobPort` recurring job when PF-14 is on `main`.
+* The web form's message is the lead's first `INTERNAL` note.
+* A version column for the stale-save rule is added only where an edit form needs it.
+* Done when adds: after a reset, both Sample firms have both pipelines; a new `firm.created` seeds that firm once, and a second run adds nothing.
+
+**Shared event names:**
+* FO-1a added `prototype/studio/ports/events.ts` (`EVENT.FIRM_CREATED`, zod only), which is case-side contract v0.1's events home.
+* Every PF/FO row takes its event names from there. A new event (`prospect.won`, `signing.completed`, `invoice.*`, `payment.*`, `booking.*`, …) is added to that file by the row that first emits it, never as a string literal.
+* The sentence is in every brief.
+
+**qa-testable Done when (P-592: MVP-CHECKLIST.md is the one Release 1 tracking page; a qa cloud lane is adding PF, FO, money and audit capabilities to `qa/CAPABILITIES.md`).**
+* Every Done when line in rows rev 3.1 to 15 names an observable pass and fail: a route's answer, a database refusal, an email in the demo inbox, a screen state.
+* **Which row closes a capability for qa:** a capability becomes testable by a person when the row that serves it merges.
+  * That is the screen row (the "s", "st" or "w" rows) or, where there is no screen, the API row.
+  * Schema-only rows close no capability themselves: FO-1a, FO-1b, FO-1k, FO-7a, FO-13, PF-12, PF-19a and PF-3.
+  * qa tests their rules through the first API row that uses them, and through the row's own pass and fail suite on `main`.
+* Lead B gives the qa lane the row → map-row list on request; MVP-CHECKLIST §A already holds it.

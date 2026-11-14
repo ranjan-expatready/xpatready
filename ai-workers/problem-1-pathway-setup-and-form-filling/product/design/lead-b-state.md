@@ -143,3 +143,6 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
   * Brief **PF-19a** written (next schema slot after FO-1a; FO-2 waits on it). It adds the `fo_web_form` → `msg_consent_wording` foreign key FO-1a left, with one back-relation line OK'd by Lead B.
 * 14 Nov 13:56 IST: brief **PF-12** written (walls; runs right after FO-7a, before FO-7b; it adds a missing-policy check so later tables can't skip their policy). Told Lead 45 that PF-19a, FO-13 and FO-7a can start once FO-1a merges, two schema rows at a time (P-559 (3)).
 * 14 Nov 13:57 IST: Lead 45 set the schema start order (STATE c3dc42691): **PF-19a + FO-7a** once FO-1a merges, then FO-13 when a slot frees. FO-7a goes first because money has the longest chain (FO-7a → PF-12 → FO-7b).
+* 14 Nov 15:17 IST: Lead 45 reported FO-1b #1741 merged (15:1x) and FO-1a #1742 re-approved at 0e7b715df and queued.
+  * Lead B answered FO-1a's two questions on #1742 (comment 6875438964). Back-relation lines and keys → new row **FO-1k**; the seed → **FO-2** (brief updated).
+  * Rows rev 15.1: FO-1k; FO-2 amended; event names from `ports/events.ts` (sentence added to every brief); the qa-testable Done when note (P-592).
