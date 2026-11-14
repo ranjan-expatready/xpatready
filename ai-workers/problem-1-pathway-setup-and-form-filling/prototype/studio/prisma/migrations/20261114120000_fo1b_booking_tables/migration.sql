@@ -7,16 +7,14 @@
 --     host overlap on the range padded by the type's gaps (exclusion, BR-3, AG-4-26); block_range and sequence are the
 --     database's (trigger); status moves; a time change is a reschedule; a token expires at the meeting's end, is voided
 --     when the booking is cancelled or moved, and only its voided_at changes, once (AG-4-36); no two windows of one person
---     overlap on a day and a person's windows share one zone (AG-4-62); firm_id never changes; staff, hosts and the firm
---     exist in the same firm (triggers, until Lead B's back-relation lines on platform.prisma let them be foreign keys);
+--     overlap on a day and a person's windows share one zone (AG-4-62); firm_id never changes; a type's hosts are staff of
+--     its firm (trigger: a list has no foreign key);
 --     ranges and shapes of minutes, slugs, links, zones and hashes (checks).
--- Rollback (in this order; review m4): DROP TRIGGER fo_platform_staff_kept ON "platform_staff"; DROP TRIGGER
---   fo_platform_firm_kept ON "platform_firm"; DROP TABLE "fo_booking_token", "fo_booking", "fo_time_off", "fo_availability",
+-- Rollback (in this order; review m4): DROP TABLE "fo_booking_token", "fo_booking", "fo_time_off", "fo_availability",
 --   "fo_consultation_type"; DROP FUNCTION fo_zone_ok(text), fo_distinct_uuids(uuid[]), fo_distinct_modes("FoMeetingMode"[]),
---   fo_firm_fixed(), fo_staff_in_firm(), fo_consultation_type_refs(), fo_availability_zone(), fo_booking_write(),
---   fo_booking_void_tokens(), fo_booking_token_write(), fo_platform_staff_kept(), fo_platform_firm_kept(); DROP TYPE
---   "FoBookingStatus", "FoMeetingMode", "FoConsultationPurpose"; delete this folder's row from _prisma_migrations.
---   btree_gist stays (other rows may use it).
+--   fo_firm_fixed(), fo_consultation_type_hosts(), fo_availability_zone(), fo_booking_write(), fo_booking_void_tokens(),
+--   fo_booking_token_write(); DROP TYPE "FoBookingStatus", "FoMeetingMode", "FoConsultationPurpose"; delete this folder's
+--   row from _prisma_migrations. btree_gist stays (other rows may use it).
 
 -- CreateEnum
 CREATE TYPE "FoConsultationPurpose" AS ENUM ('FREE_CONSULT');
@@ -151,6 +149,18 @@ CREATE UNIQUE INDEX "fo_booking_token_firm_id_token_hash_key" ON "fo_booking_tok
 -- AddForeignKey
 ALTER TABLE "fo_booking" ADD CONSTRAINT "fo_booking_firm_id_type_id_fkey" FOREIGN KEY ("firm_id", "type_id") REFERENCES "fo_consultation_type"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
+-- AddForeignKey (to the platform's rows: Lead B's OK on #1741, with the four back-relation lines on platform.prisma)
+ALTER TABLE "fo_consultation_type" ADD CONSTRAINT "fo_consultation_type_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "platform_firm"("id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+-- AddForeignKey
+ALTER TABLE "fo_availability" ADD CONSTRAINT "fo_availability_firm_id_staff_id_fkey" FOREIGN KEY ("firm_id", "staff_id") REFERENCES "platform_staff"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+-- AddForeignKey
+ALTER TABLE "fo_time_off" ADD CONSTRAINT "fo_time_off_firm_id_staff_id_fkey" FOREIGN KEY ("firm_id", "staff_id") REFERENCES "platform_staff"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+-- AddForeignKey
+ALTER TABLE "fo_booking" ADD CONSTRAINT "fo_booking_firm_id_staff_id_fkey" FOREIGN KEY ("firm_id", "staff_id") REFERENCES "platform_staff"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
+
 -- AddForeignKey
 ALTER TABLE "fo_booking_token" ADD CONSTRAINT "fo_booking_token_firm_id_booking_id_fkey" FOREIGN KEY ("firm_id", "booking_id") REFERENCES "fo_booking"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
@@ -220,27 +230,11 @@ CREATE TRIGGER fo_time_off_firm_fixed BEFORE UPDATE OF firm_id ON "fo_time_off" 
 CREATE TRIGGER fo_booking_firm_fixed BEFORE UPDATE OF firm_id ON "fo_booking" FOR EACH ROW EXECUTE FUNCTION fo_firm_fixed();
 CREATE TRIGGER fo_booking_token_firm_fixed BEFORE UPDATE OF firm_id ON "fo_booking_token" FOR EACH ROW EXECUTE FUNCTION fo_firm_fixed();
 
--- The staff member a row names is a staff member of the row's firm (23503, as a foreign key would answer).
-CREATE FUNCTION fo_staff_in_firm() RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  PERFORM 1 FROM "platform_staff" s WHERE s.firm_id = NEW.firm_id AND s.id = NEW.staff_id FOR KEY SHARE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION '%: staff % is not a staff member of firm %', TG_TABLE_NAME, NEW.staff_id, NEW.firm_id USING ERRCODE = 'foreign_key_violation';
-  END IF;
-  RETURN NEW;
-END $$;
-CREATE TRIGGER fo_availability_staff BEFORE INSERT OR UPDATE OF firm_id, staff_id ON "fo_availability" FOR EACH ROW EXECUTE FUNCTION fo_staff_in_firm();
-CREATE TRIGGER fo_time_off_staff BEFORE INSERT OR UPDATE OF firm_id, staff_id ON "fo_time_off" FOR EACH ROW EXECUTE FUNCTION fo_staff_in_firm();
-CREATE TRIGGER fo_booking_staff BEFORE INSERT OR UPDATE OF firm_id, staff_id ON "fo_booking" FOR EACH ROW EXECUTE FUNCTION fo_staff_in_firm();
-
--- A type's firm exists and each of its hosts is a staff member of that firm.
-CREATE FUNCTION fo_consultation_type_refs() RETURNS trigger LANGUAGE plpgsql AS $$
+-- Each of a type's hosts is a staff member of the type's firm. Hosts are a list, which no foreign key covers (the firm
+-- and every other staff reference are foreign keys); deleting a staff member named only in a list is not refused.
+CREATE FUNCTION fo_consultation_type_hosts() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE missing uuid;
 BEGIN
-  PERFORM 1 FROM "platform_firm" f WHERE f.id = NEW.firm_id FOR KEY SHARE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'fo_consultation_type: firm % does not exist', NEW.firm_id USING ERRCODE = 'foreign_key_violation';
-  END IF;
   -- The hosts' rows are key-share locked, so a delete of one of them waits for this write (and then sees it).
   PERFORM 1 FROM "platform_staff" s WHERE s.firm_id = NEW.firm_id AND s.id = ANY (NEW.host_staff_ids) FOR KEY SHARE;
   SELECT h INTO missing FROM unnest(NEW.host_staff_ids) h
@@ -250,7 +244,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER fo_consultation_type_refs BEFORE INSERT OR UPDATE OF firm_id, host_staff_ids ON "fo_consultation_type" FOR EACH ROW EXECUTE FUNCTION fo_consultation_type_refs();
+CREATE TRIGGER fo_consultation_type_hosts BEFORE INSERT OR UPDATE OF firm_id, host_staff_ids ON "fo_consultation_type" FOR EACH ROW EXECUTE FUNCTION fo_consultation_type_hosts();
 
 CREATE FUNCTION fo_availability_zone() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
@@ -378,33 +372,3 @@ BEGIN
   RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
 END $$;
 CREATE TRIGGER fo_booking_token_write BEFORE INSERT OR UPDATE OR DELETE ON "fo_booking_token" FOR EACH ROW EXECUTE FUNCTION fo_booking_token_write();
-
--- The delete side of the references to platform rows (break B-2), until Lead B's back-relation lines let them be
--- foreign keys: a staff member named by an fo_ row (hours, time off, a booking, a type's hosts), or a firm with an fo_
--- row, is not deleted and does not change id (23503, as ON DELETE RESTRICT answers in READ COMMITTED, which every code
--- path uses). Under REPEATABLE READ a delete racing a new row for that person can still pass (review m11): no code
--- deletes staff or firms today, and real foreign keys (whose checks see past the snapshot) close it once Lead B's
--- back-relation lines land. These triggers sit on the platform's tables as a foreign key's own checks would; they
--- change no platform column and no platform row.
-CREATE FUNCTION fo_platform_staff_kept() RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF TG_OP = 'UPDATE' AND (NEW.id, NEW.firm_id) IS NOT DISTINCT FROM (OLD.id, OLD.firm_id) THEN RETURN NEW; END IF;
-  IF EXISTS (SELECT 1 FROM "fo_availability" WHERE firm_id = OLD.firm_id AND staff_id = OLD.id)
-     OR EXISTS (SELECT 1 FROM "fo_time_off" WHERE firm_id = OLD.firm_id AND staff_id = OLD.id)
-     OR EXISTS (SELECT 1 FROM "fo_booking" WHERE firm_id = OLD.firm_id AND staff_id = OLD.id)
-     OR EXISTS (SELECT 1 FROM "fo_consultation_type" WHERE firm_id = OLD.firm_id AND OLD.id = ANY (host_staff_ids)) THEN
-    RAISE EXCEPTION 'platform_staff: staff % is still named by front-office booking rows (hours, time off, bookings or a type''s hosts)', OLD.id USING ERRCODE = 'foreign_key_violation';
-  END IF;
-  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
-END $$;
-CREATE TRIGGER fo_platform_staff_kept BEFORE DELETE OR UPDATE OF id, firm_id ON "platform_staff" FOR EACH ROW EXECUTE FUNCTION fo_platform_staff_kept();
-CREATE FUNCTION fo_platform_firm_kept() RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF TG_OP = 'UPDATE' AND NEW.id IS NOT DISTINCT FROM OLD.id THEN RETURN NEW; END IF;
-  IF EXISTS (SELECT 1 FROM "fo_consultation_type" WHERE firm_id = OLD.id) OR EXISTS (SELECT 1 FROM "fo_booking" WHERE firm_id = OLD.id)
-     OR EXISTS (SELECT 1 FROM "fo_availability" WHERE firm_id = OLD.id) OR EXISTS (SELECT 1 FROM "fo_time_off" WHERE firm_id = OLD.id) THEN
-    RAISE EXCEPTION 'platform_firm: firm % still has front-office booking rows', OLD.id USING ERRCODE = 'foreign_key_violation';
-  END IF;
-  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
-END $$;
-CREATE TRIGGER fo_platform_firm_kept BEFORE DELETE OR UPDATE OF id ON "platform_firm" FOR EACH ROW EXECUTE FUNCTION fo_platform_firm_kept();

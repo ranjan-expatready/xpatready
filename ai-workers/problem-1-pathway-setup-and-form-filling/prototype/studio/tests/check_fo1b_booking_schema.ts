@@ -27,6 +27,8 @@ let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 400)}` : ""}`); };
 const psql = (db: string, args: string[]) => execFileSync(join(BIN, "psql"), [urlOf(db), "-v", "ON_ERROR_STOP=1", "-q", ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const sql = (db: string, q: string) => psql(db, ["-Atc", q]);
+// Refused with this SQLSTATE and a message matching re (psql's verbose errors print "ERROR:  <code>: …").
+const refusedCode = (db: string, q: string, code: string, re: RegExp) => { try { psql(db, ["-v", "VERBOSITY=verbose", "-Atc", q]); return false; } catch (e) { const err = String((e as { stderr?: string }).stderr ?? e); return err.includes(`ERROR:  ${code}:`) && re.test(err); } };
 const refused = (db: string, q: string, re: RegExp) => { try { sql(db, q); return false; } catch (e) { return re.test(String((e as { stderr?: string }).stderr ?? e)); } };
 const throwsLike = async (f: () => unknown, test: (e: unknown) => boolean) => { try { await f(); return false; } catch (e) { return test(e); } };
 const client = (db: string) => new PrismaClient({ adapter: new PrismaPg({ connectionString: urlOf(db), options: "-c TimeZone=UTC" }) });
@@ -99,7 +101,7 @@ try {
   ok("FO-1b pass: the same slug in another firm is accepted (slugs are unique in the firm)", sql(DEMO, type(TB, firmB, "free-consultation", [staffS])) === TB);
   ok("FO-1b fail: a second type with the same slug in the same firm is refused", refused(DEMO, type(u(102), firmA, "free-consultation", [staffR]), /fo_consultation_type_firm_id_slug_key/));
   ok("FO-1b fail: a slug that is not lower-case words joined by - (AG-4-9 rule 2) is refused", refused(DEMO, type(u(102), firmA, "Free Consultation", [staffR]), /fo_consultation_type_slug_check/));
-  ok("FO-1b fail: a host who is not staff of the type's firm is refused (firm B's person on firm A's type)", refused(DEMO, type(u(102), firmA, "other", [staffS]), /host .* is not a staff member of firm/));
+  ok("FO-1b fail: a host who is not staff of the type's firm is refused (firm B's person on firm A's type; hosts are a list, checked by trigger)", refused(DEMO, type(u(102), firmA, "other", [staffS]), /host .* is not a staff member of firm/));
   ok("FO-1b fail: a type with no mode, a mode twice, a length outside 5-480 min or a negative gap is refused",
     refused(DEMO, `insert into fo_consultation_type (id, firm_id, slug, name, modes, host_staff_ids, minutes, updated_at) values ('${u(102)}', '${firmA}', 'x', 'X', '{}', '{}', 30, now())`, /fo_consultation_type_modes_check/)
     && refused(DEMO, `insert into fo_consultation_type (id, firm_id, slug, name, modes, host_staff_ids, minutes, updated_at) values ('${u(102)}', '${firmA}', 'x', 'X', '{VIDEO,VIDEO}', '{}', 30, now())`, /fo_consultation_type_modes_check/)
@@ -203,7 +205,7 @@ try {
   ok("FO-1b pass: sequence is the database's — linking the person does not raise it, a value written by the app is ignored",
     sql(DEMO, `update fo_booking set person_id = '${u(900)}', sequence = 99 where id = '${u(223)}' returning sequence`) === "0");
   ok("FO-1b fail: a booking naming another firm's host or type is refused, and a booking's firm cannot change",
-    refused(DEMO, book(u(231), staffS, `${D2} 20:00Z`, `${D2} 20:30Z`), /is not a staff member of firm/)
+    refused(DEMO, book(u(231), staffS, `${D2} 20:00Z`, `${D2} 20:30Z`), /is not a host of consultation type/)
     && refused(DEMO, book(u(231), staffS, `${D2} 20:00Z`, `${D2} 20:30Z`, TA, firmB), /is not a type of firm/)
     && refused(DEMO, `update fo_booking set firm_id = '${firmB}' where id = '${u(223)}'`, /firm_id never changes/));
   const zoned = (z: string) => `insert into fo_booking (id, firm_id, type_id, staff_id, mode, starts_at, ends_at, visitor_time_zone, updated_at) values ('${u(232)}', '${firmA}', '${TA}', '${staffR}', 'VIDEO', '${D2} 20:00Z', '${D2} 20:30Z', '${z}', now())`;
@@ -295,7 +297,7 @@ try {
   ok("FO-1b fail: overlapping windows on a day, end before start, weekday 7, another zone for the same person, a bad zone, or another firm's person are refused",
     refused(DEMO, avail(newStaff, 1, 900, 1000), /fo_availability_no_overlap/) && refused(DEMO, avail(newStaff, 2, 840, 780), /fo_availability_minutes_check/)
     && refused(DEMO, avail(newStaff, 7, 60, 120), /fo_availability_weekday_check/) && refused(DEMO, avail(newStaff, 3, 60, 120, "Asia/Kolkata"), /fo_availability_one_zone/)
-    && refused(DEMO, avail(newStaff, 3, 60, 120, "america/toronto"), /not an IANA time zone/) && refused(DEMO, avail(staffS, 3, 60, 120, "America/Toronto", firmA), /is not a staff member of firm/));
+    && refused(DEMO, avail(newStaff, 3, 60, 120, "america/toronto"), /not an IANA time zone/) && refusedCode(DEMO, avail(staffS, 3, 60, 120, "America/Toronto", firmA), "23503", /fo_availability_firm_id_staff_id_fkey/));
   ok("FO-1b pass (review m5): one statement moves all of a person's windows to a new zone (checked at commit)",
     sql(DEMO, `update fo_availability set time_zone = 'Asia/Kolkata' where staff_id = '${newStaff}' returning 1`).split("\n").length === 3
     && sql(DEMO, `select string_agg(distinct time_zone, ',') from fo_availability where staff_id = '${newStaff}'`) === "Asia/Kolkata");
@@ -305,25 +307,36 @@ try {
     sql(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffT}', '${D} 17:00Z', '${D} 22:00Z', 'user-R') returning 1`) === "1");
   ok("FO-1b fail: time off ending before it starts, or for another firm's person, is refused",
     refused(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffT}', '${D} 22:00Z', '${D} 17:00Z', 'user-R')`, /fo_time_off_range_check/)
-    && refused(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffS}', '${D} 17:00Z', '${D} 22:00Z', 'user-R')`, /is not a staff member of firm/)
+    && refusedCode(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffS}', '${D} 17:00Z', '${D} 22:00Z', 'user-R')`, "23503", /fo_time_off_firm_id_staff_id_fkey/)
     && refused(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffT}', '${D} 17:00Z', 'infinity', 'user-R')`, /fo_time_off_range_check/)
     && refused(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffT}', '${D} 17:00Z', '${D} 22:00Z', ' ')`, /fo_time_off_created_by_check/));
 
-  // Break B-2: the delete side of the references to platform rows.
+  // Real foreign keys to the platform's rows (Lead B's answer on #1741, rev 14.2): a cross-firm staff reference is 23503
+  // (foreign_key_violation), and a staff member or firm still named by booking rows is not deleted and does not change id
+  // (ON DELETE/UPDATE RESTRICT, which PostgreSQL answers 23001 restrict_violation; break B-2).
+  ok("FO-1b fail (foreign key): a firm B staff member on a firm A booking is refused 23503 by fo_booking_firm_id_staff_id_fkey (the host trigger switched off inside the refused statement, so the key itself answers)",
+    refusedCode(DEMO, `alter table fo_booking disable trigger fo_booking_write; insert into fo_booking (id, firm_id, type_id, staff_id, mode, starts_at, ends_at, visitor_time_zone, block_range, updated_at) values ('${u(235)}', '${firmA}', '${TA}', '${staffS}', 'VIDEO', '${D2} 22:00Z', '${D2} 22:30Z', 'UTC', tstzrange('${D2} 22:00Z', '${D2} 22:40Z'), now())`, "23503", /fo_booking_firm_id_staff_id_fkey/)
+    && sql(DEMO, `select count(*) from pg_trigger where tgname = 'fo_booking_write' and tgenabled = 'O'`) === "1" && sql(DEMO, `select count(*) from fo_booking where id = '${u(235)}'`) === "0");
+  ok("FO-1b fail (foreign key): a type for a firm that does not exist is refused 23503", refusedCode(DEMO, type(u(105), u(999), "ghost", []), "23503", /fo_consultation_type_firm_id_fkey/));
+  ok("FO-1b pass: the four foreign keys to the platform are RESTRICT on delete and on update",
+    sql(DEMO, `select string_agg(conname || ':' || confdeltype::text || confupdtype::text, ',' order by conname) from pg_constraint where contype = 'f' and confrelid in ('platform_staff'::regclass, 'platform_firm'::regclass) and conrelid::regclass::text like 'fo\\_%'`)
+      === "fo_availability_firm_id_staff_id_fkey:rr,fo_booking_firm_id_staff_id_fkey:rr,fo_consultation_type_firm_id_fkey:rr,fo_time_off_firm_id_staff_id_fkey:rr");
   const lone = sql(DEMO, `insert into platform_staff (id, firm_id, email, display_name, updated_at) values (gen_random_uuid(), '${firmA}', 'lone@sample-firm.example.com', 'Lone', now()) returning id`);
   ok("FO-1b pass: a staff member no front-office row names can still be deleted", sql(DEMO, `delete from platform_staff where id = '${lone}' returning 1`) === "1");
-  ok("FO-1b fail (break B-2): a staff member with hours, or named only as a type's host, cannot be deleted or change id; the booking rows keep their person",
-    refused(DEMO, `delete from platform_staff where id = '${newStaff}'`, /still named by front-office booking rows/)
-    && refused(DEMO, `update platform_staff set id = gen_random_uuid() where id = '${newStaff}'`, /still named by front-office booking rows/)
-    && (() => { const h = sql(DEMO, `insert into platform_staff (id, firm_id, email, display_name, updated_at) values (gen_random_uuid(), '${firmA}', 'host@sample-firm.example.com', 'Host', now()) returning id`);
-      sql(DEMO, `update fo_consultation_type set host_staff_ids = host_staff_ids || '${h}'::uuid where id = '${u(102)}'`);
-      return refused(DEMO, `delete from platform_staff where id = '${h}'`, /still named by front-office booking rows/); })());
+  const booker = sql(DEMO, `insert into platform_staff (id, firm_id, email, display_name, updated_at) values (gen_random_uuid(), '${firmA}', 'booker@sample-firm.example.com', 'Booker', now()) returning id`);
+  sql(DEMO, `update fo_consultation_type set host_staff_ids = host_staff_ids || '${booker}'::uuid where id = '${TA}'`);
+  sql(DEMO, book(u(236), booker, `${D2} 22:00Z`, `${D2} 22:30Z`));
+  ok("FO-1b fail (foreign key, break B-2): deleting a staff member who has a booking (and nothing else) is refused by fo_booking_firm_id_staff_id_fkey (RESTRICT: SQLSTATE 23001); the booking keeps its host",
+    refusedCode(DEMO, `delete from platform_staff where id = '${booker}'`, "23001", /violates RESTRICT setting of foreign key constraint "fo_booking_firm_id_staff_id_fkey"/) && sql(DEMO, `select staff_id from fo_booking where id = '${u(236)}'`) === booker);
+  ok("FO-1b fail (foreign key): a staff member with hours cannot be deleted or change id (RESTRICT: 23001)",
+    refusedCode(DEMO, `delete from platform_staff where id = '${newStaff}'`, "23001", /violates RESTRICT setting of foreign key constraint "fo_availability_firm_id_staff_id_fkey"/)
+    && refusedCode(DEMO, `update platform_staff set id = gen_random_uuid() where id = '${newStaff}'`, "23001", /violates RESTRICT setting of foreign key constraint "fo_availability_firm_id_staff_id_fkey"/));
   const firmE = sql(DEMO, `insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), 'firm-e', 'E', 'CA', 'e@firm-e.example.com', now()) returning id`);
   ok("FO-1b pass: a firm with no front-office row can still be deleted (as before FO-1b)", sql(DEMO, `delete from platform_firm where id = '${firmE}' returning 1`) === "1");
   const firmF = sql(DEMO, `insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), 'firm-f', 'F', 'CA', 'f@firm-f.example.com', now()) returning id`);
   sql(DEMO, type(u(104), firmF, "free-consultation", []));
-  ok("FO-1b fail (break B-2): a firm with a consultation type cannot be deleted or change id",
-    refused(DEMO, `delete from platform_firm where id = '${firmF}'`, /still has front-office booking rows/) && refused(DEMO, `update platform_firm set id = gen_random_uuid() where id = '${firmF}'`, /still has front-office booking rows/));
+  ok("FO-1b fail (foreign key): a firm with a consultation type cannot be deleted or change id (RESTRICT: 23001)",
+    refusedCode(DEMO, `delete from platform_firm where id = '${firmF}'`, "23001", /violates RESTRICT setting of foreign key constraint "fo_consultation_type_firm_id_fkey"/) && refusedCode(DEMO, `update platform_firm set id = gen_random_uuid() where id = '${firmF}'`, "23001", /violates RESTRICT setting of foreign key constraint "fo_consultation_type_firm_id_fkey"/));
   ok("FO-1b pass: time off leaves the bookings in it (AG-4-62 rule 7: user-T's 14:00 on that day is still SCHEDULED)", sql(DEMO, `select status from fo_booking where id = '${u(209)}'`) === "SCHEDULED");
   ok("FO-1b: no secret column — no FO-1b column is named like a password, secret or raw token",
     sql(DEMO, `select count(*) from information_schema.columns where table_name = any('{${FO_TABLES.join(",")}}') and column_name ~ '(password|secret|^token$|api_key)'`) === "0");

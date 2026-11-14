@@ -5,10 +5,10 @@
 // §2.2 and §7 binding; requirements AG-04: AG-4-1, -4, -9, -26, -36, -62, BR-3). Schema only: the booking API is FO-3.
 // Like the platform rows, these carry no workspace_id (the firm is the tenant; the demo reset leaves them) and every
 // table carries firm_id first in every index but its primary key. A row naming a staff member, a type or a booking keys
-// on (firm_id, <id>), so it can never point at another firm's row: foreign keys inside this file; to platform_firm and
-// platform_staff, triggers in the migration (on write here, and on delete or id change on the platform's tables) until
-// Lead B adds the back-relation lines to platform.prisma (asked in the PR; DEVELOPING.md DB-SPLIT: never edit another
-// area's file), when they become foreign keys. Rules Prisma cannot say are in the migration
+// on (firm_id, <id>), so it can never point at another firm's row: composite foreign keys, RESTRICT on delete and update,
+// to platform_staff (firm_id, id) and to this file's own tables; fo_consultation_type to platform_firm (Lead B's OK on
+// #1741 for the four back-relation lines on platform.prisma). A type's hosts are a list, which no foreign key covers:
+// a trigger checks each host is staff of the firm when the list is written. Rules Prisma cannot say are in the migration
 // 20261114120000_fo1b_booking_tables: the no-overlap rule per host (btree_gist exclusion over SCHEDULED and RESCHEDULED
 // bookings on the range padded by the type's gaps, BR-3, AG-4-26), the padded range and `sequence` kept by the database,
 // status moves, token expiry and voiding (AG-4-36), checks on minutes, slugs, zones and hashes.
@@ -63,6 +63,7 @@ model FoConsultationType {
   createdAt               DateTime              @default(now()) @map("created_at") @db.Timestamptz
   updatedAt               DateTime              @updatedAt @map("updated_at") @db.Timestamptz
 
+  firm     PlatformFirm @relation(fields: [firmId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   bookings FoBooking[]
 
   @@unique([firmId, slug])
@@ -85,6 +86,8 @@ model FoAvailability {
   timeZone    String   @map("time_zone")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
+  staff PlatformStaff @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
   @@index([firmId, staffId, weekday])
   @@map("fo_availability")
 }
@@ -100,6 +103,8 @@ model FoTimeOff {
   createdBy String   @map("created_by")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
+  staff PlatformStaff @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
   @@index([firmId, staffId, startsAt])
   @@map("fo_time_off")
 }
@@ -111,22 +116,23 @@ model FoTimeOff {
 /// of one host never overlap on block_range (BR-3). The host is one of the type's hosts and the mode one of its modes
 /// when written; times are finite and at most a day apart; only an active booking changes time, host, type or mode.
 model FoBooking {
-  id              String                   @id @default(uuid()) @db.Uuid
-  firmId          String                   @map("firm_id") @db.Uuid
-  typeId          String                   @map("type_id") @db.Uuid
-  staffId         String                   @map("staff_id") @db.Uuid
-  personId        String?                  @map("person_id") @db.Uuid
-  prospectId      String?                  @map("prospect_id") @db.Uuid
-  status          FoBookingStatus          @default(SCHEDULED)
-  sequence        Int                      @default(0)
+  id              String                    @id @default(uuid()) @db.Uuid
+  firmId          String                    @map("firm_id") @db.Uuid
+  typeId          String                    @map("type_id") @db.Uuid
+  staffId         String                    @map("staff_id") @db.Uuid
+  personId        String?                   @map("person_id") @db.Uuid
+  prospectId      String?                   @map("prospect_id") @db.Uuid
+  status          FoBookingStatus           @default(SCHEDULED)
+  sequence        Int                       @default(0)
   mode            FoMeetingMode
-  startsAt        DateTime                 @map("starts_at") @db.Timestamptz
-  endsAt          DateTime                 @map("ends_at") @db.Timestamptz
-  visitorTimeZone String                   @map("visitor_time_zone")
+  startsAt        DateTime                  @map("starts_at") @db.Timestamptz
+  endsAt          DateTime                  @map("ends_at") @db.Timestamptz
+  visitorTimeZone String                    @map("visitor_time_zone")
   blockRange      Unsupported("tstzrange")? @map("block_range")
-  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime                 @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt       DateTime                  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime                  @updatedAt @map("updated_at") @db.Timestamptz
 
+  staff  PlatformStaff      @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   type   FoConsultationType @relation(fields: [firmId, typeId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   tokens FoBookingToken[]
 
