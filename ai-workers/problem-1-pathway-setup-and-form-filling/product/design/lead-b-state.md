@@ -38,6 +38,7 @@
 | PF-5s | pricing, sign-up, trial, profile, billing, hold screens | **concept r2 approved** after the fresh challenge (`screens/pf-5s-saas/`) | after PF-5, PF-4b, PF-6, PF-1; founder's look due |
 | FO-3c | consultation agreement before the first consult (Code s. 23) | **shaped (rows rev 9)** | after FO-3, FO-5, FO-6 |
 | PF-12 | database walls (row-level security) on PF/FO tables | **shaped (rows rev 9.1)** | after PF-4, FO-1a, FO-1b |
+| PF-13, FO-9a/9b/9s, FO-10, FO-11, FO-7p | P-574: branding extras, duplicates, assignment rules, WhatsApp, payment plans | **shaped (rows rev 10)** | see each row's waits on; FO-10 needs map row 36 (automation) shaped and owned; FO-11 needs rows 48/49 (case side) |
 | Shaped next (no rows yet) | FO-3b paid consults (after FO-7) · PF-11 firm data download (before any real firm goes live) · FO-7s money screens (concept first, after FO-7b) · FO-8 `prospect.won` with the case side · PF-8 cloud deploy (founder's Canadian cloud account) · PF-9 firm set-up checklist and settings screen · PF-10 import with a dry run (AG-18) | | shape two ahead |
 
 ## Rulings received (all stand)
@@ -104,3 +105,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 09:02 IST: release holder is now Lead 41 (`local_eb5559e3…`). Open with it: rows rev 9 to copy (FO-3c, FO-5, FO-6, FO-7c, PF-4b); F15 recommendation (AUD-1); #1728 fix and re-approval; PF-3 PR question 3 (B-6).
 * 14 Nov 09:08 IST: Lead 41: rev 9 copied; P-571 rules B-6 (reset via settings write path, audit line), the seed line (Sample setting default off, production test) and F15 (AUD-1 chain + AUD-2 daily Object Lock export). Rows rev 9.1: PF-4 brief updated; PF-5 "closed after 90 days" with archive and download conditions (contracts §7 §1.1 Firm exit, map row 105); new row PF-12 database walls (RLS), named in contracts §0.
 * 14 Nov 09:09 IST: Lead 41 copied rev 9.1 and accepted the firm-exit rule (retention and our processor role after exit on the counsel list, not the founder); PF-12 split accepted. All Lead B rows are in BACKLOG. Waiting: #1728 merge → FO-1a, FO-1b, PF-4 start.
+* 14 Nov 09:21 IST: rows rev 10 (P-574): PF-13, FO-9a, FO-9b, FO-9s, FO-10, FO-11, FO-7p; size 12-16 PRs (Hypothesis). Context ~36% (Lead 41's reading); hand-over at 45% (P-565).
