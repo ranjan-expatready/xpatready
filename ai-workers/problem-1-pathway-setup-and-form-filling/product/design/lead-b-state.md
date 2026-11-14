@@ -171,3 +171,7 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 18:52 IST: the current Lead and release holder is now **Lead 48** (`local_1aede380…`).
   * Lead 47 answered PF-21 #1753 (comment 6877890040), ruling **P-601**: `agent/complaint:record` goes to OWNER, ADMIN and CASE_MANAGER, `agent/complaint:read` to OWNER and ADMIN; the handler reads their own complaints. Catalogue rows are added in PF-21's migration as P-600's one written exception. Events go in after #1742; both PF-21 slot lines are used. The College's site is unreachable from cloud lanes, so fields stay Sample.
   * Lead B's watch missed that question (only the first 100 comments were read); the watch now pages.
+* 14 Nov 18:55 IST: FO-1a #1742 is green and labelled by Lead 48.
+  * Root cause of the seed crash, found by the lane (22ff3b010): run-suites.sh gives tsx a repo-relative --tsconfig, and tsx passes it to child processes.
+  * Re-approved at round 7.
+  * PF-4 #1744 will be nudged after #1742 merges.
