@@ -1,0 +1,26 @@
+# Brief: FO-7b, invoices, receipts, offline payments, credit notes and refunds (cloud builder lane; row owner Lead B)
+
+Start only after **FO-7a, FO-5, PF-4, PF-4b and PF-14 have merged** (FO-5 brings the retainer fee rows, `DocumentRenderPort` and `FilesPort`; PF-4b brings `MailPort`; PF-14 brings `JobPort` and the fake clock). Money lane: FO-7a → FO-7b → FO-7c ∥ FO-7t → FO-7p, with FO-7r after FO-7b and FO-7t (P-576, rev 13). No schema change. Paste into a new cloud session on the repository (default branch `main`):
+
+---
+You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime FO-7b` and take **one row, FO-7b**, end to end on a fresh branch from `origin/main`, one PR.
+
+**The row:** `ai-workers/problem-1-pathway-setup-and-form-filling/product/BACKLOG.md`, row **FO-7b** (rows rev 7, 8.1; client money its own module by rev 10 part 2). Read with it, and only these: `product/design/platform-and-front-office-contracts-2026-11-14.md` §2.5, **§7 (binding; §7 §2.5)** and **§8 (client money module: code in `api/src/client-money/`, nothing else writes `money_*`)**; `product/design/lead-b-trace-2026-11-14/t6-payments.md` (M1-M5, M7, M9, M11-M13); the AG-06 cards the row cites (AG-6-1, -4, -19, -23, -44, -46, -48, -61, -63, -71; `domain/requirements-2026-11-02/02-functional-requirements/agent/AG-06-billing-and-payments_v2.1_2026-10-27.md`, those cards only); on `main`: `prisma/schema/client-money.prisma` (FO-7a), `api/src/front-office/retainers/*.ts` (fee rows), the `MailPort`, `DocumentRenderPort`, `FilesPort` and `AuditPort` files, `api/src/features/README.md`.
+
+**What to build (API only):**
+* Draft an invoice from a signed retainer's fee rows or by hand; the party is the won person or company, **never a prospect** (AG-6-1 r1).
+* **A deposit (an `ON_SIGNING` fee row, an advance) is never a card-payable invoice and never carries a pay link:** with trust on it becomes a trust request (FO-7t's route; here only refuse and point to it); with trust off it is billed like any row once the service is given (Code s. 33(1); AG-6-61). Unconfirmed: no counsel.
+* Edit only a draft; issue (number, freeze, due date default 14 days, AG-6-46); status **derived from facts, never stored**: `Draft | Open | Part paid | Paid | Overdue | Credited | Refunded`, plus **`Written off`** when a `money_write_off` row exists (FO-7a has the table since rev 13; FO-7r adds the action). Put the derivation in one function FO-7r and FO-7t reuse.
+* Record an offline payment (idempotent; warns on a duplicate reference, AG-6-19); receipt `R-` emailed by `MailPort` to the bill-to with a PDF from `DocumentRenderPort`, no Cc (AG-6-63); credit note part or full with a reason (AG-6-48); refund with a reason and its own key (AG-6-23); the invoice email waits while the operating details block is empty (AG-6-71 r3).
+* Events `invoice.issued`, `invoice.paid`, `invoice.voided`, `invoice.overdue` (a `JobPort` job on the fake clock, the day after the due date), `payment.succeeded`, `payment.refunded`; keys `agent/invoice:issue`, `agent/payment:record`, `agent/payment:refund` (AG-06 C5).
+* `ClientMoneyPort.hasMoney(party)` (true when any invoice, payment or trust entry exists), which FO-9b calls.
+* Every change through `AuditPort.record(tx, …)`; outbox row last. Register in new `api/src/features/client-money-invoices.ts`. Test `tests/check_fo7b_invoices.ts` covering every line of the row's Done when, a pass and a fail each (status as a table test, including `Written off` from a seeded write-off row).
+
+**Touch list (nothing else):** new `api/src/client-money/invoices/*.ts`, `api/src/client-money/port.ts` (`ClientMoneyPort`), `api/src/features/client-money-invoices.ts`, `tests/check_fo7b_invoices.ts`; the receipt and invoice PDF wording as a committed text source under `samples/`.
+
+**Must still be true:** every existing suite, the demo reset and the checkpoint load (C10.1) pass unchanged; FO-5's and FO-7a's suites pass unchanged; amounts are integers in minor units; currencies never summed.
+
+**Duplicate check (P-526):** BACKLOG, open PRs, `main`'s code (`git grep -i 'invoice\|receipt\|credit.note'` under `api/src`; the case side's fee-table words are not duplicates) and BUGS; one `Duplicate check:` line.
+
+**Rules (standard, every PF/FO brief):** P-559: firm tables, real sign-in and billing are ours in the PF/FO modules (amends P-335/P-357). One row, one session, one PR; new files only outside the touch list. Opus reviewer (P-303); **breaker yes (money)**; re-review reads only the diff (P-277); label `review: approved` only after `Reviewer: Approve <sha>` and green CI (P-277, P-385); merge `main` only on a conflict (P-270). Live AI off, US$0, never a priced button (P-175). No real keys anywhere; no Stripe call here (card is FO-7c). Push after every step (P-557). Questions as a PR comment headed "Question for the tech lead"; report to the current Lead (`tools/current-lead.sh`) for the merge queue and to **Lead B** (row owner, branch `lead-b-front-office`, hand-over `product/design/lead-b-state.md`) for the row. Every token earns its outcome (P-556): read only the files named here and the code you change.
+---
