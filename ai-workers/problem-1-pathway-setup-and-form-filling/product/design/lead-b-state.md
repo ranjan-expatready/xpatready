@@ -24,26 +24,22 @@
 | FO-1a / FO-1b | sales tables / booking tables | briefs written | start **side by side** after PF-3 merges (P-559 (3), Lead 38); FO-1a also fixes DEVELOPING.md's stale one-migration line |
 | PF-4 | sign-in, roles, permission keys | **brief written** (`lead-b-briefs/PF-4.md`) | start when PF-3 merges (schema-free, so it may run beside FO-1a/1b) |
 | PF-4b | staff reads, session, accept invitation, step-up, provider emails via MailPort | **brief written** (`lead-b-briefs/PF-4b.md`) | start when PF-4 merges; builder verifies 4 Cognito facts first (step 0) |
-| PF-5 | sign-up + subscription (SA-04) | shaped; door per question 2 | brief after PF-4 |
+| PF-5 | sign-up + subscription (SA-04) | **rewritten to P-566** (self-serve SaaS flow; invited link kept) | brief after PF-4 and A46's component picks |
 | FO-2 / FO-2b | leads + Individual prospects API / Corporate | shaped | briefs after FO-1a |
 | FO-3 | booking API (AG-04) | shaped | after FO-1b and FO-2 |
 | FO-4 / FO-4b | sales screens / script embed | shaped (concept approved) | after FO-2 and PF-1 |
 | FO-5 | retainers (AG-05 rules, FilesPort, docxtemplater) | shaped | after FO-1a, PF-4 |
-| FO-5b | Code s. 24(3) checklist | waits on **question 4** | closes unbuilt if "no" |
+| FO-5b | Code s. 24(3) checklist | **build it** (Q4 decided under P-566 (3)) | after FO-5 |
 | FO-6 | signing, vendor-neutral (+ P-564 email code) | shaped | after FO-5, PF-4 |
 | FO-6v | BoldSign adapter, 4 conditions checked first | released by P-563 | after FO-6; needs the founder's BoldSign sandbox key for Lead B's one Mac check |
-| PF-6 | staff screens (concept approved) | shaped | after PF-4b, PF-1; Security screen per **question 3** |
+| PF-6 | staff screens (concept approved) | shaped (Q3 decided: required for all, reset button) | after PF-4b, PF-1 |
 | Shaped next (no rows yet) | FO-3b paid consults (after FO-7) · FO-3c consultation agreement at booking (Code s. 23; after FO-6) · FO-5s retainer/signing screens (concept first) · FO-7 invoices/receipts/payments (AG-06; trust per **question 5**) · FO-8 `prospect.won` with the case side · PF-8 cloud deploy (founder's Canadian cloud account) · PF-9 firm set-up checklist and settings screen · PF-10 import with a dry run (AG-18) | | shape two ahead |
 
 ## Rulings received (all stand)
 P-559 (App.tsx line; schema folder rule; P-335/P-357 amended for PF/FO) · P-560 (FO follows AG-02; `prospect.won`; a person opens the case) · Lead 37: one audit trail (`audit_event` + `AuditPort.record(tx,…)`, AUD-1, release holder's; no audit table in our modules); front office owns the lead/prospect/client activity timeline (read view); firm settings are platform's typed settings home; representative of record = Case Manager with a licence, no rename in case code (`user-R`) · Lead 38: FO-1a/1b side by side · Lead 39: Atomic CRM design reference only · founder 22:3x 13 Nov: Corporate pipeline and script embed in month one · **P-561** BoldSign on 4 conditions → **P-563** confirmed after stream 4's comparison · **P-562** size for ~100 Canadian firms (50 to start where it saves effort) · **P-564** email one-time code before signing, firm setting on by default · **P-565** sessions past ~half context hand over.
 
-## Founder questions still open (release holder asks one at a time; detail and costs in the register §D)
-2. **Sign-up:** private single-use link (SA-4-4, recommended now) vs open public page.
-3. **Two-step (re-shaped):** Cognito sets it per user pool and has no recovery codes → (a) required for every firm (recommended, ~0 changes, deviation from AG-1-40) vs (b) AG-1-40 as written (~4-6 changes).
-4. **Retainer:** non-blocking checklist from Code s. 24(3) (recommended) vs nothing (AG-05).
-5. **Client money:** (b) per-client trust ledger, receipts, offline trust deposits; card only for invoiced fees; card into trust after counsel (recommended) vs (a) full AG-06 trust card account now.
-Fold each answer into contracts §7 and the affected rows (PF-5; PF-4b/PF-6; FO-5b; FO-7), push, and tell the release holder.
+## Founder questions
+All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3-5 decided by Lead B under **P-566 (3)** with evidence (register §C2, contracts §7): two-step required for all; build the s. 24(3) checklist; trust (b). Three deviations from the team's requirements go to the founder as one line each through the release holder (AG-1-40; AG-05 l.539-550; AG-6-70's optional trust card account). From now on, best-practice questions are decided by Lead B with evidence (P-566 (3)); only real preferences or conflicts with the team's requirements go up.
 
 ## Next step for the fresh Lead B
 1. Read this file, then contracts §7, then the rows file's latest sections.
@@ -88,3 +84,4 @@ Fold each answer into contracts §7 and the affected rows (PF-5; PF-4b/PF-6; FO-
 * 14 Nov 07:57 IST: PF-4 brief written (`lead-b-briefs/PF-4.md`): API only, no schema, so it can start beside FO-1a/1b once PF-3 merges; two-step switch built with a `PLATFORM_POOL_MFA_REQUIRED` flag so question 3 changes config, not code. Rows file: brief rules now point to the current Lead and this file, not a session id.
 * 14 Nov 07:58 IST: PF-4b brief written (`lead-b-briefs/PF-4b.md`); step 0 checks the four Cognito facts at AWS's docs before code. Next: FO-5s concept (skill screen-concept).
 * 14 Nov 07:59 IST: FO-5s concept drafting started (in-process Opus drafter → `screens/fo-5s-retainer-signing/concept-draft.md` + `design/board.html`); then a fresh challenger, then Lead B approval (P-223 (4)). If this session ends first, a fresh Lead B re-runs the draft from the skill screen-concept.
+* 14 Nov 08:03 IST: P-566 folded (contracts §7 §1.1, rows rev 6: PF-5 rewritten, PF-5s shaped). Q3-Q5 decided under P-566 (3) with evidence (register §C2; contracts §7 §1.2, §2.3-2.4, §2.5); PF-4, PF-4b, PF-6, FO-5b and the PF-4/PF-4b briefs aligned.
