@@ -3,7 +3,7 @@
 Independent reviewer (P-303), 14 Nov 2026. Forms-lane engine/data row, no concept file: reviewed against the BK-26 row, `STANDARDS.md`, `RULES.md` and correctness. Diff `origin/main...c6d3f3e14`: 20 files, +522/−20 (about 124 of them generated list lines): within the ~800-line PR size.
 
 ## What I re-ran (not the builder's word)
-* Pure: `check_bk26_dependent_lists.ts` 19/19; `check_p5_engine` (studio 27/27, p5 35/35), `check_screen01_rules` 72/72, and every other pure suite that imports a touched file and needs no server: green. CI type check (`product/tools/typecheck.mjs`): no new errors (15 known).
+* Pure: `check_bk26_dependent_lists.ts` 19/19; `prototype/tests/check_p5_engine` 35/35, `check_qa180_one_rule` 27/27, `check_screen01_rules` 72/72, and every other pure suite that imports a touched file and needs no server: green. CI type check (`product/tools/typecheck.mjs`): no new errors (15 known).
 * Lists files: regenerated from the official PDFs; byte-identical to the committed `imm{0008,1294,1295,5710}e.lists.json`.
 * Fresh isolated copy `forms_bk26r` on :4458 (forms range), reset + configured load by BK-13, stopped by trap: **BK-13 45/45 exit 0** (IMM 1294 73 written, read back, no badChoice; nothing by hand). **BK-24 exit 0, no F1 gap**: IMM 1294's only open box is the consent (F2); the rest are F2–F5 (BK-25). **Walk 8/8.** A second fresh copy ran my probe walk (journey report beside this file).
 * All 22 inventoried forms scanned for `setDDLFromLOV(... + ...)`: only IMM 0008, 1294, 1295 and 5710 have them. The second call in each (`oCity`, `oProv.formattedValue` in `validateDetails…`) is the same box pair, so no list is missed.
@@ -61,8 +61,39 @@ Journey score (reviewer, the one for this check): **7.5/10, below the pass mark 
 * The graph tool (P-86): not run, because it rewrites `qa/GRAPH.md` and this row adds no screen element or route.
 * One axe `color-contrast` hit was caught mid-generation, with the button spinning, in my probe. The walk's settled states are clean. I could not tie the hit to this PR.
 
-**Verdict: Block**
+**Verdict at c6d3f3e14: Block**
 
-To fix:
+To fix (at c6d3f3e14):
 1. **M1 (Major):** match a dependent list's labels with their own `, <key>` suffix removed; add a Hamilton/ON pass test and a Hamilton/QC fail test.
 2. Minor (fix in the same PR if cheap, otherwise as follow-ups): m1 drop empty-code separators and correct the counts and the test name · m2 ambiguous first-word match on a dependent list is refused, not guessed · m3 plain words for the list path in the officer's line · m4 and m5 as noted.
+
+## Re-review, diff only (P-277): c6d3f3e14..6cedecd59
+The diff: `p5/transforms.ts` (+27/−12), `check_bk26_dependent_lists.ts`, the walk's expected words, two refreshed screenshots, and this review and the journey report, committed by the builder.
+
+**What changed:**
+* **M1, fixed.** `dependentChoices` adds an alias for each label ending in the list's own key, "Hamilton, ON" becoming "Hamilton" with the same code. It is generic: the suffix is the dataset group name and no form is named.
+  * I checked all four lists files: after accent folding and the aliases, no value maps to two codes, so no alias creates a clash.
+* **m1, fixed.** Items with no code or a blank label are dropped. The count in the words excludes the aliases (844 for ON, 846 for QC).
+* **m2, fixed.** On a dependent list only, `dependentCode` replaces `codeFor`. It matches the label letter for letter, ignoring case, accents and repeated spaces, or the code itself; two codes for one value gives no answer.
+  * Boxes that are not dependent keep `codeFor` unchanged: the ternary's else branch is the old expression.
+  * Side effect, accepted: "Quebec" (QC) is now refused because the form lists "Quebec City". The words stay true, and the officer can answer with the form's spelling.
+* **m3, fixed.** The words now read `"MONTREAL" is not among the 844 choices the form lists for "Province" ON, so nothing is written and nothing is guessed: check the answer.` "Montréal" is written as the form's "Montreal" (1694). "of The application" is existing wording.
+* **m4 and m5:** kept, with the builder's reason (the `formatsFor` pattern; no property-test library behind the §1 gate). Accepted as Minor.
+
+**What I re-ran:**
+* Pure: BK-26 22/22. The new tests fail when their rule is removed: drop the alias and Hamilton/ON fails; put `codeFor` back and Pierrefonds fails; keep the separators and the separator test fails.
+* My own pure probe on the new head:
+  * Hamilton, Waterloo, Kingston, Sherbrooke and Saint John are written (3324, 3900, 3414, 2140, 0850), and "Sainte-Thérèse Ouest" (2432).
+  * Hamilton/QC, Pierrefonds and the separator are refused.
+  * "Toronto " with a trailing space and the code "3812" both give 3812.
+* Other pure suites: `check_bk22_filler_steps` 41/41, `check_b107` green, `check_qa395` 22/22, `check_bk23` 28/28, `check_screen01_rules` 72/72, `p5 check_p5_engine` 35/35. Type check: no new errors (15 known).
+* Fresh isolated copy on :4458, stopped by trap: **BK-13 45/45 exit 0; BK-24 exit 0**, with IMM 1294's only open box being the consent (F2), so F1 is closed; **walk 8/8**, with the new words on the case page. This agrees with the builder's :4452 log.
+
+**Journey score at 6cedecd59: 9.5/10 (pass).** I re-scored from the automated re-walk and the probes; I did not redo the full visible walk.
+* Task completed, correct data, next step and plain words go up to 1: the cities the form lists are written, and the refusal words are true and plain.
+* Error recovery stays ½: when the answer is a near spelling ("Quebec" for "Quebec City"), the line does not name the form's nearest choice.
+* The other criteria are as in `journey-test-reviewer-2026-11-14.md`.
+
+**Open:** no Blocker or Major. The only open items are Minors m4 and m5, accepted as they are.
+
+**Verdict: Approve** (for 6cedecd59a9804121bb5f728f87db5bba69c6766)
