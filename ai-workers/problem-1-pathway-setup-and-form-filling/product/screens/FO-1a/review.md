@@ -106,4 +106,37 @@ What I re-checked, and how:
 
 Journey score, round 2: **9/10**. J7 (swap the primary) now completes and J10 (a booking with no lead) has its outcome. Correct data stays at half a point because of R2-M1.
 
-**Verdict: Block.** To fix: **R2-M1** (one CHECK and one fail test). Once it is fixed and that test is shown failing without the CHECK, I expect to approve on the diff alone.
+**Round 2 verdict: Block.** To fix: **R2-M1** (one CHECK and one fail test). Once it is fixed and that test is shown failing without the CHECK, I expect to approve on the diff alone.
+
+## Round 3: commit 0405443ea (diff `121476e43..0405443ea`, P-277)
+**The suite now gives 109 passed, 0 failed.**
+
+What I re-checked, on a scratch database with every migration and the seed:
+* **R2-M1 is fixed.** Both repeats are now refused by `fo_arrival_receipt_outcome_check`:
+  * a FAILED receipt in firm B naming firm A's lead with no person;
+  * a PENDING receipt naming a lead that does not exist.
+* **r1 is fixed:** the swap comment now says to end or demote the old PRIMARY link first.
+* **r2 is fixed:** the PR body now has the Questions for Lead B, the deviations, `migrate diff`, and m2, m8, m10, m11 and m12.
+* **`fo_has_word` reads any script:**
+  * 株式会社さくら, Виза, السعر and é count as words;
+  * a space, U+200B/U+00A0, U+3164 and "--" do not;
+  * I checked the byte ranges of the character class in the migration.
+* **The engaged-lead rule is sound under concurrency.** `fo_prospect_lead_engaged` is deferred and takes a share lock on the lead. A BEFORE UPDATE on the lead locks the row before `fo_lead_stays_engaged` runs, so a lead closed at the same moment waits for the prospect and then sees it.
+* **Setup rows** must start unseeded at number 1. **The program-chain query** now cuts a loop. **Invisible characters** are refused in intake keys.
+
+**New Major (R3-M1): the stage-move chain rule orders history by `at`, which is not the order the moves happened in.**
+* **Where:** `migration.sql`, in `fo_stage_move_matches`, the query `SELECT m."to_stage_id" INTO prev … ORDER BY m."at" DESC, m."id" DESC LIMIT 1`.
+* **The cause:** `at` defaults to `now()`, which is the time the *transaction started*. The tie-break is a random uuid. Two failures follow, both reproduced:
+  * **Moves in one transaction (Engage, then two moves).** All three moves share one `at`, so the "last" move is picked at random. The correct third move was refused in **4 of 12** runs ("a move starts where the last one ended").
+  * **Two transactions at once.** T2 begins first and does other work. T1 begins later, moves the prospect A→B and commits. T2 then moves B→C. Both pass, but T2's row carries the earlier `at`. The history now reads ENGAGED, then QUALIFIED→CONSULT, then ENGAGED→QUALIFIED. **The next honest move, C→D, is refused**, so the prospect is stuck. The only way out is a false duplicate move into history that can never be removed. Two staff, or a booking and a person, moving one prospect together is enough to cause this.
+* **Fix:** order the chain by a value given under the prospect's row lock. Either:
+  * add a `bigint` identity column (`seq`) and use `ORDER BY seq DESC`; the move is inserted after the prospect's UPDATE, which holds the row lock, so `seq` follows the real order; or
+  * set `NEW."at" := clock_timestamp()` in the trigger and order by (`at`, `seq`).
+* **Tests to add:**
+  * pass: three moves in one transaction, repeated about 20 times;
+  * fail-without-fix: the two-transaction case above, followed by the next move;
+  * each shown failing on 0405443ea.
+
+Journey score, round 3: **8½/10**. Correct data drops to half a point again because of R3-M1. Error recovery stays at 1.
+
+**Verdict: Block.** To fix: **R3-M1**. Everything else from rounds 1 and 2 is closed or recorded in the PR.

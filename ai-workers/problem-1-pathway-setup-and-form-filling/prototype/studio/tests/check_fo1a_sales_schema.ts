@@ -317,6 +317,14 @@ try {
   sql(DEMO, move(u(600), null, WON, "SIGNED_OFFLINE"));
   ok("FO-1a pass: a stage move to the prospect's stage keeps its cause", sql(DEMO, `select cause from fo_stage_move where prospect_id = '${u(600)}'`) === "SIGNED_OFFLINE");
   ok("FO-1a fail: a move to a stage the prospect is not in is refused (review m3)", refused(DEMO, move(u(600), WON, LOST, "PERSON"), /goes to the prospect's stage/));
+  ok("FO-1a fail: a move of a person into the WON stage is refused: only a signature, Signed offline or Convert wins (AG-2-28a; break R3-4)", (() => {
+    const L = u(1050), P = u(1051); sql(DEMO, leadSql(SF, L, P1));
+    sql(DEMO, `begin; update fo_lead set state = 'ENGAGED', engaged_at = now(), engaged_by = 'test' where id = '${L}'; ${prospectSql(SF, P, L, "INDIVIDUAL", ENG_SF, { subject_person_id: `'${P1}'`, primary_contact_person_id: `'${P1}'` }).replace(/ returning number$/, "")}; ${move(P, null, ENG_SF, "PERSON")}; commit;`);
+    return refused(DEMO, `begin; update fo_prospect set stage_id = '${WON}', won_via = 'CONVERTED', won_at = now() where id = '${P}'; ${move(P, ENG_SF, WON, "PERSON")}; commit;`, /and only they do/);
+  })());
+  sql(DEMO, `begin; update fo_prospect set stage_id = '${stageId(DEMO, SF, "INDIVIDUAL", "QUALIFIED")}' where id = '${u(1051)}';
+    insert into fo_stage_move (firm_id, prospect_id, from_stage_id, to_stage_id, cause, by_actor, at) values ('${SF}', '${u(1051)}', '${ENG_SF}', '${stageId(DEMO, SF, "INDIVIDUAL", "QUALIFIED")}', 'PERSON', 'test', '2000-01-01'); commit;`);
+  ok("FO-1a fail: a move written with a back date gets the time it was made (break R3-1)", sql(DEMO, `select count(*) from fo_stage_move where at < now() - interval '1 day'`) === "0" && sql(DEMO, `select count(*) from fo_stage_move where prospect_id = '${u(1051)}'`) === "2");
   ok("FO-1a fail: a second first move, or a move from a stage the last move did not end in, is refused (break R2-4)", refused(DEMO, move(u(600), null, WON, "PERSON"), /starts where the last one ended/) && refused(DEMO, move(u(600), LOST, WON, "PERSON"), /starts where the last one ended/));
   ok("FO-1a fail: a stage move is never changed", refused(DEMO, `update fo_stage_move set cause = 'BOOKING'`, /written once/));
   // Change type (contracts §7 §2.1): the prospect moves to the other pipeline's first stage; only CHANGE_TYPE crosses.
@@ -329,6 +337,35 @@ try {
   ok("FO-1a pass: Change type is recorded as a move between pipelines", sql(DEMO, `select string_agg(cause::text, ',' order by at, id) from fo_stage_move where prospect_id = '${u(741)}'`) === "PERSON,CHANGE_TYPE");
   sql(DEMO, `update fo_prospect set stage_id = '${stageId(DEMO, SF, "CORPORATE", "QUALIFIED")}' where id = '${u(741)}'`);
   ok("FO-1a fail: a signature (or Signed offline, or Convert) moving to a stage that is not WON is refused", refused(DEMO, move(u(741), ENG_CO, stageId(DEMO, SF, "CORPORATE", "QUALIFIED"), "RETAINER_EXECUTED"), /moves to the WON stage/));
+  // The chain's order (review R3-M1): several moves in one transaction, 20 times over, each accepted.
+  const QUAL = stageId(DEMO, SF, "INDIVIDUAL", "QUALIFIED"), FEES = stageId(DEMO, SF, "INDIVIDUAL", "PROPOSAL"), SENT = stageId(DEMO, SF, "INDIVIDUAL", "RETAINER_SENT");
+  const step = (pros: string, from: string | null, to: string) => `update fo_prospect set stage_id = '${to}' where id = '${pros}'; ${move(pros, from, to, "PERSON")};`;
+  let chained = 0;
+  for (let i = 0; i < 20; i++) {
+    const L = u(1000 + i), P = u(1100 + i);
+    sql(DEMO, leadSql(SF, L, P1));
+    try {
+      sql(DEMO, `begin; update fo_lead set state = 'ENGAGED', engaged_at = now(), engaged_by = 'test' where id = '${L}';
+        ${prospectSql(SF, P, L, "INDIVIDUAL", ENG_SF, { subject_person_id: `'${P1}'`, primary_contact_person_id: `'${P1}'` }).replace(/ returning number$/, "")};
+        ${move(P, null, ENG_SF, "PERSON")}; ${step(P, ENG_SF, QUAL)} ${step(P, QUAL, FEES)} commit;`);
+      chained++;
+    } catch { /* counted below */ }
+  }
+  ok("FO-1a pass: Engage and two moves in one transaction are accepted, 20 times in 20 (review R3-M1)", chained === 20, chained);
+  // Two transactions at once: T2 starts first, T1 moves FEES → QUAL and commits, then T2 moves QUAL → SENT; the next honest
+  // move (SENT → FEES) must still be accepted (ordered by `at`, T2's earlier start would make it refused).
+  const PX = u(1100);
+  const t2 = db.$transaction(async (tx) => {
+    await tx.$queryRawUnsafe(`select now()`); await tx.$executeRawUnsafe(`select pg_sleep(0.4)`);
+    await tx.$executeRawUnsafe(`update fo_prospect set stage_id = '${SENT}' where id = '${PX}'`); await tx.$executeRawUnsafe(move(PX, QUAL, SENT, "PERSON"));
+  }, { timeout: 30_000 });
+  await new Promise((r) => setTimeout(r, 100));
+  sql(DEMO, `begin; ${step(PX, FEES, QUAL)} commit;`);
+  await t2;
+  ok("FO-1a pass: after two overlapping transactions' moves, the next move from where the last ended is accepted (review R3-M1)",
+    (() => { try { sql(DEMO, `begin; ${step(PX, SENT, FEES)} commit;`); return true; } catch { return false; } })()
+    && sql(DEMO, `select string_agg(coalesce(f.key, '-') || '>' || t.key, ',' order by m.seq) from fo_stage_move m left join fo_stage f on f.id = m.from_stage_id join fo_stage t on t.id = m.to_stage_id where m.prospect_id = '${PX}'`) === "->ENGAGED,ENGAGED>QUALIFIED,QUALIFIED>PROPOSAL,PROPOSAL>QUALIFIED,QUALIFIED>RETAINER_SENT,RETAINER_SENT>PROPOSAL",
+    sql(DEMO, `select string_agg(coalesce(f.key, '-') || '>' || t.key, ',' order by m.seq) from fo_stage_move m left join fo_stage f on f.id = m.from_stage_id join fo_stage t on t.id = m.to_stage_id where m.prospect_id = '${PX}'`));
   ok("FO-1a fail: the web form is not turned on without a consent wording (SA-11-29)", refused(DEMO, `update fo_web_form set enabled = true where id = '${FORM}'`, /fo_web_form_consent_check/));
   sql(DEMO, `update fo_web_form set enabled = true, consent_wording_version_id = '${u(900)}' where id = '${FORM}'`);
   ok("FO-1a pass: with a consent wording version named, it turns on", sql(DEMO, `select enabled from fo_web_form where id = '${FORM}'`) === "t");
@@ -348,6 +385,11 @@ try {
   ok("FO-1a pass: a FAILED receipt that names no lead is kept", (sql(DEMO, `insert into fo_arrival_receipt (firm_id, door, intake_key, payload_hash, outcome, completed_at) values ('${SF}', 'MANUAL', 'manual:r-11', 'h', 'FAILED', now())`), sql(DEMO, `select outcome from fo_arrival_receipt where intake_key = 'manual:r-11'`) === "FAILED"));
   const FRESH = u(120); firm(DEMO, FRESH, "fresh-firm");
   ok("FO-1a fail: a front office written already marked seeded, or at another number, is refused (break R2-7)", refused(DEMO, `insert into fo_sales_setup (firm_id, seeded_at, seeded_by) values ('${FRESH}', now(), 'x')`, /starts unseeded/) && refused(DEMO, `insert into fo_sales_setup (firm_id, next_lead_no) values ('${FRESH}', 50)`, /starts unseeded/));
+  sql(DEMO, `insert into fo_sales_setup (firm_id) values ('${FRESH}')`);
+  ok("FO-1a fail: a firm is marked seeded only with its stages, reasons and web form (break R3-3)", refused(DEMO, `update fo_sales_setup set seeded_at = now(), seeded_by = 'x' where firm_id = '${FRESH}'`, /only with its stages/));
+  ok("FO-1a fail: a soft hyphen, a Braille blank, a lone combining accent, a variation selector or punctuation alone is no name (break R3-2)",
+    sql(DEMO, `select fo_has_word(E'\\u00ad') or fo_has_word(E'\\u2800') or fo_has_word(E'\\u0301') or fo_has_word(E'\\u034f\\ufe0f') or fo_has_word(E'\\u2014\\u2026\\u3002') or fo_has_word(E'\\u3164\\u115f')`) === "f" && sql(DEMO, `select fo_has_word('é') and fo_has_word('7')`) === "t");
+  ok("FO-1a fail: an intake key with a soft hyphen or any character outside printable ASCII is refused (break R3-2)", refused(DEMO, `insert into fo_arrival_receipt (firm_id, door, intake_key, payload_hash) values ('${SF}', 'BOOKING', E'booking:b\\u00ad9', 'h')`, /fo_arrival_receipt_key_check/));
   ok("FO-1a pass: an unreadable phone is kept as typed when marked so (AG-2-84 rule 5)", (sql(DEMO, `insert into fo_person (firm_id, phone, phone_readable, created_by, updated_at) values ('${SF}', '416 555', false, 'test', now())`), true));
 } finally {
   for (const d of dbs) await d.$disconnect().catch(() => undefined);

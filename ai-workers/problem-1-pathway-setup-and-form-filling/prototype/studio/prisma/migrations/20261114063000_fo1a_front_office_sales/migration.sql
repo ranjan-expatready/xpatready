@@ -303,6 +303,7 @@ CREATE TABLE "fo_stage_move" (
     "cause" "FoMoveCause" NOT NULL,
     "by_actor" TEXT NOT NULL,
     "at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "seq" BIGSERIAL NOT NULL,
 
     CONSTRAINT "fo_stage_move_pkey" PRIMARY KEY ("id")
 );
@@ -418,7 +419,10 @@ CREATE INDEX "fo_call_firm_id_person_id_started_at_idx" ON "fo_call"("firm_id", 
 CREATE INDEX "fo_note_firm_id_person_id_created_at_idx" ON "fo_note"("firm_id", "person_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "fo_stage_move_firm_id_prospect_id_at_idx" ON "fo_stage_move"("firm_id", "prospect_id", "at");
+CREATE INDEX "fo_stage_move_firm_id_prospect_id_seq_idx" ON "fo_stage_move"("firm_id", "prospect_id", "seq");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "fo_stage_move_seq_key" ON "fo_stage_move"("seq");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "fo_web_form_public_token_key" ON "fo_web_form"("public_token");
@@ -552,7 +556,6 @@ ALTER TABLE "fo_web_form" ADD CONSTRAINT "fo_web_form_firm_id_fkey" FOREIGN KEY 
 -- AddForeignKey
 ALTER TABLE "fo_service" ADD CONSTRAINT "fo_service_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
-
 -- =====================================================================================================================
 -- Rules Prisma cannot say (FO-1a). Each names the requirement card or contract line it follows.
 -- =====================================================================================================================
@@ -584,15 +587,25 @@ BEGIN
   IF OLD."seeded_at" IS NOT NULL AND (NEW."seeded_at" IS DISTINCT FROM OLD."seeded_at" OR NEW."seeded_by" IS DISTINCT FROM OLD."seeded_by") THEN
     RAISE EXCEPTION 'fo_sales_setup_forward: a firm is seeded once; the seed mark never changes' USING ERRCODE = 'check_violation';
   END IF;
+  -- The mark is set only with what the seed writes (break R3-3): both pipelines' WON, LOST and NURTURE stages, both
+  -- reason lists and a web form.
+  IF OLD."seeded_at" IS NULL AND NEW."seeded_at" IS NOT NULL AND (
+       (SELECT count(*) FROM "fo_stage" s WHERE s."firm_id" = NEW."firm_id" AND s."kind" <> 'ACTIVE') < 6
+    OR (SELECT count(DISTINCT r."kind") FROM "fo_reason" r WHERE r."firm_id" = NEW."firm_id") < 2
+    OR NOT EXISTS (SELECT 1 FROM "fo_web_form" w WHERE w."firm_id" = NEW."firm_id")) THEN
+    RAISE EXCEPTION 'fo_sales_setup_forward: a firm is marked seeded only with its stages, reasons and web form' USING ERRCODE = 'check_violation';
+  END IF;
   RETURN NEW;
 END $$;
 CREATE TRIGGER "fo_sales_setup_forward" BEFORE UPDATE ON "fo_sales_setup" FOR EACH ROW EXECUTE FUNCTION fo_sales_setup_forward();
 
--- A name, label or text a person reads has at least one character that is not a space, a control character, ASCII
--- punctuation or an invisible character (no-break and zero-width spaces, joiners, the Hangul fillers, the byte-order
--- mark). Written so in any script: the databases use the C locale, where [[:alnum:]] knows only ASCII (break R2-1:
--- 株式会社さくら, Виза, السعر are names).
-CREATE FUNCTION fo_has_word(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT t ~ '[^[:space:][:cntrl:][:punct:]  -‏ -  -⁯　ㅤᅟᅠﾠ﻿]' $$;
+-- A name, label or text a person reads has at least one letter or digit, in any script: ICU's [[:alnum:]] (the
+-- databases use the C locale, where [[:alnum:]] knows only ASCII: break R2-1, so 株式会社さくら, Виза and السعر are
+-- names), after the Hangul fillers, which Unicode counts as letters but which show nothing, are taken out. Spaces,
+-- punctuation, symbols such as the Braille blank, combining marks, joiners and other format characters alone are no
+-- name (break R3-2). ICU is in every PostgreSQL 18 the studio runs on (Homebrew on the Mac, pgdg's apt build in CI, the
+-- npm build in cloud copies), so this migration fails loudly on one without it.
+CREATE FUNCTION fo_has_word(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT regexp_replace(t, '[\u115f\u1160\u3164\uffa0]', '', 'g') ~ ('[[:alnum:]]' COLLATE "und-x-icu") $$;
 
 -- A front-office row never moves to another firm (the (firm_id, id) keys refuse it for rows that are pointed at; this
 -- refuses it for every row, the setup row included).
@@ -694,7 +707,7 @@ ALTER TABLE "fo_arrival_receipt" ADD CONSTRAINT "fo_arrival_receipt_key_check" C
     WHEN 'WEB_FORM' THEN "web_form_id" IS NOT NULL AND "intake_key" LIKE 'form:' || "web_form_id"::text || ':_%'
     WHEN 'BOOKING' THEN "web_form_id" IS NULL AND "intake_key" LIKE 'booking:_%'
     WHEN 'MANUAL' THEN "web_form_id" IS NULL AND "intake_key" LIKE 'manual:_%'
-  END AND "intake_key" !~ '[[:space:][:cntrl:]  -‏ -  -⁯　ㅤᅟᅠﾠ﻿]');
+  END AND "intake_key" ~ '^[!-~]+$');   -- printable ASCII only: keys are made by our code from ids (break R2-6, R3-2)
 ALTER TABLE "fo_arrival_receipt" ADD CONSTRAINT "fo_arrival_receipt_outcome_check" CHECK (
   (("outcome" = 'PENDING') = ("completed_at" IS NULL))
   AND ("outcome" <> 'CREATED' OR ("lead_id" IS NOT NULL AND "person_id" IS NOT NULL))
@@ -879,21 +892,26 @@ ALTER TABLE "fo_stage_move" ADD CONSTRAINT "fo_stage_move_check" CHECK ("from_st
 -- A stage move records the prospect's own change (review m3): written after it in the same transaction, it moves to the
 -- prospect's stage then; a move between pipelines is Change type and only Change type (contracts §7 §2.1).
 -- The history is one chain (break R2-4): a move starts where the last one ended (the first starts nowhere), under the
--- prospect's row lock; a move made by a signature, Signed offline or Convert ends in the WON stage.
+-- prospect's row lock, in the order seq gives there; a move made by a signature, Signed offline or Convert ends in the
+-- WON stage, and no other move does (AG-2-28a).
 CREATE FUNCTION fo_stage_move_matches() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE cur uuid; prev uuid; pf "FoPipeline"; pt "FoPipeline"; kt "FoStageKind";
 BEGIN
   SELECT p."stage_id" INTO cur FROM "fo_prospect" p WHERE p."firm_id" = NEW."firm_id" AND p."id" = NEW."prospect_id" FOR UPDATE;
+  -- The chain's order is taken here, under the prospect's row lock (review R3-M1): `at` is the transaction's start time
+  -- and the id is random, so neither orders moves made in one transaction or in two at once. A seq given is replaced.
+  NEW."seq" := nextval(pg_get_serial_sequence('"fo_stage_move"', 'seq'));
+  NEW."at" := clock_timestamp();   -- the time of the move, never a writer's (break R3-1: a back-dated move)
   IF cur IS DISTINCT FROM NEW."to_stage_id" THEN
     RAISE EXCEPTION 'fo_stage_move_matches: a move goes to the prospect''s stage (write the prospect first)' USING ERRCODE = 'check_violation';
   END IF;
-  SELECT m."to_stage_id" INTO prev FROM "fo_stage_move" m WHERE m."firm_id" = NEW."firm_id" AND m."prospect_id" = NEW."prospect_id" ORDER BY m."at" DESC, m."id" DESC LIMIT 1;
+  SELECT m."to_stage_id" INTO prev FROM "fo_stage_move" m WHERE m."firm_id" = NEW."firm_id" AND m."prospect_id" = NEW."prospect_id" ORDER BY m."seq" DESC LIMIT 1;
   IF prev IS DISTINCT FROM NEW."from_stage_id" THEN
     RAISE EXCEPTION 'fo_stage_move_matches: a move starts where the last one ended (the first starts nowhere)' USING ERRCODE = 'check_violation';
   END IF;
   SELECT s."kind" INTO kt FROM "fo_stage" s WHERE s."firm_id" = NEW."firm_id" AND s."id" = NEW."to_stage_id";
-  IF NEW."cause" IN ('RETAINER_EXECUTED', 'SIGNED_OFFLINE', 'CONVERT') AND kt <> 'WON' THEN
-    RAISE EXCEPTION 'fo_stage_move_matches: a signature, Signed offline or Convert moves to the WON stage' USING ERRCODE = 'check_violation';
+  IF (NEW."cause" IN ('RETAINER_EXECUTED', 'SIGNED_OFFLINE', 'CONVERT')) <> (kt = 'WON') THEN
+    RAISE EXCEPTION 'fo_stage_move_matches: a signature, Signed offline or Convert moves to the WON stage, and only they do (AG-2-28a)' USING ERRCODE = 'check_violation';
   END IF;
   SELECT s."pipeline" INTO pt FROM "fo_stage" s WHERE s."firm_id" = NEW."firm_id" AND s."id" = NEW."to_stage_id";
   SELECT s."pipeline" INTO pf FROM "fo_stage" s WHERE s."firm_id" = NEW."firm_id" AND s."id" = NEW."from_stage_id";

@@ -97,3 +97,38 @@ Expected: take a row lock on what is read (`FOR UPDATE` raises a serialization e
 - **B1 and Change type:** ending the old link, adding the new PRIMARY and repointing in one transaction commits. Refused at commit or at once: ending the link alone, `set constraints all immediate`, the end inside a released savepoint or after a rolled-back one, DELETE of the link, repointing the link row to another person, and WON then end link then back to ENGAGED. Change type INDIVIDUAL to CORPORATE (new company and link, CHANGE_TYPE move) commits, and so does changing back.
 - **B2 to B6:** under READ COMMITTED both orders of B2 are refused. DUPLICATE_PROSPECT and COMBINED_PROSPECT refuse removal and turn-off. One statement deleting every ACTIVE stage is refused, and two parallel READ COMMITTED turn-offs keep 1 live ACTIVE stage. Blank and cyclic combinations do not stop the seed, and ABANDONED firm C gets `seeded: false`, directly and from `seedCreatedFirms`.
 - **Other rules:** counters cannot be wound back, and the seed mark cannot be cleared or changed. Refused: TRUNCATE of fo_company_contact, a trailing-space intake key, a note or receipt whose person is not the lead's person, a move to a stage that is not current or written before the prospect, a first move with CHANGE_TYPE, and a lower-case reason key. A booking ON_OPEN_PROSPECT receipt with no lead is accepted, as designed. `prisma migrate diff` names no fo_ line.
+
+## Round 3 (0405443ea, diff from 121476e43 only, READ COMMITTED)
+
+Fresh scratch database `xr_studio_fo1a_break3_21485`, built from the 0405443ea migration and now dropped. Scripts were under `studio/var/fo1a-break3/` and are deleted. During the run, an uncommitted edit (review R3-M1: a `seq` column on fo_stage_move) appeared in the shared working tree. It was not tested here, and because of it `migrate diff` was not judged this round.
+
+**R3-1 Major (new; R2-4's chain fix): the stage-move chain uses the wrong order, so valid moves are refused and false ones accepted.** The trigger takes "the last move" by `ORDER BY at DESC, id DESC`. But `at` defaults to the transaction's start time, and `id` is random.
+- *Three moves in one transaction* (ENGAGED to QUALIFIED to CONSULT to PROPOSAL): the third move was refused in 4 of 6 runs, depending on which of the two equal-`at` rows has the larger id. When the ids fall the other way, a move from the wrong stage is accepted.
+- *Two staff moving one prospect:* a transaction that began first (sleep, then CONSULT, "from QUALIFIED") commits after a quicker one (ENGAGED to QUALIFIED). Both commit, and the slower move sorts first. The next honest move, "from CONSULT to PROPOSAL", is refused, while a false "from QUALIFIED to PROPOSAL" is accepted. The prospect is stuck for good, because moves are add-only.
+- *A writer-given `at`:* `at = '2000-01-01'` is accepted. It puts ENGAGED to QUALIFIED in the year 2000, before the first move, and the chain then forks (ENGAGED to CONSULT).
+
+The uncommitted `seq` under the prospect's lock looks aimed at the first two; it was not tested. The given `at` would remain.
+
+**R3-2 Minor: invisible characters still pass the word and intake-key checks.** The lists name specific characters, so others get through.
+- `fo_has_word` is true for a label made only of: a soft hyphen (U+00AD), the Braille blank (U+2800), U+180E, the combining grapheme joiner (U+034F), a variation selector (U+FE0F), or a lone combining accent. It is also true for "—", "…" and "。" (punctuation outside ASCII). A released combination named U+2800 became the service "就労ビザ › x › " with an invisible last part.
+- Intake keys ending in U+00AD, U+2800, U+180E, U+034F, U+FE0F or the tag space U+E0020 are accepted.
+
+**R3-3 Minor (R2-7 by two statements):** `insert into fo_sales_setup (firm_id) values (<firm E>)` followed by `update … set seeded_at = now(), seeded_by = 'nobody'` is accepted. Firm E has 0 stages and the seed says `seeded: false` from then on. The insert rule holds, but the first setting of the mark is not tied to the seed.
+
+**R3-4 Minor:** a PERSON move into the WON stage (with `won_via`) is accepted. AG-2-28a: WON is set only by a signature, Signed offline or Convert.
+
+**Held in round 3**
+- **R2-1:** `株式会社さくら`, `Виза` and `السعر` pass the word check, and the seed keeps `就労ビザ`. U+00A0, U+200B, U+2060, U+3164, U+FEFF and U+115F are refused.
+- **R2-2:** these are refused at commit or at once:
+  - a prospect on a CLOSED lead;
+  - moving an ENGAGED lead with a prospect back to OPEN;
+  - repointing a prospect to an OPEN lead;
+  - Engage undone inside a rolled-back savepoint.
+  
+  Engage (prospect first, then the lead) commits. Deleting the prospect, then closing the lead, commits. Close against prospect insert gives one consistent outcome in all three timings (prospect waiting, close waiting, prospect committed first). No lead that is not ENGAGED has a prospect.
+- **R2-4, other parts:** a second first move, a move to a stage that is not current, and CONVERT into an ACTIVE stage are refused.
+- **R2-7:** an insert already marked seeded, or not starting at number 1, is refused.
+- **R2-8:** two programs that are each other's parent give "Loop B › Loop A › Loop combo", and a self-parent gives "Self › Self combo".
+- **R2-M1:** receipts that name another firm's lead with no person, another firm's lead and person, the lead with another person, or another firm's person are refused. The right lead and person are accepted.
+
+**No new Blocker. One new Major: R3-1.**
