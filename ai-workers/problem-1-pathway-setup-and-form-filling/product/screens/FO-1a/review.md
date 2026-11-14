@@ -205,6 +205,35 @@ Cause: FO-1b merged first with its own `fo_firm_fixed()`. FO-1a's earlier stamp 
 
 Journey score, round 6: **9½/10** (unchanged).
 
-**Verdict: Approve.** No Blocker or Major is open at 421f887ce.
+**Round 6 verdict: Approve.** No Blocker or Major is open at 421f887ce.
 
 Reviewer: Approve 421f887cee2b64db63a2788cda26f93af909d280
+
+## Round 7: commit 22ff3b010 (diff `f364eb377..22ff3b010`, P-277; main has not moved)
+Cause: CI run 43587658447, shard 1, failed both seed-command checks with empty output and exit 1. The chain:
+* `run-suites.sh:128` starts each suite with `tsx --tsconfig $S/api/tsconfig.json`, a path relative to the repository root.
+* tsx hands that path to child processes in `TSX_TSCONFIG_PATH`.
+* The test started the seed command in `studio/`, where that relative path names nothing, so tsx stopped before the script ran.
+
+What changed:
+* **The test (accepted):**
+  * `childEnv()` resolves the inherited path to an absolute one before the child starts.
+  * `errHead()` reports the start of stderr, where the error is, instead of its tail.
+  * One check runs the command the CI way (repository-root cwd, relative `--tsconfig`) and expects exit 0. Another passes the path through unresolved and expects "Cannot resolve tsconfig", so the cause stays visible.
+* **`firm-seed.ts`:**
+  * `seedSampleFirmsFrontOffice` now records a failing firm in `failed` and goes on with the other.
+  * The command adds Sample-firm failures to `failed`. Any other error is printed as `{"error": …}` on stdout with exit 1, so there is no unhandled rejection. The test covers this with a database that does not exist.
+* **The migration:** `fo_owner_in_firm` is renamed `fo_sales_owner_in_firm`; the two triggers keep their names. A `pg_proc` check with a fail case requires every `fo_` function to be `fo_sales_*`, named for its table, or FO-1b's.
+
+Results:
+* Run the CI way from the repository root with the `run-suites.sh` command: **124 passed, 0 failed**.
+* Run with plain `npx tsx` from `studio/`: **124 passed, 0 failed**.
+
+Minor (does not block):
+* **r7-1:** the name check hard-codes FO-1b's nine function names (`FO1B_FUNCTIONS`). A later booking row that adds an `fo_` function will turn this FO-1a suite red. That is a cross-area dependency. FO-1b's functions could be told apart by the area's own prefix once FO-1b adopts one, or the list could live in one shared place. Record it for Lead B; it is not this row's to fix.
+
+Journey score, round 7: **9½/10** (unchanged).
+
+**Verdict: Approve.** No Blocker or Major is open at 22ff3b010.
+
+Reviewer: Approve 22ff3b0108cdf15177e1fddb1a4d7cadbdf8e495
