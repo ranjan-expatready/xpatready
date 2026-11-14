@@ -150,3 +150,47 @@ Not checked: CI on this head; the breaker's own round 2.
 **Fix list before Approve:** R2-Major 1 and R2-Major 2. R2-m1 and R2-m2 are advised, and are cheap now.
 
 Verdict: Changes needed
+
+## Round 3 (diff only, P-277): `1863c935a..3c88ac486`
+Head `3c88ac48603dc89a3427b38429e7583ca4241c11`.
+* `check_fo7a_money_schema.ts`: 119/119.
+* Probes ran on my own scratch database (`xr_studio_fo7a_review_probe3` on :54329, dropped afterwards). Line numbers below refer to the new `migration.sql`.
+
+### Round 2 findings, checked again
+| Item | Status | Evidence |
+|---|---|---|
+| R2-Major 1: Quebec tax | **Closed** | A 1,000.00 line at 149,750 ppm with tax 149.75 is accepted. A 0.33 line with GST and QST rounded apart (tax 0.05 against 0.049) is accepted. Tax 149.77 on 1,000.00 is refused. Settings accept `ratePpm` 50000 and 99750. |
+| R2-Major 2: re-apply after a return | **Closed** | Apply 60, return 60: a further return of 0.01 is refused. Re-applying the full 1,150.13 is accepted, and 0.01 more is refused. Two returns of 80 on one 100 application: RR gives one written and the other refused (23505); RC refuses both new returns (23514, after one earlier written). Sum 80. |
+| R2-m1: B-4 at RR | **Closed** | The payment commits first, then a stale RR amount change: 40001, and the amount stays 1,000. |
+| R2-m2: deposit-then-withdraw deadlock | **Closed** | 4 of 4 rounds: both commit. |
+| R2-m3: series gap; first number | **Closed** | A direct `+1` after a number is taken is refused. Before any number is taken, the first number can be raised, lowered or the row deleted. `numbers_taken` given at insert is refused. |
+| R2-m4: another kind's default prefix | **Closed** | Invoice prefix `CN-` is refused by `money_number_series_default_prefix_check`; `TOR-` is accepted. |
+| R2-m5: batch written in a savepoint | **Closed** | A line after `RELEASE SAVEPOINT` is accepted. A line on a batch from an earlier transaction is refused, also after `VACUUM (FREEZE)`. On `pg_xact_status`: an unfrozen tuple older than the clog cannot exist (clog is truncated only up to the frozen horizon), so NULL cannot slip through. A batch from before an epoch wrap gives an error, never acceptance. Writing `IF b.mine IS NOT TRUE` would make the NULL case explicit (nit). |
+| R2-m6: duplicate comment | **Closed** | |
+
+### New in this diff
+**Major:** none.
+
+**Minor**
+1. **`:812` (`money_issued_invoice`) with `:1060`: moving the party lock first opened a new lock-order deadlock.**
+   * **Order now:** a withdrawal takes the party lock, then the invoice row. A credit note (or write-off) takes the invoice row, and a return in the same transaction then takes the party lock.
+   * **Who hits it:** "Credit note, then return the trust applied to it" (AG-6-48; AG-6-73 rule 4) in one transaction, against a concurrent withdrawal on the same invoice and party.
+   * **Reproduced:** 40P01, 4 of 4. Round 2's order did not deadlock here.
+   * **Impact:** one transaction is aborted and can be retried; no data is wrong.
+   * **Fix:** in `money_issued_invoice`, read the invoice's party and currency first without a lock, take that party's lock, then touch the row. Every path then locks party first, invoice row second.
+2. **The `money.taking_number` setting (`:692`, `:718`); the coordinator asked whether it matters.**
+   * **Reproduced:** `set_config('money.taking_number','on',true)`, then a direct update to 5000, is accepted.
+   * **In my view it does not matter as a threat:** the app role owns these tables and can `DISABLE TRIGGER` anyway, and nobody sets a namespaced setting by accident. The triggers guard against app mistakes, not against a hostile owner.
+   * **Cheap hardening (optional):** while the setting is on, also require `next_number = OLD.next_number + 1` and `numbers_taken = OLD.numbers_taken + 1`. A bypass could then only ever take numbers one by one.
+   * **The real fix is PF-12's:** a non-owner app role and a `SECURITY DEFINER` number function.
+
+**Not in this diff (noted for FO-7t; outside this diff, not a finding):**
+* A negative CORRECTION takes money out of trust without naming an invoice, which is s. 32(f) by the back door. This includes a −60 correction naming a 60 return. Reproduced: after that chain, 1,210.13 was taken from trust for a 1,150.13 invoice.
+* This existed from round 1: CORRECTION may be either sign, and the row lists it.
+* **Fix later:** FO-7t should write a negative correction only against a deposit (a bounced cheque, a wrong party). A database rule could require a negative CORRECTION to name a DEPOSIT or a positive correction that is not a return.
+
+Not checked: CI on this head; the breaker's round 3; the isolated-copy C10.1 and demo-reset results the coordinator reports (I did not re-run them).
+
+**No Blocker and no Major is open.** Round 3 Minor 1 (the new deadlock) is advised before FO-7t, which will write credit-note returns.
+
+Verdict: Approve
