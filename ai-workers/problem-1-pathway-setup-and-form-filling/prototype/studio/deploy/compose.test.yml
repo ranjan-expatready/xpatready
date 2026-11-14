@@ -39,7 +39,10 @@ services:
     environment:
       DATABASE_URL: postgresql://studio@db:5432/studio
       # PF-4's local sign-in stand-in answers only with this set (contracts §1.2); a test environment, never the cloud's.
+      # PLATFORM_ENVIRONMENT stays unset (local): the stand-in is refused when it is test or production (PF-8 sets it).
       PLATFORM_IDENTITY: local
+      # P-571 (2): the Sample firms and staff the smoke signs in as (PF-3's seed, run once at start); off by default.
+      PLATFORM_SAMPLE_SEED: "on"
     ports:
       - "127.0.0.1:${SKELETON_PORT:-4480}:8080"
     depends_on:

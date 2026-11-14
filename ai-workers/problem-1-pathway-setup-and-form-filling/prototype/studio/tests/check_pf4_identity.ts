@@ -14,7 +14,7 @@ import { Controller, Get, Module, Post } from "@nestjs/common";
 import { APP_GUARD, NestFactory } from "@nestjs/core";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createSign, generateKeyPairSync, randomBytes, randomUUID } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -489,6 +489,18 @@ else {
   const me = sR.status === 200 ? await call(BASE, "GET", "/api/platform/me", { token: sR.body.token }) : sR;
   ok("PF-4 pass: on the real server, user-R signs in through the local stand-in as a Case Manager with a licence; duties include represent",
     me.status === 200 && me.body.roles.includes("CASE_MANAGER") && me.body.licensed === true && me.body.duties.includes("represent"), me);
+  // PF-7's container smoke (tools/skeleton-smoke.sh, CI `skeleton`), step 3, against this real server: it signs in with
+  // PF-4's request shape and reads /me (CI red at 808b68c9: it sent {"email"} only, answered 400 FIRM_REQUIRED).
+  const smoke = (env: Record<string, string>) => spawnSync("bash", [join(STUDIO, "tools", "skeleton-smoke.sh"), BASE], { encoding: "utf8", env: { ...process.env, PLATFORM_ME: "required", ...env } }).stdout ?? "";
+  const smokeMe = smoke({}).split("\n").find((l) => /^(PASS|FAIL|SKIP) {2}me:/.test(l)) ?? "";
+  ok("PF-4 pass (CI skeleton at 808b68c9): the skeleton smoke's sign-in and /me step passes on the real server", /^PASS {2}me: GET \/api\/platform\/me 200 with firmId/.test(smokeMe), smokeMe);
+  const smokeWrong = smoke({ SMOKE_STAFF_FIRM: "no-such-firm" }).split("\n").find((l) => /^(PASS|FAIL) {2}me:/.test(l)) ?? "";
+  ok("PF-4 fail: the smoke's me step still fails when the sign-in is refused (a firm that does not exist → 401, no token)", /^FAIL {2}me: the local sign-in .* answered 401 without a token/.test(smokeMe ? smokeWrong : ""), smokeWrong);
+  const oldBody = await call(BASE, "POST", "/api/platform/session/local", { body: { email: "representative@sample-firm.example.com" } });
+  ok("PF-4 fail (the root cause, kept refused): the old smoke body {\"email\"} alone — no firm, no second step — is refused 400 FIRM_REQUIRED", oldBody.status === 400 && oldBody.body.code === "FIRM_REQUIRED", oldBody);
+  const compose = readFileSync(join(STUDIO, "deploy", "compose.test.yml"), "utf8"), appEnv = compose.slice(compose.indexOf("\n  app:"));
+  ok("PF-4 pass: the container test (deploy/compose.test.yml) runs the app with the local stand-in and the Sample seed, never as test or production",
+    /PLATFORM_IDENTITY: local/.test(appEnv) && /PLATFORM_SAMPLE_SEED: "on"/.test(appEnv) && !/PLATFORM_ENVIRONMENT: *"?(test|production)/.test(appEnv), appEnv.slice(0, 600));
   const linkOnCopy = await call(BASE, "GET", "/api/platform/me", { auth: `Bearer ${randomBytes(32).toString("base64url")}` });
   const actorOnCopy = await call(BASE, "GET", "/api/platform/me", { actor: "user-R" });
   const staffElsewhere = await call(BASE, "GET", "/api/structure", { token: sR.body.token, actor: "user-A" });
