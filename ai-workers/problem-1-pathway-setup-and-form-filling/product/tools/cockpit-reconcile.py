@@ -63,10 +63,13 @@ works_on_main (spec §6 4 and 5; §6 10 "93/98"): count of capability rows (id
   and whose Status starts with "Works". Bake (BK-) verdict rows are not counted.
 works_total: count of those capability rows with M in {M2, M3, M4, T}.
 changes_per_day_window (§1 Pace line Y, N2, M2, principle 4, §11 R5, R5b):
+  R8: history_days = today - 13 Nov + 1 (13 Nov is day 1); the window is the
+  IST days from max(13 Nov, today - 13) to today (at most 14, never before
+  13 Nov); the same days feed the Monte Carlo.
   Release 1 changes = distinct ids cited in the Build rows' "BACKLOG rows"
   cells; BK- rows exactly those cited there (today BK-10, BK-14, BK-16, BK-17,
   BK-22, BK-23, BK-24), no others. Each change counts on its merge
-  date. days_since = today - 13 Nov 2026; window w = min(14, days_since) IST
+  date. Window w = the R8 days above (no longer min(14, days_since)) IST
   days ending today; Y = changes merged in the window / w, rounded to 2
   decimals. Under 5 days of history -> null ("a rate needs at least 5 days").
 remaining_scope_changes (§1 C1, R4): distinct unmerged BACKLOG ids among the
@@ -82,8 +85,8 @@ proven_rows (§1 B1, §9): needs a machine-readable qa id column in the
 open_app_prs (§2 WIP): open app PRs (state "open", files_app true, not
   records; drafts included).
 lanes_working (§2 L, P-326): branches in github/branches_recent.json with
-  pushed_at within 90 minutes before taken_at, excluding main and merge-queue
-  bot branches (mergify/*, gh-readonly-queue/*).
+  pushed_at within 90 minutes before taken_at, excluding main, lead/* and
+  lead-b-* (R8) and merge-queue bot branches (mergify/*, gh-readonly-queue/*).
 ready_rows (§2 Q, R2-3, §11 R3, R3b, R3c): a BACKLOG row is ready when
   (a) briefs.json lists its exact id, (b) it is not merged, (c) no open
   non-records PR matches it, (d) every dependency id is merged, (e) no "waits
@@ -110,7 +113,8 @@ ready_rows (§2 Q, R2-3, §11 R3, R3b, R3c): a BACKLOG row is ready when
   value = Q; detail = ready [{row, brief}]; not_ready_non_id = [{row, items}].
 forecast_p50_date / forecast_p85_date (§1 Forecast, M2, R2-B1 (b), §11 R2):
   daily_counts = Release 1 changes per IST day for the 14 IST days ending today
-  (oldest first). Under 5 days of Release 1 history (days_since < 5) both are
+  (oldest first; R8: only the window days, at most 14). Under 5 days of
+  Release 1 history (history_days < 5, so first measured on 17 Nov) both are
   null: "not measured: fewer than 5 days of Release 1 history (from 18 Nov)"
   (no reference class, R2). Otherwise Monte Carlo: 10,000 runs, seed 59614
   (this script's own), each simulated day draws one of the 14 counts
@@ -131,7 +135,7 @@ A4 Shaped (for C1 and built) is read from the Status cell: anything not starting
    Shaped" test uses Status starting with "Shaped".
 A5 C1 "minus parts of those rows already merged (floor 0)": applied per
    not-shaped row; unmerged parts of shaped rows counted once across rows.
-A6 Window and days: days_since = today - 13 Nov (so 5 days on 18 Nov,
+A6 (superseded by R8) Window and days: days_since = today - 13 Nov (so 5 days on 18 Nov,
    "~18 Nov"); the window and the 14 MC days end today, today included.
 A8 Y under 5 days is null (principle 4) even though the window is defined.
 A9 Lanes: bot merge-queue branches and main excluded; open PRs add nothing
@@ -144,6 +148,14 @@ A13 Percentile: nearest-rank (index ceil(pN) - 1); forecast dates agree with
 Settled after §11: B1 (R1b), B2 (R3b), B4 (R5b); B3 and B5 accepted as built
 (whole-word "after"; a title that only mentions an id matches).
 C1-C3 settled by R3c; D1 and D2 kept as ruling R3d.
+F1 R8 counts 13 Nov as day 1, so 5 days of history first exist on 17 Nov;
+   R2's quoted reason says "(from 18 Nov)". The reason now reads
+   "(from 17 Nov)", computed (reasons are not compared, only values).
+F2 R8 parked PRs (no push for 7 days): the snapshot has push times only for
+   branches pushed in the last 24 h, and this script computes no stage wait,
+   so parked PRs change none of its numbers; open_app_prs still counts them.
+F3 Y is rounded half-to-even at 2 decimals (Python round), e.g. 3/8 -> 0.38.
+F4 R8 lanes: "lead/*" and "lead-b-*" are matched as name prefixes.
 E1 A labelled field ends at the next labelled "Waits on:" (with its colon): the
    What cell of PF-4t reads "*Done when:* ... *Waits on:* PF-4 merged", one
    segment with no "·"; prose "waits on" without a colon inside "decisions:"
@@ -617,7 +629,8 @@ def compute(snap):
         N["open_app_prs"] = num(None, "not measured: " + pulls_err)
     else:
         N["open_app_prs"] = num(sum(1 for p in open_counted if p.get("files_app") is True),
-                                "pulls with state open and files_app true, records PRs excluded (drafts included)")
+                                "pulls with state open and files_app true, records PRs excluded (drafts included; "
+                                "R8 parked PRs are not split out: the snapshot has no push time older than 24 h)")
 
     # --- lanes working
     if not isinstance(branches, list):
@@ -626,14 +639,18 @@ def compute(snap):
         cut = now - dt.timedelta(minutes=LANE_MINUTES)
         names = sorted({b.get("name") for b in branches
                         if b.get("name") and b.get("name") != "main"
-                        and not b["name"].startswith(("mergify/", "gh-readonly-queue/"))
+                        and not b["name"].startswith(("mergify/", "gh-readonly-queue/", "lead/", "lead-b-"))
                         and parse_ts(b.get("pushed_at")) is not None
                         and cut <= parse_ts(b["pushed_at"]) <= now})
-        N["lanes_working"] = num(len(names), "branches (not main, not merge-queue bots) pushed in the last %d min"
+        N["lanes_working"] = num(len(names), "branches (not main, lead/*, lead-b-*, merge-queue bots) pushed in "
+                                 "the last %d min"
                                  % LANE_MINUTES, detail=names)
 
     # --- checklist-based numbers
-    days_since = (today - R1_START).days
+    # R8: history and window never reach before 13 Nov; 13 Nov counts as day 1.
+    history_days = max(0, (today - R1_START).days + 1)
+    first = max(R1_START, today - dt.timedelta(days=WINDOW_DAYS - 1))
+    window = [first + dt.timedelta(days=k) for k in range((today - first).days + 1)] if today >= R1_START else []
     rows, has_qa = (parse_checklist(ck_text) if ck_text is not None else ([], False))
     backlog = parse_backlog(bl_text) if bl_text is not None else None
     missing = [n for n, ok in (("MVP-CHECKLIST.md", ck_text is not None), ("BACKLOG.md", backlog is not None),
@@ -679,17 +696,18 @@ def compute(snap):
             d = md(rid)
             if d is not None:
                 per_day[d] = per_day.get(d, 0) + 1
-        days14 = [today - dt.timedelta(days=WINDOW_DAYS - 1 - k) for k in range(WINDOW_DAYS)]
-        r1_counts = [per_day.get(d, 0) for d in days14]
-        w = min(WINDOW_DAYS, days_since)
-        in_window = sum(r1_counts[WINDOW_DAYS - w:]) if w > 0 else 0
-        if days_since < MIN_HISTORY_DAYS or w <= 0:
+        r1_counts = [per_day.get(d, 0) for d in window]
+        w = len(window)
+        in_window = sum(r1_counts)
+        wdetail = {"days": [d.isoformat() for d in window], "counts": r1_counts}
+        if history_days < MIN_HISTORY_DAYS or w == 0:
             N["changes_per_day_window"] = num(
                 None, "not measured: %d day(s) of Release 1 history, a rate needs 5 (%d changes merged in the window)"
-                % (max(days_since, 0), in_window))
+                % (history_days, in_window), detail=wdetail)
         else:
-            N["changes_per_day_window"] = num(round(in_window / w, 2), "%d Release 1 changes merged in the last %d "
-                                              "IST days / %d" % (in_window, w, w))
+            N["changes_per_day_window"] = num(round(in_window / w, 2), "%d Release 1 changes merged in the %d IST "
+                                              "days from %s / %d" % (in_window, w, window[0].isoformat(), w),
+                                              detail=wdetail)
 
     # --- proven
     if ck_text is None:
@@ -747,9 +765,9 @@ def compute(snap):
                               detail=ready, not_ready_non_id=blocked_non_id)
 
     # --- forecast (R2: no reference class)
-    if days_since < MIN_HISTORY_DAYS:
+    if history_days < MIN_HISTORY_DAYS:
         why = "not measured: fewer than 5 days of Release 1 history (from %s)" % (
-            (R1_START + dt.timedelta(days=MIN_HISTORY_DAYS)).strftime("%d %b").lstrip("0"))
+            (R1_START + dt.timedelta(days=MIN_HISTORY_DAYS - 1)).strftime("%d %b").lstrip("0"))
         p50 = p85 = None
     else:
         p50, p85, why = monte_carlo(r1_counts, remaining, today)
@@ -835,7 +853,9 @@ def _fixture(taken_at, checklist=None, extra=None):
                 {"name": "b-old", "sha": "2", "pushed_at": "2026-11-20T04:00:00Z"},
                 {"name": "main", "sha": "3", "pushed_at": "2026-11-20T06:20:00Z"},
                 {"name": "mergify/merge-queue/x", "sha": "4", "pushed_at": "2026-11-20T06:25:00Z"},
-                {"name": "b-lead", "sha": "5", "pushed_at": "2026-11-20T05:01:00Z"}]
+                {"name": "b-lead", "sha": "5", "pushed_at": "2026-11-20T05:01:00Z"},
+                {"name": "lead/2026-11-07-lead31", "sha": "6", "pushed_at": "2026-11-20T06:10:00Z"},
+                {"name": "lead-b-front-office", "sha": "7", "pushed_at": "2026-11-20T06:11:00Z"}]
     briefs = {r: "design/briefs/%s.md" % r for r in
               ("PF-1", "PF-3", "PF-4", "PF-5", "PF-6", "PF-7", "PF-10", "PF-11", "PF-12", "PF-13", "PF-14", "PF-15",
                "PF-16", "PF-17", "PF-18", "PF-19", "PF-20", "ZZ-1")}
@@ -870,9 +890,11 @@ def self_test():
     # R1/R5: changes = cited ids PF-1 PF-2 PF-3 PF-4 PF-8 BK-1 BK-2 PF-9 PF-6. First app non-records merges (IST):
     # BK-1 10 Nov, PF-1 14 Nov, BK-2 16 Nov, PF-2 20 Nov (01:30 IST). PF-4t is not PF-4 (R1); PF-6 only by a
     # records-labelled PR (R1); BK-3 merged 17 Nov but not cited (R5).
-    # R1b: #15 (non-app, 12 Nov) does not move BK-2's date from 16 Nov. R5b: only cited BK ids count.
-    eq("daily_counts", out["mc_inputs"]["daily_counts"], [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1])
-    eq("changes_per_day_window", v["changes_per_day_window"], 0.43)  # 3 in 14-20 Nov / 7
+    # R8: window 13-20 Nov (8 days; BK-1's 10 Nov merge is before 13 Nov and left out). R1b: #15 (non-app,
+    # 12 Nov) does not move BK-2's date from 16 Nov. R5b: only cited BK ids count (BK-3 on 17 Nov is not).
+    eq("daily_counts", out["mc_inputs"]["daily_counts"], [0, 1, 0, 1, 0, 0, 0, 1])
+    eq("window days", n["changes_per_day_window"]["detail"]["days"][0], "2026-11-13")
+    eq("changes_per_day_window", v["changes_per_day_window"], 0.38)  # 3 / 8 = 0.375 -> 0.38
     eq("built_rows", v["built_rows"], 2)                  # map 1 and map 4; map 6 has PF-9 not in BACKLOG (R4)
     # C1: shaped rows' unmerged BACKLOG parts PF-3, PF-6 (2) + map 3 (3 - 0) + map 5 (3) = 8; PF-9 left out (R4).
     eq("remaining_scope_changes", v["remaining_scope_changes"], 8)
@@ -880,7 +902,8 @@ def self_test():
        [{"map": "6", "id": "PF-9"}])                     # PF-8 in a Not shaped row is an unshaped part, no failure
     eq("proven_rows", v["proven_rows"], None)             # no qa id column
     eq("open_app_prs", v["open_app_prs"], 2)              # #4 and draft #10; #13 records only
-    eq("lanes_working", v["lanes_working"], 2)            # b-pf3 (30 min), b-lead (89 min)
+    eq("lanes_working", v["lanes_working"], 2)            # b-pf3 (30 min), b-lead (89 min); lead/*, lead-b-* out (R8)
+    eq("lanes detail", n["lanes_working"]["detail"], ["b-lead", "b-pf3"])
     # R3/R3b/R3c ready: PF-4 ("nothing" is filler, R3c), PF-7 (clause ends at "·": PF-2 merged, "P-500" leaves
     # no word, "decisions: PF-3" is past the cut), PF-10 ("merged" is filler), PF-12 (bracketed "its schema
     # baton" dropped, R3c; PF-1 merged), PF-13 (PF-4t merged; "and", "#1741", "first PR" dropped), PF-14 (BK-18
@@ -906,12 +929,22 @@ def self_test():
     # Case 2 (R2): 15 Nov 12:00 IST, 2 days of history -> no rate, no forecast, no reference class.
     out2 = compute(Snapshot(mem=_fixture("2026-11-15T12:00:00+05:30")))
     n2 = out2["numbers"]
-    eq("R2 counts", out2["mc_inputs"]["daily_counts"], [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0])
+    eq("R8 counts 15 Nov", out2["mc_inputs"]["daily_counts"], [0, 1, 0])     # 13, 14, 15 Nov
     eq("R2 p50", n2["forecast_p50_date"], {"value": None, "reason":
-       "not measured: fewer than 5 days of Release 1 history (from 18 Nov)"})
+       "not measured: fewer than 5 days of Release 1 history (from 17 Nov)"})
     eq("R2 p85", n2["forecast_p85_date"]["value"], None)
     eq("Y under 5 days", n2["changes_per_day_window"]["value"], None)
     eq("remaining on 15 Nov", out2["mc_inputs"]["remaining_scope"], 10)  # PF-2 PF-3 BK-2 PF-6 + 3 + 3
+
+    # Case 2b (R8): 17 Nov is day 5 -> rate and forecast measured; 12 Nov is before the start -> no days.
+    out2b = compute(Snapshot(mem=_fixture("2026-11-17T12:00:00+05:30")))
+    eq("R8 counts 17 Nov", out2b["mc_inputs"]["daily_counts"], [0, 1, 0, 1, 0])
+    eq("R8 Y 17 Nov", out2b["numbers"]["changes_per_day_window"]["value"], 0.4)  # 2 / 5
+    if not isinstance(out2b["numbers"]["forecast_p50_date"]["value"], str):
+        fails.append("R8 17 Nov forecast not measured")
+    out2c = compute(Snapshot(mem=_fixture("2026-11-12T12:00:00+05:30")))
+    eq("R8 before start", (out2c["mc_inputs"]["daily_counts"], out2c["numbers"]["forecast_p50_date"]["value"]),
+       ([], None))
 
     # Case 3: Monte Carlo by hand.
     today = dt.date(2026, 11, 20)
