@@ -157,3 +157,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 17:08 IST: the current Lead and release holder is now **Lead 47** (`local_a358e18f…`).
   * The FO-1a lane applied the fix: it merged main (4cb10ae08) and re-stamped its migration as 20261114153000 with fo_sales_ function names (421f887ce). Reviewer round 6 approved it at 421f887ce, and the head is f364eb377.
   * `ci` is pending and the PR has no label: the release holder relabels on green.
+* 14 Nov 17:10 IST: Lead 47 read FO-1a's migration at f364eb377 (P-423): OK. It labels when ci run 43587658447 is green. Schema order noted; rev 15.2's rule goes into BACKLOG at its next records pass.
