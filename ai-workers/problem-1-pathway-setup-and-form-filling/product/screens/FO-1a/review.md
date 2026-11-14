@@ -139,4 +139,24 @@ What I re-checked, on a scratch database with every migration and the seed:
 
 Journey score, round 3: **8½/10**. Correct data drops to half a point again because of R3-M1. Error recovery stays at 1.
 
-**Verdict: Block.** To fix: **R3-M1**. Everything else from rounds 1 and 2 is closed or recorded in the PR.
+**Round 3 verdict: Block.** To fix: **R3-M1**. Everything else from rounds 1 and 2 is closed or recorded in the PR.
+
+## Round 4: commit 1aaccdb4c (diff `0405443ea..1aaccdb4c`, P-277)
+**The suite now gives 116 passed, 0 failed.** I rebuilt a scratch database with every migration and the seed, re-ran both round-3 repros on it, then dropped it.
+* **R3-M1 is fixed.** The trigger now gives `seq` (from `nextval`) and `at` (from `clock_timestamp()`) after it takes the `FOR UPDATE` lock on the prospect, and it finds the previous move by `seq`.
+  * Engage plus two moves in one transaction: **0 of 20** refused (it was 4 of 12 at 0405443ea).
+  * The two-transaction case: the history now reads ENGAGED, QUALIFIED, CONSULT in `seq` order, and its `at` values follow the same order. The next honest move, C→D, is accepted.
+  * The suite has the matching pass and fail tests, and the builder reports that the mutation fails them.
+* **WON:** a move into WON with cause PERSON is refused. Only RETAINER_EXECUTED, SIGNED_OFFLINE or CONVERT may enter WON, and only into WON (AG-2-28a). Undo convert, a move out of WON, stays possible.
+* **`fo_has_word` uses ICU:**
+  * true for 株式会社さくら, Виза, السعر, é, "Won – client";
+  * false for a space, U+200B/U+00A0, U+3164, "--", an em dash and U+2800.
+  * The migration needs ICU. That is the case on this cloud copy, and the builder says it is also so on Homebrew and pgdg. I have not seen a CI run, so watch the first one.
+* **Also checked:** intake keys must be printable ASCII; the seed mark can be set only once the stages, reasons and web form exist. The seed still sets the mark last, so a normal seed is not affected.
+* **Still open:** none. m2/B5, m8, m10, m11 and m12 are recorded in the PR (checked in round 3).
+
+Journey score, round 4: **9½/10**. Correct data is back to 1. Plain words stays at ½ for the long service names, such as "Study permits › Study permit".
+
+**Verdict: Approve.** No Blocker or Major is open.
+
+Reviewer: Approve 1aaccdb4c3c0d8c31d0b13b8a513258c406f6982
