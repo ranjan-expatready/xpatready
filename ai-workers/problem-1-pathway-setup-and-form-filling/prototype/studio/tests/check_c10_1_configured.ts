@@ -105,8 +105,15 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   for (const id of releasedIds) {
     const d = (await call("GET", `/combinations/${id}/review`)).body?.draft as { matches_release?: boolean; changes?: unknown[] } | undefined;
     if (d?.matches_release === true) continue;
-    const later = id !== sql(`select id from combination where combination_key = 'sp.outside'`) && (d?.changes ?? []).length > 0 && (d?.changes ?? []).every((c) => LATER.test(JSON.stringify(c)));
-    (later ? pending : drifted).push(later ? id : `${id}: ${JSON.stringify(d?.changes ?? []).slice(0, 300)}`);
+    // A form's "Field map" line counts its changed form fields without naming them: it is a later item only when the form
+    // fields of that edition changed since this combination's release are exactly the later boxes (read from the library).
+    const changedSince = (edition: string) => sql(`select string_agg(distinct m.data_path, ',') from form_field_map m join form_edition e on e.id = m.form_edition_id
+      where e.edition_label = '${edition.replace(/'/g, "''")}' and m.updated_at > (select max(released_at) from config_release where combination_id = '${id}')`).split(",").filter(Boolean);
+    const laterItem = (c: { kind?: string; key?: string }) => LATER.test(JSON.stringify(c))
+      || (c.kind === "Field map" && !!c.key && ((x) => x.length === 2 && x.every((b) => /MarriageInPerson/.test(b)))(changedSince(c.key)));
+    const later = id !== sql(`select id from combination where combination_key = 'sp.outside'`) && (d?.changes ?? []).length > 0 && ((d?.changes ?? []) as { kind?: string; key?: string }[]).every(laterItem);
+    const isSp = id === sql(`select id from combination where combination_key = 'sp.outside'`);
+    (later ? pending : drifted).push(later ? id : `${id}${isSp ? " (the Study permit)" : ""}: ${((d?.changes ?? []) as { kind?: string; key?: string }[]).map((c) => `${c.kind}|${c.key}${laterItem(c) ? "" : " (not a later item)"}`).join("; ").slice(0, 900)}`);
   }
   ok("C10.1 row 10 (P-319): every configured release's draft matches its release right after the load, but for the Study permit's later IMM 5707 questions another combination takes at its next release (P-598)", drifted.length === 0, { released: releasedIds.length, drifted, pending }); // none released (a blocked checkpoint) has nothing to drift
   ok("C10.1 row 10 fail: a combination with no form is never released as configured", n(`select count(*) from config_release r where not exists (select 1 from combination_form f where f.combination_id = r.combination_id)`) === 0 && /no form is on it yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
