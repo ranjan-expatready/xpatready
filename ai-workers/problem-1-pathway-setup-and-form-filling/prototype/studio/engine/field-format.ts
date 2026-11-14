@@ -6,6 +6,7 @@
 // shown as "read from the form, not checked here" so nothing is silently claimed.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { DependentList } from "../../p5/transforms.ts";
 
 const SOLUTION = join(import.meta.dirname, "..", "..", "..");
 
@@ -124,6 +125,15 @@ type BoxFormat = { caption?: string | null; max_chars?: number; checks?: { funct
 type FormatsFile = { file: string; sha256: string; boxes: Record<string, BoxFormat> };
 
 const files = new Map<string, FormatsFile | null>();
+const lists = new Map<string, Record<string, DependentList> | null>();
+/** BK-26: the dependent lists file beside an inventory ("…/imm1294e.inventory.json" → "…/imm1294e.lists.json",
+ *  prototype/p1/xfa_inventory.py lists), by the box each list fills; null when the form has none. Read once. */
+export function dependentListsFor(inventoryFile: string | null | undefined): Record<string, DependentList> | null {
+  if (!inventoryFile || !/\.inventory\.json$/.test(inventoryFile)) return null;
+  const f = inventoryFile.replace(/\.inventory\.json$/, ".lists.json");
+  if (!lists.has(f)) { try { lists.set(f, (JSON.parse(readFileSync(join(SOLUTION, f), "utf8")) as { boxes?: Record<string, DependentList> }).boxes ?? null); } catch { lists.set(f, null); } }
+  return lists.get(f) ?? null;
+}
 /** The formats file beside an inventory ("…/imm1295e.inventory.json" → "…/imm1295e.formats.json"), read once. */
 export function formatsFor(inventoryFile: string | null | undefined): FormatsFile | null {
   if (!inventoryFile || !/\.inventory\.json$/.test(inventoryFile)) return null;

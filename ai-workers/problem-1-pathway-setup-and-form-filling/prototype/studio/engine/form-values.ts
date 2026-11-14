@@ -4,7 +4,7 @@
 // snapshot's map and the form's field list (inventory); no database, file, clock or vendor call. Shared by the real
 // fill (writeForm, which then writes the PDF) and the answer-key runner (engine/answer-keys.ts), so a test checks
 // exactly what a fill writes.
-import { proseRecorded, recordedDerivation, runTransform, sameAsOf, wordsInSteps } from "../../p5/transforms.ts";
+import { dependentChoices, proseRecorded, recordedDerivation, runTransform, sameAsOf, wordsInSteps, type DependentList } from "../../p5/transforms.ts";
 import { codeAsksMore, codeForValue, hasCodes, labelForText, notOnFormValue, type ListValue, type OptionMap } from "./options.ts";
 import { byAPerson, inFormFormat } from "./form-steps.ts";
 import { NotWorkedOut } from "./not-worked-out.ts";
@@ -13,7 +13,9 @@ import type { Snapshot } from "./snapshot.ts";
 
 /** One form field of the form's inventory (the parts this step reads). */
 export type InventoryBox = { data_path?: string | null; som?: string | null; ui?: string; caption?: string | null; required?: boolean | null; max_chars?: number | null; options?: unknown; options_resolved?: [string, string][] | null };
-export type Inventory = { fields: InventoryBox[]; groups?: unknown[] };
+/** `dependent_lists` (BK-26): the form's lists filled from another box's answer, by the box they fill, read from the
+ *  official file beside the inventory (engine/field-format.ts dependentListsFor); absent, such a box goes to a person. */
+export type Inventory = { fields: InventoryBox[]; groups?: unknown[]; dependent_lists?: Record<string, DependentList> | null };
 /** What happened to one form field: written (with the value), or why not. */
 export type BoxResult = BoxRow & { result: "written" | "by a person" | "not written" | "by hand" | "not on this form" | "blank"; written?: string; why?: string; fix?: string };
 type Entry = { data_path: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null };
@@ -58,7 +60,9 @@ export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: I
   const wordsOf = new Map<string, string[]>();
   for (const e of map.entries) if (e.fact) { const w = wordsInSteps(e.transform, e.fact); if (w.length) wordsOf.set(e.fact, [...(wordsOf.get(e.fact) ?? []), ...w]); }
   // F1 slice 2 and 2b (evidence lane F2, F6): a signature or the oath block is never written, whatever is mapped to it.
-  const boxes = covBoxes.map((r): BoxResult => {
+  // BK-26: a box whose list depends on another box's answer is worked out after every other box, from what the copy writes there.
+  const lists = inv.dependent_lists ?? {};
+  const one = (r: BoxRow & { fix?: string }): BoxResult => {
     const person = byAPerson(inv.fields, box.get(r.box) ?? { data_path: r.box });
     if (person) return { ...r, result: "by a person", why: person };
     // Review M1 on #1620 (QA-415): a fact the case works out but cannot for this person yet goes by hand, with its reason.
@@ -74,12 +78,21 @@ export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: I
     if (twoChoices) return { ...r, result: "by hand", why: `The form prints ${twoChoices.map((o) => `"${o.label}"`).join(" and ")} for this answer: the immigration expert decides which, so nothing is written and nothing is guessed.` };
     if (e?.option_map && list) { const code = codeForValue(r.value, e.option_map, list); if (code === null) { const not = notOnFormValue(r.value, e.option_map, list); return not ? { ...r, result: "not on this form", why: `The form has no choice for "${not.label}", so nothing is written and nothing is guessed: leave it blank or change the answer.` } : { ...r, result: "by hand", why: `"${r.value}" has no code in this form field's option map` }; } write(r.box, code); return { ...r, result: "written", written: values[r.box] }; }
     // A text form field (no codes in its transform and no choices of its own) writes the value's label, never its key.
-    const own = box.get(r.box) ?? {};
+    let own: InventoryBox & { options_scope?: string } = box.get(r.box) ?? {};
+    const dep = lists[r.box];
+    if (dep) {
+      const c = dependentChoices(dep, box.get(dep.depends_on), values[dep.depends_on]);
+      if ("why" in c) return { ...r, result: "by hand", why: c.why };
+      own = { ...own, options_resolved: c.options, options_scope: c.scope };
+    }
     const text = list && !hasCodes(r.transform) && !(Array.isArray(own.options_resolved) && own.options_resolved.length);
     const o = runTransform(r.transform ?? "as_is", r.nothing_recorded ? null : text ? labelForText(r.value, list) : r.value, own, { fact: (k) => confirmed.get(`${r.about}|${k}`), nothingRecorded: !!r.nothing_recorded, ...(r.counted !== undefined ? { counted: r.counted, countedWhy: r.detail } : {}), ownFact: r.fact ?? undefined, words: r.fact ? wordsOf.get(r.fact) : undefined });
     if (o.ok) { write(r.box, o.value); return { ...r, result: "written", written: values[r.box], ...(r.nothing_recorded || r.counted !== undefined ? { why: r.detail } : {}) }; }
+    if ("refused" in o) return { ...r, result: "not on this form", why: `${o.reason}, so nothing is written and nothing is guessed: check the answer.` };
     return { ...r, result: "hand" in o ? "by hand" : "blank", why: o.reason };
-  });
+  };
+  const first = covBoxes.map((r) => (lists[r.box] ? null : one(r)));
+  const boxes = covBoxes.map((r, i) => first[i] ?? one(r));
   return { boxes: sameAsLeavesRowEmpty(boxes, values, box), values };
 }
 

@@ -6,8 +6,42 @@
 
 export type Address = { po_box?: string; apt_unit?: string; street_number?: string; street_name?: string; city?: string; district?: string; province?: string; postal_code?: string; country?: string };
 export type Phone = { role?: string; type?: string; country_code?: string; number?: string; extension?: string };
-export type Box = { ui?: string; max_chars?: number | null; options?: unknown; options_resolved?: [string, string][] | null };
-export type Outcome = { ok: true; value: string; steps: string[] } | { ok: false; hand: true; reason: string; steps: string[] } | { ok: false; blank: true; reason: string; steps: string[] };
+/** `options_scope` (BK-26): the box's choices are one list of a dependent list (dependentChoices below), named in words;
+ *  a value not in it is refused, never left to a guess. */
+export type Box = { ui?: string; max_chars?: number | null; options?: unknown; options_resolved?: [string, string][] | null; options_scope?: string };
+export type Outcome = { ok: true; value: string; steps: string[] } | { ok: false; hand: true; reason: string; steps: string[] } | { ok: false; blank: true; reason: string; steps: string[] } | { ok: false; refused: true; reason: string; steps: string[] };
+
+/** BK-26: a list the form's own script fills from another box's answer (IMM 1294's city from its province:
+ *  `setDDLFromLOV(CityTown.CityTown, "CityList." + this.formattedValue+".City[*]")`), every list read from the official
+ *  file's own datasets by prototype/p1/xfa_inventory.py (`<form>.lists.json`). `key` says which of the other box's values
+ *  picks the list: the label it shows (the script's formattedValue) or its code (rawValue). */
+export type DependentList = { caption?: string | null; depends_on: string; depends_on_caption?: string | null; key: "label" | "code"; list: string; quote?: string; lists: Record<string, [string, string][]> };
+
+/** BK-26: the choices of a dependent list for the value the copy writes in the box it depends on (its code, as written),
+ *  or why a person picks it. Only the form's own lists; never a guess. An item with no code is not a choice (the form's
+ *  "---------------" separators). Review M1 on #1749: a label that ends in the list's own key ("Hamilton, ON" in ON's
+ *  list) is also matched without it, as the same choice (same code). Pure. */
+export function dependentChoices(dep: DependentList, source: Box | undefined, written: string | undefined): { options: [string, string][]; scope: string } | { why: string } {
+  const other = (dep.depends_on_caption ?? "").replace(/^\s*\*\s*/, "").trim() || "the box it depends on";
+  if (written === undefined || written === "") return { why: `its choices are the form's own list for the answer to "${other}", which this copy does not write: a person picks it once "${other}" is filled` };
+  const own = choices(source ?? {}).filter(([l, c]) => l !== "" || c !== "");
+  const key = dep.key === "code" || !own.length ? written : own.find(([, c]) => c === written)?.[0];
+  const options = key === undefined ? undefined : (dep.lists[key] ?? []).filter(([l, c]) => l.trim() !== "" && c !== "");
+  if (key === undefined || !options?.length) return { why: `the form has no list of choices for "${other}" ${key ?? written}: a person picks it` };
+  const suffix = `, ${key}`.toLowerCase();
+  const aliases = options.filter(([l]) => l.toLowerCase().endsWith(suffix)).map(([l, c]): [string, string] => [l.slice(0, -suffix.length), c]);
+  return { options: [...options, ...aliases], scope: `the ${options.length} choice${options.length === 1 ? "" : "s"} the form lists for "${other}" ${key}` };
+}
+
+/** BK-26 (review M1, m2, m3 on #1749): a value's code in a dependent list: its label, letter for letter, ignoring case
+ *  and accents ("Montréal" is the form's "Montreal"), or the code itself. Never a first word or a near match; two codes
+ *  for one value is no answer. */
+export function dependentCode(value: string, options: [string, string][]): string | null {
+  const fold = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+  const v = fold(value);
+  const codes = new Set(options.filter(([l, c]) => c === value.trim() || fold(l) === v).map(([, c]) => c));
+  return codes.size === 1 ? [...codes][0] : null;
+}
 
 const PROVINCES: Record<string, string> = { AB: "Alberta", BC: "British Columbia", MB: "Manitoba", NB: "New Brunswick", NL: "Newfoundland and Labrador", NS: "Nova Scotia", NT: "Northwest Territories", NU: "Nunavut", ON: "Ontario", PE: "Prince Edward Island", QC: "Quebec", SK: "Saskatchewan", YT: "Yukon" };
 /** Country codes printed on travel documents (ICAO three-letter codes) for the countries in this demonstration. */
@@ -335,7 +369,9 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       const inline: Record<string, string> = {};
       for (const pair of (m[1] ?? "").split(",")) { const q = /^\s*([^=|]+?)\s*=\s*(\w+)\s*$/.exec(pair); if (q) inline[q[1]] = q[2]; }
       if (!choices(box).length && !Object.keys(inline).length) return hand("code list depends on another answer (dependent list); the form's own rules fill it");
-      const code = codeFor(String(v), box, Object.keys(inline).length ? inline : undefined) ?? (Object.keys(inline).length ? codeFor(String(v), box) : null);
+      const code = box.options_scope ? dependentCode(String(v), choices(box)) : codeFor(String(v), box, Object.keys(inline).length ? inline : undefined) ?? (Object.keys(inline).length ? codeFor(String(v), box) : null);
+      // BK-26: on a dependent list, a value not in the list for the other box's answer is refused in words, never written.
+      if (code === null && box.options_scope) return { ok: false, refused: true, reason: `"${v}" is not among ${box.options_scope}`, steps };
       if (code === null) return hand(`"${v}" is not in the box's option list`);
       v = code; continue;
     }

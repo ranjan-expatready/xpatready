@@ -12,7 +12,7 @@ import { FamilyBody, KeyCreateBody, KeyUpdateBody, SignBody } from "../../contra
 import { problemFromZod } from "../../contracts/programs.ts";
 import { canonical } from "../../../contracts/rules.ts";
 import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
-import { writesParts } from "../../engine/field-format.ts";
+import { dependentListsFor, writesParts } from "../../engine/field-format.ts";
 import { blank, changeProblem, checkExpected, checkFamily, fingerprintOf, inventoryHash, ITEM_KINDS, keyBoxes, NO_SCORING, runFieldMap, runRuleSet, runState, SAMPLE_WORDS, signProblem, unclean, type Family, type FieldError, type ItemKind, type MapExpected, type RuleExpected } from "../../engine/answer-keys.ts";
 import type { Inventory } from "../../engine/form-values.ts";
 import { ACTORS, Audit, Db, fail, need, readerOf, SOLUTION, Workspace, type Actor } from "./core.ts";
@@ -50,7 +50,8 @@ export function fieldListOf(s: Snapshot, form: string, edition?: string | null):
   try {
     const st = statSync(path), stamp = `${st.mtimeMs}|${st.size}`, hit = LISTS.get(path);
     if (hit?.stamp === stamp) return hit;
-    const inv = JSON.parse(readFileSync(path, "utf8")) as Inventory, out = { stamp, inv, hash: inventoryHash(inv) };
+    // BK-26: with the form's dependent lists beside it, so a key checks what a fill writes (its hash leaves them out).
+    const inv = { ...(JSON.parse(readFileSync(path, "utf8")) as Inventory), dependent_lists: dependentListsFor(m.inventory_file) }, out = { stamp, inv, hash: inventoryHash(inv) };
     LISTS.set(path, out);
     return out;
   } catch { return null; }

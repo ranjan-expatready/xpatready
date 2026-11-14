@@ -17,7 +17,9 @@ export const REVIEW_CORRECTIONS: Correction[] = REVIEW_FILE.corrections;
  *  "boxes"), where changing the proposed field itself would change every form field that reads it on that draft (IMM
  *  1295's question 7 and 8 rows read one residence-period list). The key the saved answer proposed is checked first.
  *  Data, never a form or program in code. */
-type BoxCorrection = { edition: string; box: string; proposed: string; key: string; transform: string; note: string };
+/** BK-26: `proposed: null` is a form field the saved answer left unresolved (IMM 1294's city, a dependent list); it is
+ *  mapped only while it is still unresolved with nothing mapped. */
+type BoxCorrection = { edition: string; box: string; proposed: string | null; key: string; transform: string; note: string };
 export const BOX_CORRECTIONS: BoxCorrection[] = REVIEW_FILE.boxes ?? [];
 
 /** BK-16 (P-496): the sources a combination's setup marks "later" in samples/wave1.json (a form the library gains only
@@ -122,9 +124,10 @@ export default {
         const rows = ed ? await db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: x.box } }) : [];
         const now = effective(rows, (m) => m.dataPath, "draft")[0];
         if (now?.outcome === "mapped" && now.canonicalFieldKey === x.key && now.transform === x.transform) continue; // corrected already
-        if (!now || now.outcome !== "mapped" || now.canonicalFieldKey !== x.proposed) { refused.push(`${x.edition} ${x.box}: the saved answer does not map it to ${x.proposed} (it reads ${now?.canonicalFieldKey ?? "nothing"}), so it was not corrected`); continue; }
-        await revise(db.formFieldMap, rows, { canonicalFieldKey: x.key, transform: x.transform, origin: "HUMAN", confidence: null, reason: `Changed by the sample loader: ${x.note}`.slice(0, 500) }, author.id, strip);
-        await ctx.audit.log(workspaceId, author.id, "decided", "form field", x.box, `The sample loader changed ${x.box} on ${x.edition} from ${x.proposed} to ${x.key} (${x.transform}): ${x.note}`);
+        const was = x.proposed === null ? !!now && now.outcome === "unresolved" && !now.canonicalFieldKey : !!now && now.outcome === "mapped" && now.canonicalFieldKey === x.proposed;
+        if (!was) { refused.push(`${x.edition} ${x.box}: the saved answer does not ${x.proposed === null ? "leave it unresolved" : `map it to ${x.proposed}`} (it ${now?.outcome === "mapped" ? `reads ${now.canonicalFieldKey}` : `is ${now?.outcome ?? "not there"}`}), so it was not corrected`); continue; }
+        await revise(db.formFieldMap, rows, { ...(x.proposed === null ? { outcome: "mapped" } : {}), canonicalFieldKey: x.key, transform: x.transform, origin: "HUMAN", confidence: null, reason: `Changed by the sample loader: ${x.note}`.slice(0, 500) }, author.id, strip);
+        await ctx.audit.log(workspaceId, author.id, "decided", "form field", x.box, `The sample loader ${x.proposed === null ? "mapped" : "changed"} ${x.box} on ${x.edition} ${x.proposed === null ? "(left unresolved by the saved answer)" : `from ${x.proposed}`} to ${x.key} (${x.transform}): ${x.note}`);
         boxes++;
       } catch (e) { refused.push(`${x.edition} ${x.box}: ${said(e)}`); }
     }

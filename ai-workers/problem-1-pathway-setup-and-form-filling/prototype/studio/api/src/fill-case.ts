@@ -32,6 +32,7 @@ import { keptOnMacWords } from "./sample-validated.ts";
 import { busyWords } from "./busy.ts";
 import { stampReadBack } from "./review-stamp.ts";
 import { formValues, notOnFormLines, type Inventory } from "../../engine/form-values.ts";
+import { dependentListsFor } from "../../engine/field-format.ts";
 import { mandatoryOpen, type CaseWords, type OpenField, type RequiredWhen } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
 import { trialFor, type EditionMap } from "./fill-trials.ts";
@@ -121,7 +122,8 @@ export const inventoryOf = (file: string): Inventory | null => {
   let at = 0; try { at = statSync(abs).mtimeMs; } catch { return null; }
   const hit = inventories.get(abs);
   if (hit && hit.at === at) return hit.inv;
-  try { const inv = JSON.parse(readFileSync(abs, "utf8")) as Inventory; if (!Array.isArray(inv?.fields)) return null; inventories.set(abs, { at, inv }); return inv; } catch { return null; }
+  // BK-26: with the form's dependent lists beside it, so readiness and the copy work a city out from its province alike.
+  try { const inv = JSON.parse(readFileSync(abs, "utf8")) as Inventory; if (!Array.isArray(inv?.fields)) return null; inv.dependent_lists = dependentListsFor(file); inventories.set(abs, { at, inv }); return inv; } catch { return null; }
 };
 /** QA-165 part 2 (P-237, P-238): the mandatory form fields a copy made now would leave empty, with why (engine/runtime/
  *  mandatory.ts), from the same value step a copy runs. Empty when the form has no PDF map or field list. */

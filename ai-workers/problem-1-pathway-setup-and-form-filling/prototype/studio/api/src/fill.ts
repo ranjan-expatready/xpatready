@@ -9,6 +9,7 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import { formValues } from "../../engine/form-values.ts";
+import { dependentListsFor } from "../../engine/field-format.ts";
 import { personSteps } from "../../engine/form-steps.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
@@ -50,6 +51,7 @@ export async function writeForm(snapshot: Snapshot, cov: { boxes: BoxRow[] }, fo
   const invFile = solutionFile(map.inventory_file);
   if (!invFile) fail(`This form's form field list${ed} is not in the product's own files; it cannot be filled.`);
   const inv = JSON.parse(readFileSync(invFile!, "utf8"));
+  inv.dependent_lists = dependentListsFor(map.inventory_file); // BK-26: lists the form fills from another box's answer
   const box = new Map<string, any>(inv.fields.filter((x: any) => x.data_path).map((x: any) => [x.data_path, x]));
   // G4 (C5.7): the value step is engine code (engine/form-values.ts), shared with the answer-key runner.
   const { boxes, values } = formValues(snapshot, map, inv, cov.boxes);
