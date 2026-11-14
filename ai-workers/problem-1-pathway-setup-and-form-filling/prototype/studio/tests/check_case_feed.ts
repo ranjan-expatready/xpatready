@@ -7,7 +7,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import { CASE_ENTITIES, CONFIG_ENTITIES, caseOf, firmMayRead, isConfigEntity } from "../api/src/case-feed.ts";
+import { CASE_ENTITIES, CONFIG_ENTITIES, PLATFORM_ENTITIES, caseOf, firmMayRead, isConfigEntity } from "../api/src/case-feed.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined && !c ? ` — ${JSON.stringify(detail).slice(0, 400)}` : ""}`); };
@@ -47,6 +47,12 @@ ok("pass: \"case\" in other words (\"in case\", \"case officer\") is not a case 
 ok("pass (B102): a worked-out value is a configuration line, read by every firm", isConfigEntity("worked-out value") && !CASE_ENTITIES.has("worked-out value") && firmMayRead(line("worked-out value", "Configuration author worked out person.age_years as \"Age in whole years from Date Of Birth, on Application date.\" (Sample)"), own));
 ok("fail (B102): a worked-out value line that named another firm's case would still not be read", !firmMayRead(line("worked-out value", `x on case ${THEIRS}`), own));
 ok("the two lists do not overlap", [...CASE_ENTITIES].every((x) => !CONFIG_ENTITIES.has(x)));
+// PF-3 (#1728, merge batch run 43546321596): a firm's setting line is a platform line: on the platform list, read by no
+// firm's case feed (a configuration line would reach every firm; the platform's own timeline reads it by firm).
+ok("pass (PF-3): \"platform_firm_setting\" is on the platform list only", PLATFORM_ENTITIES.has("platform_firm_setting") && !CASE_ENTITIES.has("platform_firm_setting") && !isConfigEntity("platform_firm_setting"));
+ok("fail (PF-3): another firm's setting line is never read by this firm's staff, nor by any firm's (it names no case)", !firmMayRead(line("platform_firm_setting", "Firm sample-solo: setting platform.currency changed", "x:platform.currency"), own) && !firmMayRead(line("platform_firm_setting", "Firm sample-firm: setting platform.language changed"), new Set([OURS, THEIRS])));
+ok("fail (PF-3 review m11): a setting line of a firm whose key reads like a case (\"case-deadbeef\") is not read by the firm whose case id it matches", !firmMayRead(line("platform_firm_setting", "Firm case-deadbeef: setting platform.currency changed"), new Set(["deadbeef"])) && firmMayRead(line("sign step", "x marked a form on case deadbeef"), new Set(["deadbeef"])));
+ok("the platform list overlaps neither other list", [...PLATFORM_ENTITIES].every((x) => !CASE_ENTITIES.has(x) && !CONFIG_ENTITIES.has(x) && !x.startsWith("library ")));
 
 // The sweep: every audit write in api/src (any `.log(` call with five or more arguments, auditEvent.create and
 // createMany). Its entity is a case or a configuration entity; a dynamic entity is one known below with its values; a
@@ -88,7 +94,7 @@ for (const f of files(API)) {
         if (!values) wrong.push(`${where} (entity ${entity.getText(src)} is dynamic and not known to this check: list its values)`);
         else for (const v of values) {
           found.push({ where, entity: v, names });
-          if (!CASE_ENTITIES.has(v) && !isConfigEntity(v)) wrong.push(`${where} "${v}" is on neither list`);
+          if (!CASE_ENTITIES.has(v) && !isConfigEntity(v) && !PLATFORM_ENTITIES.has(v)) wrong.push(`${where} "${v}" is on no list`);
           if (names && !CASE_ENTITIES.has(v)) wrong.push(`${where} "${v}" names a case but is not a case entity`);
         }
       }
