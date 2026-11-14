@@ -93,4 +93,27 @@ Paths are relative to `prototype/studio/`; `svc:N` means line N of `api/src/fron
 - `platform_firm_setting` `platform.closed_days` = `["2026-11-18"]` for sample-firm.
 - sample-solo was set to PAYMENT_HOLD and then SECURITY_LOCK, and is back to ACTIVE.
 - About 30 bookings made by my scripts (emails `*@example.com`).
-- sample-solo's in-process per-firm booking count was full at about 14:20 UTC (B-3). It clears after 10 minutes or on restart.
+- sample-solo's in-process per-firm booking count was full after the B-3 test (Round 1). It clears after 10 minutes or on restart.
+
+## Round 2 (fixes at `4843bc16b`, :4431 restarted on that head, same database)
+`svc2:N` means a line of `service.ts` at `4843bc16b`. I retested only B-1 to B-7, B-9 and B-10.
+
+| Item | Outcome | What I sent and saw |
+|---|---|---|
+| B-1 | **Held** | Two same-time reschedules: each answered 200 with the same token, status SCHEDULED, nothing written. Same time with a new zone: one `booking.zone_changed` audit line and no event. That booking's history is scheduled, zone_changed, rescheduled, cancelled in the audit, and scheduled, rescheduled, cancelled in the events. |
+| B-2 | **Held** | 400 now for: control characters in a name, CRLF, tab, U+2028, NEL and RLO; `Etc/GMT0` and `Etc/GMT+15` (shape); `US/Pacific-New` on booking and reschedule ("not a zone this server knows"); years 0000, 1999 and 2100 in `startsAt`; `from=0001…` on the page's and the token's slots. Not one 500 in Round 2. |
+| B-3 | **Still open, Major** | The per-firm count now starts after the stamp check (svc2:179-181), but the stamp can be reused (B-8). So: one GET, wait 3 s, then 21 IPs × 10 well-formed forms for a time never offered (`2026-12-06T08:00:00Z`). Result: 199×409, nothing booked, and the next real booking got 429 (2.5 s in all). Expected: count only forms that book, or bind the stamp to one use. |
+| B-4 | **Held** | Booking, reschedule and cancel answer only status, mode, times, zone, label (and the token). No `staffId`, `typeId`, `personId` or `prospectId`. |
+| B-5 | **Held** | For PAYMENT_HOLD, SECURITY_LOCK, DELETED and PROVISIONING, the link's GET, slots, reschedule and cancel all got the byte-identical 404. TRIAL and ACTIVE got 200. |
+| B-6 | **Held** | An odd minute and a past time get "That time is not available any more." |
+| B-7 | **Held** | Byte-identical 404 on GET and POST for: `%00` in the key or slug, upper-case key or slug, `-x`, an 81-character key, a trailing `%20`, and a leading RLO in the key. |
+| B-9 | **Partly held, Minor** | Refused now: invisible-only `​`, combining marks only, RLO, LRI. Still accepted with 201: `ㅤ` (Hangul filler, a letter that shows as blank, so a name can still look empty), RLM `‏`, ALM `؜`, and tag characters `U+E0041`. Rule at svc2:77-78. |
+| B-10 | **Held** | `AMERICA/TORONTO`, `america/toronto` (slots `tz`) and `America/TORONTO` (reschedule) are stored and shown as `America/Toronto`. `US/Eastern` is kept as typed (an IANA link, not a case fix). |
+
+**R2-1 Major (new, from the fix): 3,000 slot reads close a firm's booking page for every visitor.** The new `slots:firm` limit (svc2:154, 3,000 per 10 minutes) is counted per firm.
+- Repro: 26 IPs each sent 120 `GET …/sample-solo/book/solo-consult/slots` (49 s, 2,998×200). A visitor from a new IP then got 429. sample-firm's page still answered 200.
+- Expected: a per-firm read limit that one visitor population cannot exhaust for another, or none (the per-IP limit and the response time, about 0.1 s for 62 days, already bound a read).
+
+Round 2 state: sample-solo went through PAYMENT_HOLD, SECURITY_LOCK, DELETED, PROVISIONING and TRIAL and is back to ACTIVE.
+- sample-solo's booking and slots counts are full from about 14:05 UTC; they clear 10 minutes later or on restart.
+- About 12 more `*@example.com` bookings were added.

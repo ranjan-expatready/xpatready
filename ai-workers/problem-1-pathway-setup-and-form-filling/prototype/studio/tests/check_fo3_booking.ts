@@ -18,7 +18,7 @@ import { fakeMail, type FakeMail } from "../ports/mail.ts";
 import { fakeStaff, type StaffContext } from "../ports/staff.ts";
 import { copyFirmHoursTo } from "../api/src/front-office/booking-seed.ts";
 import { bookingIcs, fold } from "../api/src/front-office/booking/ics.ts";
-import { BookingService, type BookingPorts } from "../api/src/front-office/booking/service.ts";
+import { BookingService, PublicBookingBody, type BookingPorts } from "../api/src/front-office/booking/service.ts";
 import { computeSlots, wallToUtc } from "../api/src/front-office/booking/slots.ts";
 import { issueToken } from "../api/src/front-office/booking/tokens.ts";
 import { auditEvent } from "../api/src/platform/audit/audit-event.ts";
@@ -154,6 +154,8 @@ try {
   const fast = await S.publicSlots(A.key, "free", {}, "ip");
   ok("FO-3 form fail: sent 1 s after the page loaded (minimum fill time) → 400", await ref({ ...good, formStamp: fast.formStamp }) === 400);
   ok("FO-3 form fail: an invisible-only name, a right-to-left override, U+2028 → 400 (break B-9)", await ref({ ...good, givenNames: "\u200b" }) === 400 && await ref({ ...good, familyName: "Ann\u202eX" }) === 400 && await ref({ ...good, familyName: "A\u2028B" }) === 400);
+  ok("FO-3 form fail: a Hangul filler, RLM, ALM or tag characters → 400 (break B-9 round 2)", await ref({ ...good, givenNames: "\u3164" }) === 400 && await ref({ ...good, givenNames: "Ana\u200f" }) === 400 && await ref({ ...good, givenNames: "Ana\u061c" }) === 400 && await ref({ ...good, givenNames: "Ana\u{e0041}" }) === 400);
+  ok("FO-3 form pass: a name in another script (Arabic, Korean, accented Latin) is taken by the name rule", ["\u0639\u0644\u064a", "\uc9c0\ubbfc", "Zo\u00eb", "O'Brien-Smith"].every((n) => PublicBookingBody.shape.givenNames.safeParse(n).success) && !PublicBookingBody.shape.givenNames.safeParse("\u3164").success);
   ok("FO-3 form fail: a zone the database does not take (Etc/GMT0) → 400, never 500 (break B-2)", await ref({ ...good, timeZone: "Etc/GMT0" }) === 400);
   ok("FO-3 form fail: a start in year 0001 → 400; slots asked from year 0001 → 400 (break B-2)", await ref({ ...good, startsAt: "0001-01-01T10:00:00Z" }) === 400 && (await thrown(() => S.publicSlots(A.key, "free", { from: "0001-01-01T00:00:00Z" }, "ip")))?.status === 400);
   ok("FO-3 form fail: a line break in a name → 400 (never 500)", await ref({ ...good, givenNames: "Ana\r\nBcc: x@y.example" }) === 400);
@@ -163,7 +165,15 @@ try {
   const lim3 = make({ limits: { bookPerFirm: 3 } });
   const realForm = await form(lim3.svc, "free", "2026-10-29 10:00", "notblocked");
   for (let i = 0; i < 10; i++) await thrown(() => lim3.svc.publicBook(A.key, "free", {}, `198.51.100.${i}`));
-  ok("FO-3 door pass: ten empty posts from ten addresses do not use up the firm's limit; a real booking still goes through (break B-3)", (await lim3.svc.publicBook(A.key, "free", realForm, "203.0.113.9")).status === "SCHEDULED");
+  // B-3 round 2: well-formed, stamped forms for a time never offered (one stamp reused) do not count either.
+  for (let i = 0; i < 10; i++) await thrown(() => lim3.svc.publicBook(A.key, "free", { ...realForm, startsAt: iso("2026-11-01 08:00"), email: `bot${i}@client.example` }, `198.51.100.${50 + i}`));
+  ok("FO-3 door pass: empty posts and stamped forms for a never-offered time from 20 addresses do not use up the firm's limit; a real booking still goes through (break B-3)", (await lim3.svc.publicBook(A.key, "free", realForm, "203.0.113.9")).status === "SCHEDULED");
+  for (const t of ["2026-10-29 12:00", "2026-10-29 13:00"]) await lim3.svc.publicBook(A.key, "free", { ...(await form(lim3.svc, "free", t, `fill${t.slice(-5, -3)}`)) }, `203.0.113.${t.slice(-5, -3)}`);
+  ok("FO-3 door fail: once the firm's limit (3 here) of real bookings is reached, the next well-formed form → 429", (await thrown(async () => lim3.svc.publicBook(A.key, "free", await form(lim3.svc, "free", "2026-10-29 14:00", "over"), "203.0.113.77")))?.status === 429);
+  const reads = make({ limits: { slotsPerIp: 2 } });
+  for (let i = 0; i < 30; i++) for (let k = 0; k < 2; k++) await reads.svc.publicSlots(A.key, "free", {}, `192.0.2.${i}`);
+  ok("FO-3 door pass: 30 addresses reading the page to their own limit never close it for a new visitor (break R2-1); fail: the third read from one of them → 429",
+    (await reads.svc.publicSlots(A.key, "free", {}, "192.0.2.200")).slots.length > 0 && (await thrown(() => reads.svc.publicSlots(A.key, "free", {}, "192.0.2.1")))?.status === 429);
   ok("FO-3 door: the public booking answer names no host, person, prospect or type (contracts §0.6); fail-proof: the row has them", noIds(phoneOk.answer) && !!phoneOk.staffId && !!phoneOk.personId, phoneOk.answer);
   ok("FO-3 form pass: phone mode with a phone, consent ticked → booked SCHEDULED", phoneOk.status === "SCHEDULED" && phoneOk.mode === "PHONE" && !!phoneOk.manageToken, phoneOk);
 

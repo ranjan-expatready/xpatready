@@ -47,8 +47,11 @@ export type BookingPorts = {
   /** Where after-commit failures are told (never thrown). */
   warn?: (msg: string) => void;
 };
-type Limits = { slotsPerIp: number; slotsPerFirm: number; bookPerIp: number; bookPerFirm: number; tokenPerIp: number; windowMinutes: number; minFillSeconds: number };
-const LIMITS: Limits = { slotsPerIp: 120, slotsPerFirm: 3000, bookPerIp: 10, bookPerFirm: 200, tokenPerIp: 30, windowMinutes: 10, minFillSeconds: 3 };
+// Reads are limited per IP only: a per-firm read limit let a group of addresses close a firm's page for everyone (break
+// R2-1). The per-firm booking limit counts only bookings actually made, so refused or never-offered forms cannot close it
+// (break B-3).
+type Limits = { slotsPerIp: number; bookPerIp: number; bookPerFirm: number; tokenPerIp: number; windowMinutes: number; minFillSeconds: number };
+const LIMITS: Limits = { slotsPerIp: 120, bookPerIp: 10, bookPerFirm: 200, tokenPerIp: 30, windowMinutes: 10, minFillSeconds: 3 };
 
 // ------------------------------------------------------------------------------------------------------------- problems
 const problem = (status: number, slug: string, title: string, detail: string, extra: Record<string, unknown> = {}) =>
@@ -74,8 +77,8 @@ const Zone = z.string().max(64).transform((s) => { const r = resolvedZone(s); re
 const Instant = z.iso.datetime({ offset: true }).transform((s) => new Date(s)).refine((d) => d.getTime() >= Date.UTC(2000, 0, 1) && d.getTime() < Date.UTC(2100, 0, 1), "a time between 2000 and 2100");
 /** A person's name: no line break, control, bidirectional or invisible-only text (breaks B-2, B-9). */
 const Name = z.string().trim().min(1, "required").max(100)
-  .refine((v) => !/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/.test(v), "no line breaks or control characters")
-  .refine((v) => /[\p{L}\p{N}]/u.test(v), "a name with letters");
+  .refine((v) => !/[\u0000-\u001f\u007f-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069\u200b-\u200f\u061c\u{e0000}-\u{e007f}]/u.test(v), "no line breaks, control or invisible characters")
+  .refine((v) => /[\p{L}\p{N}]/u.test(v.replace(/[\u115f\u1160\u3164\uffa0]/g, "")), "a name with letters");
 const FIRM_KEY = /^[a-z0-9][a-z0-9-]{0,79}$/, SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MODES = ["VIDEO", "PHONE", "IN_PERSON"] as const;
@@ -151,7 +154,6 @@ export class BookingService {
   async publicSlots(firmKey: string, slug: string, query: unknown, ip: string) {
     this.limit(`slots:ip:${ip}`, this.limits.slotsPerIp);
     const { firm, type } = await this.publicType(this.db, firmKey, slug);
-    this.limit(`slots:firm:${firm.id}`, this.limits.slotsPerFirm);
     const q = parse(SlotsQuery, query);
     const firmZone = await readSetting<string>(this.db, firm.id, TIME_ZONE.key);
     const tz = q.tz ?? firmZone;
@@ -177,8 +179,8 @@ export class BookingService {
     const b = parse(PublicBookingBody, body);
     if (b.website) throw refused("We could not take this booking. Please try again.");
     this.checkStamp(firm.id, b.formStamp);
-    // The firm's limit counts only well-formed, stamped forms, so empty posts cannot close a firm's page (break B-3).
-    this.limit(`book:firm:${firm.id}`, this.limits.bookPerFirm);
+    // The firm's limit is checked here and counted only when a booking is made (break B-3).
+    this.limit(`book:firm:${firm.id}`, this.limits.bookPerFirm, false);
     if (!type.modes.includes(b.mode)) throw refused("Please choose one of the ways to meet offered.", ["mode: not offered for this consultation"]);
     if (b.mode === "PHONE" && !b.phone) throw refused("Please give a phone number for a phone call.", ["phone: required for a phone call"]);
     const wording = await this.ports.arrival.bookingConsentWording(this.db, firm.id);
@@ -187,6 +189,7 @@ export class BookingService {
     const person = { givenNames: b.givenNames, familyName: b.familyName, email: b.email, ...(b.phone ? { phone: b.phone } : {}) };
     const out = await this.create(firm.id, type, { startsAt: b.startsAt, mode: b.mode, timeZone: b.timeZone }, { word: "system:booking-page" },
       async (tx, bookingId) => this.ports.arrival.bookingArrived(tx, { firmId: firm.id, person, consent: { wordingId: wording.wordingId, givenAt: this.ports.clock.now() }, bookingId }));
+    this.limit(`book:firm:${firm.id}`, Number.POSITIVE_INFINITY);
     return { ...this.publicView(out.booking), manageToken: out.token };
   }
 
@@ -558,12 +561,13 @@ export class BookingService {
   private manageLink(firmKey: string, token: string) { return `${this.ports.publicBaseUrl.replace(/\/+$/, "")}/book/${encodeURIComponent(firmKey)}/manage#${token}`; }
 
   // ---------------------------------------------------------------------------------------------- public-door guards
-  /** A rolling-window limit per key (contracts §0.6; sized for about 100 firms in one process, P-562). */
-  private limit(key: string, max: number) {
+  /** A rolling-window limit per key (contracts §0.6; sized for about 100 firms in one process, P-562). `count` false only
+   *  checks (the hit is added later, when the request succeeds). */
+  private limit(key: string, max: number, count = true) {
     const now = this.ports.clock.now().getTime(), since = now - this.limits.windowMinutes * MIN;
     const list = (this.hits.get(key) ?? []).filter((t) => t > since);
     if (list.length >= max) { this.hits.set(key, list); throw tooMany(); }
-    list.push(now);
+    if (count) list.push(now);
     this.hits.set(key, list);
     if (this.hits.size > 50_000) for (const [k, v] of this.hits) if (!v.some((t) => t > since)) this.hits.delete(k);
   }
