@@ -382,3 +382,44 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
 * A database function in an area's migration carries the area's prefix: `fo_sales_`, `fo_booking_`, `fo_compliance_`, `fo_signing_`, `fo_retainer_`, `money_`, `msg_`, `plat_`, `platform_`.
 * A migration's stamp is later than the newest on `main` when it merges.
 * FO-1b keeps `fo_firm_fixed()` as built. It is the only bare `fo_` helper, and no later row uses a bare `fo_` name.
+
+## Rev 16 (14 Nov 18:23 IST, Lead B (3)): rows that start now on port fakes (P-599: Release 1 (production grade) by 24 Nov)
+
+**Asked:** Lead 47 (release holder). The board showed 0 ready rows, because every next PF/FO row waited on PF-4 #1744 or FO-1a #1742. Lead 47 wants rows shaped against port fakes (P-576), each with the port it fakes, its touch list (no two on one schema file) and a brief, at least 10.
+
+**How (one contract-first row, then parallel lanes):**
+* **PF-0p** puts the shared port interfaces and their fakes in `prototype/studio/ports/`: audit, staff context, clock, jobs, mail, files, document render. It also adds one real interim `AuditPort` adapter over `audit_event` (AUD-1 swaps it later).
+* It adds **reserved back-relation comment lines** in `PlatformFirm` and `PlatformStaff`, separated by blank lines. Each later row replaces only its own line, so parallel schema PRs don't collide in git.
+* Every other row below codes to PF-0p's signatures at once and merges `main` when PF-0p lands.
+* Services take a `StaffContext` argument. Staff routes are wired with PF-4's `@PermissionKeys` once PF-4 is on `main`.
+* People and company keys to FO-1a's tables are added when FO-1a is on `main`; otherwise **FO-1k collects them** (FO-1k's scope grows to those keys).
+
+**Start now (12 rows; brief for each in `lead-b-briefs/`):**
+
+| Row | What | Port it fakes (until the real one lands) | Schema file (one each) | Touch list (code) |
+|---|---|---|---|---|
+| PF-0p | shared port contracts and fakes | defines them all; the real `AuditPort` adapter (interim) | `platform.prisma`: comment lines only | `ports/*` (not `events.ts`), `api/src/platform/audit/`, `tests/check_pf0p_ports.ts` |
+| PF-L | the approved libraries | none | none | `package.json`, lockfile, gate file |
+| PF-14 | background jobs (pg-boss adapter, worker) | builds the real `JobPort` behind PF-0p's fake | none (pg-boss's own schema) | `api/src/platform/jobs/`, `api/src/features/platform-jobs.ts`, test |
+| PF-19a | messages schema and consent store | `ConsentPort` (creates it); `AuditPort` fake | `platform-messages.prisma` | `api/src/platform/messages/consent/`, `ports/consent.ts`, test |
+| FO-7a | client-money tables | `AuditPort` fake; FO-1a's people keys by FO-1k if needed | `client-money.prisma` | migration and test only |
+| FO-13 | compliance tables (conflict, identity) | `PartySearchPort` fields only; FO-1a keys by FO-1k if needed | `front-office-compliance.prisma` | migration and test only |
+| PF-21 | complaints register | `JobPort`, `AuditPort` fakes; `StaffContext` fake | `platform-register.prisma` | `api/src/platform/complaints/`, test |
+| PF-23 | logs, redaction, metrics, alarms | `AlertPort` (creates it); `StaffContext` optional | none | `api/src/platform/observability/`, `ports/alert.ts`, one line in `main.ts`, one CI step |
+| PF-24 | secrets loader and `SecretBoxPort` | `JobPort` fake (re-encrypt) | none | `api/src/platform/config/`, `secret-box/`, `ports/secret-box.ts`, runbook, test |
+| FO-5 | retainer schema, API and documents | `StaffContext`, `AuditPort`, `FilesPort`, `DocumentRenderPort` (builds the real render and files adapters) | `front-office-retainers.prisma` | `api/src/front-office/retainers/`, test |
+| FO-3 | booking API (public door first) | `ArrivalPort` (creates it; FO-2 implements), `JobPort`, `MailPort`, `AuditPort` fakes | none (FO-1b's tables) | `api/src/front-office/booking/`, `ports/arrival.ts`, test |
+| PF-25 | firm web address | `StaffContext` fake for the staff-only change | `platform.prisma`: its slot line and new model (**after PF-0p merges**) | `api/src/platform/web-address/`, test |
+
+**Still waiting on PF-4 or FO-1a, and why:**
+* FO-2 needs FO-1a's tables for its whole body.
+* PF-4b, PF-4s, PF-4c, PF-5, PF-6 and PF-18a extend PF-4's own files.
+* PF-12 needs every table to exist first.
+* FO-1k comes after FO-1a.
+* FO-7b, FO-6 and FO-2b come after their schema rows.
+
+**Decisions for the release holder (not Lead B's to make):**
+* **The two-at-once schema limit (P-559 (3)).** Six rows above add migrations at the same time: PF-19a, FO-7a, FO-13, PF-21, FO-5 and PF-25. Each is in its own file, re-stamps at merge, and touches `platform.prisma` by its own slot line only. Running them in parallel needs the limit raised, e.g. "any number, each in its own file, the second to merge re-stamps". Otherwise the order is PF-19a + FO-7a, then FO-13, PF-21, FO-5, PF-25.
+* **PF-0p's interim `AuditPort` adapter** sits in AUD-1's area. It is an OK or a no.
+
+**Every brief now has (Lead 47, 14 Nov):** before asking for the label, run, on `main` merged into the branch, the suites of every CI part that was red on any earlier head, plus every suite in the shard that shares the demo database, and paste the results.
