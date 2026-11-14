@@ -493,3 +493,17 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
   * `CARD_FEE_ON_TRUST` is operating to trust (money in).
 
   A move from trust to operating from any other entry kind is refused. **FO-7t follows this.**
+
+## Rev 16.4 (14 Nov 20:02 IST, Lead B (3)): routes split from start-now rows while PF-4 is open
+
+**Rule:** a start-now row (rev 16) whose schema and service are reviewed, broken and green while PF-4 is still not on `main` may merge as **part 1 of 2**. Its staff routes go in a small next PR, **`<row>w`**.
+* **`<row>w` holds:** the `api/src/features/<row>.ts` registration, the controller with PF-4's `@PermissionKeys`, and route tests (a pass and a fail per key, a 403 for each role without the key, a 404 across firms).
+* **When it starts:** the day PF-4 is on `main`.
+* **Size:** S. **Reviewer only**, unless the route is a public door.
+* **For qa (P-592):** part 1's PR body says "part 1 of 2 (routes in `<row>w`)", and the capability counts as done only after `<row>w`.
+* **Applies to:**
+  * **PF-21w** (asked on #1753, comment answered);
+  * FO-5w and FO-3w-staff (FO-3's staff create, reschedule and cancel routes), if their lanes ask;
+  * PF-25w (the staff-only address change).
+
+**Shared check:** `check_pf3_platform_schema.ts:80` leaves out the keys later rows add through a named list, `ADDED_BY_LATER_ROWS` (P-601 first: `agent/complaint:`). Each later row that adds catalogue keys extends that list, and asserts its own rows exactly.
