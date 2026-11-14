@@ -46,3 +46,4 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 * 14 Nov 07:11 IST: Lead 39: rev 4 copied; FO-6 waits on FO-5r; the email one-time code is an open founder point (P-561 (3) vs AG-5-61 r13), kept in contracts §7 and FO-6 (built behind a setting).
 * 14 Nov 07:12 IST: Lead 39 copied FO-6 (rev 4.1) and FO-6v from d81baea2; the per-account question is inside FO-5r.
 * 14 Nov 07:19 IST: PF-6 challenge (2 Blockers, 9 Majors) answered; concept r2 approved (P-223 (4)); rows rev 5: PF-4b (staff reads, session, accept invitation, step-up, provider email via MailPort) and PF-6 rewritten; founder Q3 reframed with Cognito's per-pool limit: (a) required for all (recommended) vs (b) AG-1-40 as written.
+* 14 Nov 07:20 IST: Lead 39 copied rev 5 (PF-4b, PF-6). Founder questions queued after FO-5r, in order: P-561 confirm/amend, email code, Q2, Q3 (a/b), Q4, Q5. Team legacy e-signer: no tests, image-only, no seal (AG-05: do not copy).
