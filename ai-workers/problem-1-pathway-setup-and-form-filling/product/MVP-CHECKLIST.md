@@ -2,7 +2,7 @@
 
 **What this page is.** One checklist that answers "what are we tracking toward the MVP?": (A) every capability in the agreed scope and where it stands, (B) what "done" means for one row, (C) what must be true before the first real firm's data goes in.
 **Where the numbers come from.** Scope: the capability map, draft 6 (baseline P-586: 112 rows, Build 101, Optional 8, Held 3). Rows that build it: `BACKLOG.md`, section "Full MVP: platform (PF) and front office (FO)" (rev 14.1) and the Bake rows (BK-). Proof: `qa/CAPABILITIES.md` on `main` 4eec4ed2 (93 of 98 Works; M2 60/60, M3 27/29, T 6/8). Open pull requests: GitHub API, read 12:3x IST. Launch conditions: `RULES.md` (as of P-590).
-**Date.** 14 Nov 2026, 12:3x IST. Draft for the tech lead's review; not a decision.
+**Date.** 14 Nov 2026, 12:3x IST. **The one tracking page for Release 1 (P-592, founder 15:1x IST 14 Nov)**: the Lead updates the status column at each records pass; a row reaches qa Works only from a qa verdict on an `R1` capability in `qa/CAPABILITIES.md`.
 
 ---
 
