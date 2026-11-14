@@ -23,7 +23,7 @@
 | PF-3 | platform tables + settings home + seed | **in flight: PR #1728** (holds the schema baton) | watch review; then start FO-1a + FO-1b |
 | FO-1a / FO-1b | sales tables / booking tables | briefs written | start **side by side** after PF-3 merges (P-559 (3), Lead 38); FO-1a also fixes DEVELOPING.md's stale one-migration line |
 | PF-4 | sign-in, roles, permission keys | **brief written** (`lead-b-briefs/PF-4.md`) | start when PF-3 merges (schema-free, so it may run beside FO-1a/1b) |
-| PF-4b | staff reads, session, accept invitation, step-up, provider emails via MailPort | shaped | brief after PF-4; builder verifies 4 Cognito facts first |
+| PF-4b | staff reads, session, accept invitation, step-up, provider emails via MailPort | **brief written** (`lead-b-briefs/PF-4b.md`) | start when PF-4 merges; builder verifies 4 Cognito facts first (step 0) |
 | PF-5 | sign-up + subscription (SA-04) | shaped; door per question 2 | brief after PF-4 |
 | FO-2 / FO-2b | leads + Individual prospects API / Corporate | shaped | briefs after FO-1a |
 | FO-3 | booking API (AG-04) | shaped | after FO-1b and FO-2 |
@@ -86,3 +86,4 @@ Fold each answer into contracts §7 and the affected rows (PF-5; PF-4b/PF-6; FO-
 * 14 Nov 07:53 IST: hand-over written (P-565); Lead B stops.
 * 14 Nov 07:56 IST: Lead B (2) (session `f68b2550…`, worktree `lead-b-2-front-office-1e7bc9`) took over from 851ebfd6 at Lead 40's go; read this file + RULES (as of P-565). PF-3 #1728 approved at c5ba30f8, waits on the release holder's P-423 diff read and label. Next: PF-4 brief.
 * 14 Nov 07:57 IST: PF-4 brief written (`lead-b-briefs/PF-4.md`): API only, no schema, so it can start beside FO-1a/1b once PF-3 merges; two-step switch built with a `PLATFORM_POOL_MFA_REQUIRED` flag so question 3 changes config, not code. Rows file: brief rules now point to the current Lead and this file, not a session id.
+* 14 Nov 07:58 IST: PF-4b brief written (`lead-b-briefs/PF-4b.md`); step 0 checks the four Cognito facts at AWS's docs before code. Next: FO-5s concept (skill screen-concept).
