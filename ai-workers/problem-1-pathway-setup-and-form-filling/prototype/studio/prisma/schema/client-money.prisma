@@ -22,7 +22,11 @@
 //   invoice is frozen (lines, tax, party, currency, number); insert-only tables refuse update and delete; a trust
 //   withdrawal names an issued invoice of the same party and currency; a party's trust balance never goes below zero
 //   (running balance kept by the database, serialised per party and currency); one write-off per invoice; a move line
-//   is in at most one batch that has not been undone; an undo batch names the batch it undoes and a reason.
+//   is in at most one batch that has not been undone; an undo batch names the batch it undoes and a reason; credit
+//   notes, the write-off and trust paid on an invoice never exceed it; refunds never exceed their payment; nothing
+//   goes into trust while trust is off; issue, send, cancel and record times are the database's; a row a check names
+//   must be visible to it (never left to the foreign key at the end of the statement). Each holds at READ COMMITTED
+//   and REPEATABLE READ (a unique ordinal or a touched row refuses a stale writer).
 
 /// The two currencies a firm may bill in (AG-6-46 rule 3; X-6). Never converted, never added together.
 enum MoneyCurrency {
@@ -138,7 +142,8 @@ model MoneyPaymentSettings {
 model MoneyPaymentAccount {
   id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId          String             @unique @map("firm_id") @db.Uuid
-  stripeAccountId String?            @map("stripe_account_id")
+  /// Unique across firms (webhooks are routed by it): the one money_ index without firm_id first.
+  stripeAccountId String?            @unique @map("stripe_account_id")
   status          MoneyAccountStatus @default(NOT_CONNECTED)
   chargesEnabled  Boolean            @default(false) @map("charges_enabled")
   payoutsEnabled  Boolean            @default(false) @map("payouts_enabled")
@@ -151,7 +156,9 @@ model MoneyPaymentAccount {
 }
 
 /// A per-firm number series (AG-6-44): the prefix and the next number. Numbers are taken only by the database
-/// (money_take_number, inside the writing transaction), so they never skip or repeat; next_number never goes back.
+/// (money_take_number, inside the writing transaction), so they never skip or repeat. A firm moving over sets its first
+/// number when it writes the row; after that next_number moves only by taking a number. Two series of a firm never
+/// share a prefix (letters and a dash).
 model MoneyNumberSeries {
   firmId     String          @map("firm_id") @db.Uuid
   kind       MoneySeriesKind
@@ -162,6 +169,7 @@ model MoneyNumberSeries {
   settings MoneyPaymentSettings @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
 
   @@id([firmId, kind])
+  @@unique([firmId, prefix])
   @@map("money_number_series")
 }
 
@@ -245,8 +253,9 @@ model MoneyCreditNote {
 
 /// A payment (AG-6-19, AG-6-69): against an issued invoice, a sent trust request, or neither (money with no request,
 /// AG-6-72). Received into OPERATING or TRUST; card only into OPERATING. The Stripe payment intent id and the
-/// idempotency key are each unique in the firm, so a double click or a repeated webhook records one payment. Insert-only
-/// but for the cheque's one "Cleared" tick (AG-6-63 rule 7).
+/// idempotency key are each unique in the firm, so a double click or a repeated webhook records one payment. Money into
+/// trust only with trust on, and with its DEPOSIT entry in the same transaction. Insert-only but for the cheque's one
+/// "Cleared" tick (AG-6-63 rule 7).
 model MoneyPayment {
   id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId                String             @map("firm_id") @db.Uuid
@@ -258,6 +267,8 @@ model MoneyPayment {
   receivedInto          MoneyAccountKind   @map("received_into")
   receivedAt            DateTime           @map("received_at") @db.Timestamptz
   reference             String?
+  /// The optional evidence file of a deposit (a bank slip, a cheque image): a FilesPort key, never the file (FO-7t).
+  evidenceFileKey       String?            @map("evidence_file_key")
   stripePaymentIntentId String?            @map("stripe_payment_intent_id")
   idempotencyKey        String             @map("idempotency_key")
   recordedBy            String?            @map("recorded_by")
@@ -283,7 +294,8 @@ model MoneyPayment {
 }
 
 /// A refund of a payment (AG-6-23): an amount, a reason, by card or offline, with its own idempotency key. Refunds of
-/// one payment never exceed it. Insert-only.
+/// one payment never exceed it, also at REPEATABLE READ (refund_ordinal). Money received into trust goes back as a
+/// trust entry instead. Insert-only.
 model MoneyRefund {
   id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId         String           @map("firm_id") @db.Uuid
@@ -294,6 +306,8 @@ model MoneyRefund {
   route          MoneyRefundRoute
   stripeRefundId String?          @map("stripe_refund_id")
   idempotencyKey String           @map("idempotency_key")
+  /// The database's: the count of the payment's earlier refunds + 1, unique per payment (serialises refunds at any isolation).
+  refundOrdinal  Int              @default(0) @map("refund_ordinal")
   createdBy      String           @map("created_by")
   createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
 
@@ -301,6 +315,7 @@ model MoneyRefund {
 
   @@unique([firmId, idempotencyKey])
   @@unique([firmId, stripeRefundId])
+  @@unique([firmId, paymentId, refundOrdinal])
   @@index([firmId, paymentId])
   @@map("money_refund")
 }
@@ -446,7 +461,8 @@ model MoneyMoveBatch {
 /// One moved amount in a batch (AG-6-73 rule 1): its kind and direction, currency and amount, and the source it came
 /// from (a trust withdrawal for TRUST_APPLIED; a payment for WRONG_ACCOUNT and CARD_FEE_ON_TRUST). A source is in at
 /// most one batch that has not been undone: move_ordinal (the database's) counts its moves, and (source, kind, ordinal)
-/// is unique, so two people ticking the same line at once make one batch. Insert-only.
+/// is unique, so two people ticking the same line at once make one batch. Lines are written in the transaction that
+/// records their batch. Insert-only.
 model MoneyMoveLine {
   id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId             String             @map("firm_id") @db.Uuid

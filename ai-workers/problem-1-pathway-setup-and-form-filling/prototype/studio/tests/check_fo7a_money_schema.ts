@@ -29,6 +29,8 @@ let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 400)}` : ""}`); };
 const psql = (db: string, args: string[]) => execFileSync(join(BIN, "psql"), [urlOf(db), "-v", "ON_ERROR_STOP=1", "-q", ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const sql = (db: string, q: string) => psql(db, ["-Atc", q]);
+// Several statements in one transaction (psql -c): the last statement's result.
+const sqlLast = (db: string, q: string) => sql(db, q).split("\n").at(-1) ?? "";
 // Refused with a message matching re (and, with code, this SQLSTATE: psql's verbose errors print "ERROR:  <code>: …").
 const refused = (db: string, q: string, re: RegExp, code?: string) => {
   try { psql(db, ["-v", "VERBOSITY=verbose", "-Atc", q]); return false; }
@@ -49,7 +51,8 @@ function moneyDiff(db: string): string[] {
 const indexesNotFirmFirst = (db: string) => sql(db, `select coalesce(string_agg(ic.relname, ',' order by ic.relname), '') from pg_index i
   join pg_class c on c.oid = i.indrelid join pg_class ic on ic.oid = i.indexrelid
   left join pg_attribute a on a.attrelid = c.oid and a.attnum = i.indkey[0]
-  where c.relnamespace = 'public'::regnamespace and c.relname like 'money\\_%' and not i.indisprimary and coalesce(a.attname, '') <> 'firm_id'`);
+  where c.relnamespace = 'public'::regnamespace and c.relname like 'money\\_%' and not i.indisprimary and coalesce(a.attname, '') <> 'firm_id'
+    and ic.relname <> 'money_payment_account_stripe_account_id_key'`);
 
 // n real connections, each in its own transaction at the given isolation, each holding a snapshot before any writes;
 // then each runs its statement at once and commits. Returns per writer the first row's first value or the SQLSTATE.
@@ -58,7 +61,11 @@ async function race(n: number, stmt: (i: number) => string, iso = "read committe
   const cs = await Promise.all(Array.from({ length: n }, async () => { const c = new pg.Client({ connectionString: urlOf(DEMO) }); await c.connect(); conns.push(c); return c; }));
   for (const c of cs) { await c.query(`begin isolation level ${iso}`); await c.query("select 1 from money_payment_settings limit 1"); }
   const out = await Promise.all(cs.map(async (c, i) => {
-    try { const r = await c.query(stmt(i)); await c.query("commit"); const row = r.rows[0]; return { value: row ? String(Object.values(row)[0]) : "" }; }
+    try {
+      const res = await c.query(stmt(i)) as unknown as pg.QueryResult | pg.QueryResult[];
+      const r = Array.isArray(res) ? res[res.length - 1] : res;
+      await c.query("commit"); const row = r.rows[0]; return { value: row ? String(Object.values(row)[0]) : "" };
+    }
     catch (e) { await c.query("rollback").catch(() => undefined); const err = e as { code?: string; message?: string }; return { code: err.code, message: err.message }; }
   }));
   for (const c of cs) { await c.end(); conns.splice(conns.indexOf(c), 1); }
@@ -101,7 +108,8 @@ try {
   ok("FO-7a pass: migrate diff after it on the demo-data copy names no money table or type", moneyDiff(DEMO).length === 0, moneyDiff(DEMO));
 
   // ------------------------------------------------------------------------------------------------ the table shape
-  ok("FO-7a pass: firm_id is first in every index of every money_ table (primary keys aside)", indexesNotFirmFirst(DEMO) === "", indexesNotFirmFirst(DEMO));
+  ok("FO-7a pass: firm_id is first in every index of every money_ table (primary keys aside), but the one global index on the Stripe account id (webhooks are routed by it before the firm is known; review round 1, m1)",
+    indexesNotFirmFirst(DEMO) === "" && sql(DEMO, `select indexdef from pg_indexes where indexname = 'money_payment_account_stripe_account_id_key'`).includes("UNIQUE INDEX money_payment_account_stripe_account_id_key ON public.money_payment_account USING btree (stripe_account_id)"), indexesNotFirmFirst(DEMO));
   ok("FO-7a fail: this check sees an index without firm_id first (one made and dropped for the test)",
     (sql(DEMO, `create index money_tmp_bad on money_invoice (number)`), indexesNotFirmFirst(DEMO) === "money_tmp_bad") && (sql(DEMO, `drop index money_tmp_bad`), indexesNotFirmFirst(DEMO) === ""));
   ok("FO-7a pass: every amount is an integer — every *_minor column is integer, and no money_ column is a float or a decimal",
@@ -136,8 +144,17 @@ try {
     sql(DEMO, acct(firmA, null, "NOT_CONNECTED")) === "NOT_CONNECTED" && sql(DEMO, acct(firmA, "acct_1SampleA", "PENDING")) === "PENDING" && sql(DEMO, acct(firmA, "acct_1SampleA", "ACTIVE", true)) === "ACTIVE");
   ok("FO-7a fail: an ACTIVE account without an id, charges on while PENDING, a malformed id, or another firm's account id are refused",
     refused(DEMO, acct(firmB, null, "ACTIVE"), /money_payment_account_status_check/) && refused(DEMO, acct(firmB, "acct_1SampleB", "PENDING", true), /money_payment_account_status_check/)
-    && refused(DEMO, acct(firmB, "sk_live_123", "PENDING"), /money_payment_account_id_check/) && refused(DEMO, acct(firmB, "acct_1SampleA", "PENDING"), /already belongs to another firm/, "23505"));
+    && refused(DEMO, acct(firmB, "sk_live_123", "PENDING"), /money_payment_account_id_check/) && refused(DEMO, acct(firmB, "acct_1SampleA", "PENDING"), /money_payment_account_stripe_account_id_key/, "23505"));
 
+  {
+    sql(DEMO, `delete from money_payment_account where firm_id = '${firmB}'`);
+    const firmC = sql(DEMO, `insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), 'firm-c', 'C', 'CA', 'c@firm-c.example.com', now()) returning id`);
+    sql(DEMO, settings(firmC));
+    const two = await race(2, (i) => acct([firmB, firmC][i], "acct_1Race", "PENDING"), "repeatable read");
+    ok("FO-7a fail (parallel, REPEATABLE READ; review round 1 m1, break B-3): two firms connecting one Stripe account at once — one holds it, the other is refused (23505)",
+      two.filter((r) => r.value === "PENDING").length === 1 && two.filter((r) => r.code === "23505").length === 1
+      && sql(DEMO, `select count(*) from money_payment_account where stripe_account_id = 'acct_1Race'`) === "1", two);
+  }
   // --------------------------------------------------------------------------------------------------------- invoices
   const P1 = u(500), P2 = u(501), C1 = u(502);
   const draft = (id: string, f = firmA, party = `person_id`, pid = P1, cur = "CAD") =>
@@ -152,7 +169,7 @@ try {
     && refused(DEMO, `insert into money_invoice (firm_id, created_by, updated_at) values ('${firmA}', 'user-R', now())`, /money_invoice_party_check/));
   ok("FO-7a fail (AG-6-44 rule 7): a draft written with a number, or given a number by hand, is refused; the number is the database's",
     refused(DEMO, `insert into money_invoice (firm_id, person_id, number, created_by, updated_at) values ('${firmA}', '${P1}', 'INV-0001', 'user-R', now())`, /written as a draft/)
-    && refused(DEMO, `update money_invoice set number = 'INV-0001' where id = '${I1}'`, /number is the database's/));
+    && refused(DEMO, `update money_invoice set number = 'INV-0001' where id = '${I1}'`, /number and the times are the database's/));
   ok("FO-7a fail: an invoice with no lines is not issued", refused(DEMO, issue(I1), /no lines is not issued/));
   ok("FO-7a pass (AG-6-4): a fee line taxed at 13 % (1,000.00 → 130.00) and a government fee line with no tax are added to the draft",
     !!sql(DEMO, line(I1, 1, "FEE", 1, 100000, 1300, 13000)) && !!sql(DEMO, line(I1, 2, "GOVERNMENT_FEE", 1, 25500, 0, 0)));
@@ -163,8 +180,20 @@ try {
     && refused(DEMO, line(I1, 3, "FEE", 1, -100, 0, 0), /money_invoice_line_amount_check/) && refused(DEMO, line(I1, 3, "FEE", 1, 100, 0, 0, firmA, "USD"), /invoice's currency/));
   ok("FO-7a fail: an amount that is not a whole number of cents is refused (\"10.5\" into unit_amount_minor and amount_minor)",
     refused(DEMO, `insert into money_invoice_line (firm_id, invoice_id, position, kind, description, quantity, unit_amount_minor, amount_minor, currency) values ('${firmA}', '${I1}', 3, 'FEE', 'x', 1, '10.5', '10.5', 'CAD')`, /invalid input syntax for type integer/));
-  ok("FO-7a fail: a firm B line on firm A's invoice is refused by the composite key (23503)", refused(DEMO, line(I1, 3, "FEE", 1, 100, 0, 0, firmB), /money_invoice_line_firm_id_invoice_id_fkey/, "23503"));
-  ok("FO-7a pass: issuing takes the firm's first number, INV-0001 (AG-6-44 rule 1)", sql(DEMO, issue(I1)) === "INV-0001");
+  ok("FO-7a fail: a firm B line on firm A's invoice is refused (23503; the check finds no such invoice in firm B, and the composite key would too)", refused(DEMO, line(I1, 3, "FEE", 1, 100, 0, 0, firmB), /invoice .* is not visible to this statement \(not in the firm/, "23503"));
+  ok("FO-7a fail: a tax that is not the line's amount at its rate (rounded per line) is refused — 2,000,000,000 tax on a 1-cent line, or 130.01 on 1,000.00 at 13 %",
+    refused(DEMO, line(I1, 3, "FEE", 1, 1, 1300, 2000000000), /money_invoice_line_tax_check/) && refused(DEMO, line(I1, 3, "FEE", 1, 100000, 1300, 13001), /money_invoice_line_tax_check/)
+    && !!sql(DEMO, `begin; ${line(I1, 3, "FEE", 1, 85000, 1300, 11050)}; rollback;`));
+  ok("FO-7a pass: issuing takes the firm's first number, INV-0001 (AG-6-44 rule 1), stamped now even when the caller sends another time (break B-10: no backdating)",
+    sql(DEMO, `update money_invoice set issued_at = '1999-01-01', issued_by = 'user-R' where id = '${I1}' returning number`) === "INV-0001"
+    && sql(DEMO, `select issued_at > now() - interval '1 minute' from money_invoice where id = '${I1}'`) === "t");
+  {
+    const big = u(613);
+    sql(DEMO, draft(big)); sql(DEMO, line(big, 1, "FEE", 1, 2147483647, 0, 0)); sql(DEMO, line(big, 2, "FEE", 1, 1, 0, 0));
+    ok("FO-7a fail: an invoice whose total is past what one amount column holds (21,474,836.47) is not issued",
+      refused(DEMO, issue(big), /more than one invoice can hold/) && sql(DEMO, `delete from money_invoice_line where invoice_id = '${big}' and position = 2 returning 1`) === "1"
+      && !!sql(DEMO, `begin; ${issue(big)}; rollback;`));
+  }
   const frozen = /issued invoices can't be edited — use a credit note/;
   ok("FO-7a fail (AG-6-1 rule 6): an issued invoice's lines, tax, party, currency and number refuse change; it is never deleted",
     refused(DEMO, `update money_invoice_line set unit_amount_minor = 1, amount_minor = 1 where invoice_id = '${I1}' and position = 1`, frozen)
@@ -197,11 +226,24 @@ try {
   ok("FO-7a fail: next_number never goes back (numbers are never reused) and a series row is never deleted",
     refused(DEMO, `update money_number_series set next_number = 5 where firm_id = '${firmA}' and kind = 'INVOICE'`, /cannot go back/)
     && refused(DEMO, `delete from money_number_series where firm_id = '${firmA}' and kind = 'INVOICE'`, /never deleted/));
-  ok("FO-7a pass (AG-6-44 rules 1-2): another firm counts on its own from INV-0001; a firm moving over sets its next number, and INV-9999 is followed by INV-10000",
-    (sql(DEMO, draft(u(800), firmB)), sql(DEMO, line(u(800), 1, "FEE", 1, 100, 0, 0, firmB)), sql(DEMO, issue(u(800)))) === "INV-0001"
-    && sql(DEMO, `update money_number_series set next_number = 9999 where firm_id = '${firmB}' and kind = 'INVOICE' returning next_number`) === "9999"
-    && (sql(DEMO, draft(u(801), firmB)), sql(DEMO, line(u(801), 1, "FEE", 1, 100, 0, 0, firmB)), sql(DEMO, issue(u(801)))) === "INV-9999"
-    && (sql(DEMO, draft(u(802), firmB)), sql(DEMO, line(u(802), 1, "FEE", 1, 100, 0, 0, firmB)), sql(DEMO, issue(u(802)))) === "INV-10000");
+  ok("FO-7a pass (AG-6-44 rule 1): another firm counts on its own from INV-0001",
+    (sql(DEMO, draft(u(800), firmB)), sql(DEMO, line(u(800), 1, "FEE", 1, 100, 0, 0, firmB)), sql(DEMO, issue(u(800)))) === "INV-0001");
+  ok("FO-7a fail (break B-6): once a series exists its next number moves only by taking a number — a jump that would leave a gap is refused",
+    refused(DEMO, `update money_number_series set next_number = 9999 where firm_id = '${firmB}' and kind = 'INVOICE'`, /would leave a gap/));
+  const firmG = sql(DEMO, `insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), 'firm-g', 'G', 'CA', 'g@firm-g.example.com', now()) returning id`);
+  sql(DEMO, settings(firmG));
+  ok("FO-7a pass (AG-6-44 rules 1-2): a firm moving over sets its first number when it writes the series (9999), and INV-9999 is followed by INV-10000",
+    sql(DEMO, `insert into money_number_series (firm_id, kind, prefix, next_number) values ('${firmG}', 'INVOICE', 'INV-', 9999) returning next_number`) === "9999"
+    && (sql(DEMO, draft(u(801), firmG)), sql(DEMO, line(u(801), 1, "FEE", 1, 100, 0, 0, firmG)), sql(DEMO, issue(u(801)))) === "INV-9999"
+    && (sql(DEMO, draft(u(802), firmG)), sql(DEMO, line(u(802), 1, "FEE", 1, 100, 0, 0, firmG)), sql(DEMO, issue(u(802)))) === "INV-10000");
+  ok("FO-7a fail (break B-6): two series of a firm sharing a prefix, or a prefix with a digit or no dash, is refused",
+    refused(DEMO, `insert into money_number_series (firm_id, kind, prefix) values ('${firmG}', 'CREDIT_NOTE', 'INV-')`, /money_number_series_firm_id_prefix_key/, "23505")
+    && refused(DEMO, `update money_number_series set prefix = 'CN1-' where firm_id = '${firmG}' and kind = 'INVOICE'`, /money_number_series_prefix_check/)
+    && refused(DEMO, `update money_number_series set prefix = 'CN' where firm_id = '${firmG}' and kind = 'INVOICE'`, /money_number_series_prefix_check/));
+  ok("FO-7a pass (AG-6-44 rule 5): a prefix change applies to the next number only (TOR-10001)",
+    sql(DEMO, `update money_number_series set prefix = 'TOR-' where firm_id = '${firmG}' and kind = 'INVOICE' returning prefix`) === "TOR-"
+    && (sql(DEMO, draft(u(803), firmG)), sql(DEMO, line(u(803), 1, "FEE", 1, 100, 0, 0, firmG)), sql(DEMO, issue(u(803)))) === "TOR-10001"
+    && sql(DEMO, `select number from money_invoice where id = '${u(802)}'`) === "INV-10000");
   ok("FO-7a fail: a hand-made number that repeats one already issued in the firm is refused by the unique index", refused(DEMO, `alter table money_invoice disable trigger money_invoice_write; update money_invoice set number = 'INV-0001' where id = '${u(700)}'`, /money_invoice_firm_id_number_key/, "23505")
     && sql(DEMO, `select count(*) from pg_trigger where tgname = 'money_invoice_write' and tgenabled = 'O'`) === "1");
 
@@ -220,7 +262,7 @@ try {
     && refused(DEMO, pay(u(905), "key-usd-0000001", { inv: I1, cur: "USD" }), /invoice's currency/)
     && refused(DEMO, pay(u(905), "key-card-trust1", { method: "CARD", into: "TRUST", pi: "pi_3Trust" }), /money_payment_card_not_trust/)
     && refused(DEMO, pay(u(905), "key-pi-offline1", { inv: I1, pi: "pi_3Offline" }), /money_payment_intent_check/));
-  ok("FO-7a fail: a firm B payment on firm A's invoice is refused by the composite key (23503)", refused(DEMO, pay(u(905), "key-cross-00001", { inv: I1, f: firmB }), /money_payment_firm_id_invoice_id_fkey/, "23503"));
+  ok("FO-7a fail: a firm B payment on firm A's invoice is refused (23503; no such invoice in firm B)", refused(DEMO, pay(u(905), "key-cross-00001", { inv: I1, f: firmB }), /invoice .* is not visible to this statement \(not in the firm/, "23503"));
   ok("FO-7a pass (AG-6-63 rule 7): a cheque waits to clear and is ticked Cleared once",
     sql(DEMO, pay(u(906), "key-cheque-0001", { inv: I1, method: "CHEQUE", amount: 1000, cleared: false })) === u(906)
     && sql(DEMO, `update money_payment set cleared = true, cleared_at = now(), cleared_by = 'user-R' where id = '${u(906)}' returning cleared`) === "t");
@@ -234,6 +276,22 @@ try {
     refused(DEMO, refund(u(900), 40001, "refund-key-0002"), /more than the payment/) && refused(DEMO, refund(u(900), 1, "refund-key-0002", "OFFLINE", " "), /money_refund_text_check/)
     && refused(DEMO, refund(u(900), 1, "refund-key-0001"), /money_refund_firm_id_idempotency_key_key/, "23505") && refused(DEMO, refund(u(900), 1, "refund-key-0003", "CARD"), /only a card payment/));
 
+  {
+    sql(DEMO, pay(u(910), "key-refund-race-rc", { inv: I1, amount: 1000 })); sql(DEMO, pay(u(911), "key-refund-race-rr", { inv: I1, amount: 1000 }));
+    const rc = await race(2, (i) => refund(u(910), 700, `refund-rc-${i}-000`));
+    const rr = await race(2, (i) => refund(u(911), 700, `refund-rr-${i}-000`), "repeatable read");
+    ok("FO-7a fail (parallel; review round 1 Major 1, break B-2): two refunds of 700.00 on one 1,000.00 payment at once — one written, the other refused, at READ COMMITTED (23514) and at REPEATABLE READ (23505: the refund ordinal)",
+      rc.filter((r) => r.value).length === 1 && rc.some((r) => r.code === "23514") && rr.filter((r) => r.value).length === 1 && rr.some((r) => r.code === "23505")
+      && sql(DEMO, `select string_agg(s::text, ',' order by p) from (select payment_id p, sum(amount_minor) s from money_refund where payment_id in ('${u(910)}', '${u(911)}') group by payment_id) t`) === "700,700", { rc, rr });
+  }
+  ok("FO-7a fail (break B-1): a row that names another written later in the same statement is refused, not left to the foreign key at the statement's end — a payment on a draft invoice, a 1,000,000.00 USD card refund of a 1-cent cash payment",
+    refused(DEMO, `with p as (insert into money_payment (firm_id, invoice_id, method, amount_minor, currency, received_into, received_at, idempotency_key, recorded_by) values ('${firmA}', '${u(614)}', 'CASH', 1, 'USD', 'OPERATING', now(), 'key-cte-draft-01', 'user-R') returning invoice_id)
+      insert into money_invoice (id, firm_id, person_id, created_by, updated_at) select invoice_id, '${firmA}', '${P1}', 'user-R', now() from p`, /invoice .* is not visible to this statement/, "23503")
+    && refused(DEMO, `with r as (insert into money_refund (firm_id, payment_id, amount_minor, currency, reason, route, idempotency_key, created_by) values ('${firmA}', '${u(912)}', 100000000, 'USD', 'x', 'CARD', 'refund-cte-0001', 'user-R') returning payment_id)
+      insert into money_payment (id, firm_id, method, amount_minor, currency, received_into, received_at, idempotency_key, recorded_by) select payment_id, '${firmA}', 'CASH', 1, 'CAD', 'OPERATING', now(), 'key-cte-cash-001', 'user-R' from r`, /payment .* is not visible to this statement/, "23503"));
+  ok("FO-7a fail: the same rows written in the other order in one statement are refused by the rules themselves (draft invoice takes no payment)",
+    refused(DEMO, `with d as (insert into money_invoice (id, firm_id, person_id, created_by, updated_at) values ('${u(614)}', '${firmA}', '${P1}', 'user-R', now()) returning id)
+      insert into money_payment (firm_id, invoice_id, method, amount_minor, currency, received_into, received_at, idempotency_key, recorded_by) select '${firmA}', id, 'CASH', 1, 'CAD', 'OPERATING', now(), 'key-cte-draft-02', 'user-R' from d`, /draft invoice takes no payment|not visible/));
   // ------------------------------------------------------------------------------------------ receipts, credit notes
   const receipt = (kind: string, col: string, id: string) => `insert into money_receipt (firm_id, kind, ${col}) values ('${firmA}', '${kind}', '${id}') returning number`;
   ok("FO-7a pass (AG-6-63): a payment receipt takes R-0001 from the receipt series", sql(DEMO, receipt("PAYMENT", "payment_id", u(900))) === "R-0001");
@@ -247,23 +305,32 @@ try {
   const credit = (inv: string, amount: number, full = false, reason = "Fee reduced") =>
     `insert into money_credit_note (firm_id, invoice_id, "full", amount_minor, currency, reason, created_by) values ('${firmA}', '${inv}', ${full}, ${amount}, 'CAD', '${reason}', 'user-R') returning number`;
   ok("FO-7a pass (AG-6-48): a part credit note with a reason takes CN-0001", sql(DEMO, credit(I1, 8500)) === "CN-0001");
-  ok("FO-7a fail: a credit note beyond the invoice's total, on a draft, without a reason, or a 'full' one that is not all that is left is refused",
-    refused(DEMO, credit(I1, 130001), /more than the invoice's total/) && refused(DEMO, credit(u(610), 100), /draft invoice cannot have one/)
+  ok("FO-7a fail: a credit note beyond what is left on the invoice, on a draft, without a reason, or a 'full' one that is not all that is left is refused",
+    refused(DEMO, credit(I1, 130001), /more than is left to credit on the invoice \(130000\)/) && refused(DEMO, credit(u(610), 100), /draft invoice cannot have one/)
     && refused(DEMO, credit(I1, 100, false, ""), /money_credit_note_text_check/) && refused(DEMO, credit(I1, 100, true), /full credit note credits all that is left \(130000\)/));
   const cnNums = (await race(20, (i) => credit(drafts20[i], 1))).map((r) => r.value ?? `ERR ${r.code}`).sort();
   ok("FO-7a pass: 20 parallel credit notes take CN-0002 … CN-0021 — no repeat, no skip", JSON.stringify(cnNums) === JSON.stringify(series("CN-", 2, 21)), cnNums);
+  const cnRR = await race(2, () => credit(u(705), 6000), "repeatable read");
+  ok("FO-7a fail (parallel, REPEATABLE READ; review round 1): two credit notes of 60.00 at once on an invoice with 112.99 left — one written, the other fails to serialise (40001); never more than the total",
+    cnRR.filter((r) => r.value).length === 1 && cnRR.some((r) => r.code === "40001") && sql(DEMO, `select sum(amount_minor) from money_credit_note where invoice_id = '${u(705)}'`) === "6001", cnRR);
+  ok("FO-7a fail (break B-9): a reason that only looks written — an ideographic space, a right-to-left mark, a line separator — or one carrying a bidi override is refused",
+    ["　", "‏", " ", "Fee‮reduced"].every((r) => refused(DEMO, credit(I1, 1, false, r), /money_credit_note_text_check/))
+    && sql(DEMO, `begin; ${credit(I1, 1, false, "Frais réduits — 料金")}; rollback;`).startsWith("CN-"));
 
   // ------------------------------------------------------------------------------------------------- trust requests
-  const req = (id: string, sent: boolean, party = `person_id`, pid = P1, amount = 100000) =>
-    `insert into money_trust_request (id, firm_id, ${party}, amount_minor, currency, purpose, created_by, sent_at, sent_by, updated_at) values ('${id}', '${firmA}', '${pid}', ${amount}, 'CAD', 'Deposit for the work permit', 'user-R', ${sent ? "now(), 'user-R'" : "null, null"}, now()) returning coalesce(number, '-')`;
-  ok("FO-7a pass (AG-6-61, -44 rule 7): a prepared request has no number; sending it takes DR-0001",
-    sql(DEMO, req(u(1100), false)) === "-" && sql(DEMO, `update money_trust_request set sent_at = now(), sent_by = 'user-R' where id = '${u(1100)}' returning number`) === "DR-0001");
+  const req = (id: string, sent: boolean, party = `person_id`, pid = P1, amount = 100000, f = firmA) =>
+    `insert into money_trust_request (id, firm_id, ${party}, amount_minor, currency, purpose, created_by, sent_at, sent_by, updated_at) values ('${id}', '${f}', '${pid}', ${amount}, 'CAD', 'Deposit for the work permit', 'user-R', ${sent ? "now(), 'user-R'" : "null, null"}, now()) returning coalesce(number, '-')`;
+  ok("FO-7a fail (AG-6-59): with trust off (firm B never said Yes) no trust request is written and no money is received into trust",
+    refused(DEMO, req(u(1099), false, "person_id", P1, 100, firmB), /trust is off/) && refused(DEMO, pay(u(1099), "key-trust-off-01", { f: firmB, into: "TRUST" }), /trust is off/));
+  ok("FO-7a pass (AG-6-61, -44 rule 7): a prepared request has no number; sending it takes DR-0001, stamped now (break B-10)",
+    sql(DEMO, req(u(1100), false)) === "-" && sql(DEMO, `update money_trust_request set sent_at = '1999-01-01', sent_by = 'user-R' where id = '${u(1100)}' returning number`) === "DR-0001"
+    && sql(DEMO, `select sent_at > now() - interval '1 minute' from money_trust_request where id = '${u(1100)}'`) === "t");
   const reqs20 = Array.from({ length: 20 }, (_, k) => (sql(DEMO, req(u(1200 + k), false, "person_id", P2)), u(1200 + k)));
   const drNums = (await race(20, (i) => `update money_trust_request set sent_at = now(), sent_by = 'user-R' where id = '${reqs20[i]}' returning number`)).map((r) => r.value ?? `ERR ${r.code}`).sort();
   ok("FO-7a pass: 20 parallel sends take DR-0002 … DR-0021 — no repeat, no skip", JSON.stringify(drNums) === JSON.stringify(series("DR-", 2, 21)), drNums);
   ok("FO-7a fail: a sent request's party, currency and number never change; it is never deleted; a cancel needs a reason",
     refused(DEMO, `update money_trust_request set person_id = '${P2}' where id = '${u(1100)}'`, /sent request's party/) && refused(DEMO, `update money_trust_request set currency = 'USD' where id = '${u(1100)}'`, /sent request's party/)
-    && refused(DEMO, `update money_trust_request set number = 'DR-0099' where id = '${u(1100)}'`, /number is the database's/) && refused(DEMO, `delete from money_trust_request where id = '${u(1100)}'`, /never deleted/)
+    && refused(DEMO, `update money_trust_request set number = 'DR-0099' where id = '${u(1100)}'`, /number and the times are the database's/) && refused(DEMO, `delete from money_trust_request where id = '${u(1100)}'`, /never deleted/)
     && refused(DEMO, `update money_trust_request set cancelled_at = now(), cancelled_by = 'user-R' where id = '${u(1100)}'`, /money_trust_request_cancel_check/));
   ok("FO-7a fail: a trust request is never paid by card, nor into operating (contracts §7 §2.5)",
     refused(DEMO, pay(u(1101), "key-req-card-01", { req: u(1100), method: "CARD", pi: "pi_3Req" }), /never by card/) && refused(DEMO, pay(u(1101), "key-req-oper-01", { req: u(1100) }), /never by card/));
@@ -271,16 +338,27 @@ try {
   // ---------------------------------------------------------------------------------------------------- trust ledger
   const entry = (kind: string, amount: number, extra: { pay?: string; inv?: string; reason?: string; party?: string; pid?: string; req?: string } = {}) =>
     `insert into money_trust_entry (firm_id, ${extra.party ?? "person_id"}, kind, amount_minor, currency, payment_id, invoice_id, trust_request_id, reason, created_by) values ('${firmA}', '${extra.pid ?? P1}', '${kind}', ${amount}, 'CAD', ${extra.pay ? `'${extra.pay}'` : "null"}, ${extra.inv ? `'${extra.inv}'` : "null"}, ${extra.req ? `'${extra.req}'` : "null"}, ${extra.reason ? `'${extra.reason}'` : "null"}, 'user-R') returning id`;
+  // Money into trust and its deposit entry are one transaction (a payment into TRUST alone is refused at commit).
+  const deposit = (pid: string, key: string, amount: number, opts: { req?: string; inv?: string; party?: string; who?: string } = {}) =>
+    `${pay(pid, key, { req: opts.req, inv: opts.inv, into: "TRUST", amount })}; ${entry("DEPOSIT", amount, { pay: pid, party: opts.party, pid: opts.who })}`;
   const balance = (pid = P1) => sql(DEMO, `select coalesce((select balance_after_minor from money_trust_entry where firm_id = '${firmA}' and person_id = '${pid}' and currency = 'CAD' order by seq desc limit 1), 0)`);
-  sql(DEMO, pay(u(1102), "key-trust-dep-01", { req: u(1100), method: "E_TRANSFER", into: "TRUST", amount: 100000 }));
-  const DEP = sql(DEMO, entry("DEPOSIT", 100000, { pay: u(1102) }));
+  const DEP = sqlLast(DEMO, deposit(u(1102), "key-trust-dep-01", 100000, { req: u(1100) }));
   ok("FO-7a pass (Code s. 32(b), (d)): a deposit from a payment into trust is the party's first entry (seq 1, balance 1,000.00), names its request, and gets a TRUST receipt",
     sql(DEMO, `select seq || ':' || balance_after_minor || ':' || trust_request_id from money_trust_entry where id = '${DEP}'`) === `1:100000:${u(1100)}`
     && sql(DEMO, receipt("TRUST", "trust_entry_id", DEP)) === "R-0022");
+  ok("FO-7a fail: money received into trust with no deposit entry in its transaction is refused at commit (the ledger always follows the money)",
+    refused(DEMO, pay(u(1107), "key-trust-nodep-1", { req: u(1100), into: "TRUST", amount: 500 }), /recorded in the trust ledger/));
   ok("FO-7a fail: a deposit from a payment into operating, of another amount, or a deposit used twice is refused",
     (sql(DEMO, pay(u(1103), "key-trust-op-001", { amount: 500 })), refused(DEMO, entry("DEPOSIT", 500, { pay: u(1103) }), /payment received into trust/))
-    && (sql(DEMO, pay(u(1104), "key-trust-dep-02", { req: u(1100), into: "TRUST", amount: 500 })), refused(DEMO, entry("DEPOSIT", 600, { pay: u(1104) }), /its payment's amount/))
+    && refused(DEMO, `${pay(u(1104), "key-trust-dep-02", { req: u(1100), into: "TRUST", amount: 500 })}; ${entry("DEPOSIT", 600, { pay: u(1104) })}`, /its payment's amount/)
     && refused(DEMO, entry("DEPOSIT", 100000, { pay: u(1102) }), /money_trust_entry_firm_id_payment_id_key/, "23505"));
+  ok("FO-7a fail (break B-1): a 1,000,000.00 trust deposit naming a 1-cent card payment into operating that the same statement writes after it is refused",
+    refused(DEMO, `with e as (insert into money_trust_entry (firm_id, person_id, kind, amount_minor, currency, payment_id, created_by) values ('${firmA}', '${P1}', 'DEPOSIT', 100000000, 'CAD', '${u(1108)}', 'user-R') returning payment_id)
+      insert into money_payment (id, firm_id, method, amount_minor, currency, received_into, received_at, stripe_payment_intent_id, idempotency_key) select payment_id, '${firmA}', 'CARD', 1, 'CAD', 'OPERATING', now(), 'pi_3Cte', 'key-cte-card-001' from e`, /payment .* is not visible to this statement/, "23503")
+    && refused(DEMO, `with p as (insert into money_payment (id, firm_id, method, amount_minor, currency, received_into, received_at, stripe_payment_intent_id, idempotency_key) values ('${u(1108)}', '${firmA}', 'CARD', 1, 'CAD', 'OPERATING', now(), 'pi_3Cte', 'key-cte-card-001') returning id)
+      insert into money_trust_entry (firm_id, person_id, kind, amount_minor, currency, payment_id, created_by) select '${firmA}', '${P1}', 'DEPOSIT', 100000000, 'CAD', id, 'user-R' from p`, /payment received into trust|not visible/));
+  ok("FO-7a fail (review round 1, m7): a payment received into trust is not refunded as a refund (it goes back as a trust entry)",
+    refused(DEMO, refund(u(1102), 100, "refund-trust-001"), /goes back as a trust entry/));
   ok("FO-7a fail: trust entries refuse update, delete and truncate (insert-only)",
     refused(DEMO, `update money_trust_entry set amount_minor = 1 where id = '${DEP}'`, /never changed or removed \(UPDATE refused\)/, "42501")
     && refused(DEMO, `delete from money_trust_entry where id = '${DEP}'`, /never changed or removed \(DELETE refused\)/, "42501")
@@ -292,22 +370,49 @@ try {
   const WD = sql(DEMO, entry("WITHDRAWAL_TO_INVOICE", -30000, { inv: I1 }));
   ok("FO-7a pass: a withdrawal of 300.00 to the party's issued invoice leaves 700.00 (seq 2)", sql(DEMO, `select seq || ':' || balance_after_minor from money_trust_entry where id = '${WD}'`) === "2:70000");
   ok("FO-7a fail: a withdrawal of 800.00 from 700.00 is refused — the balance never goes below zero", refused(DEMO, entry("WITHDRAWAL_TO_INVOICE", -80000, { inv: I1 }), /would go below zero \(held 70000 CAD/, "23514") && balance() === "70000");
+  {
+    const small = u(615);
+    sql(DEMO, draft(small)); sql(DEMO, line(small, 1, "FEE", 1, 500, 0, 0)); sql(DEMO, issue(small));
+    ok("FO-7a fail (review round 1 m4, break B-5): trust never pays more than is open on the invoice — 6.00 to a 5.00 invoice is refused; 5.00 is written; then 0.01 more is refused",
+      refused(DEMO, entry("WITHDRAWAL_TO_INVOICE", -600, { inv: small }), /more than is open on the invoice \(500 open/) && !!sql(DEMO, entry("WITHDRAWAL_TO_INVOICE", -500, { inv: small }))
+      && refused(DEMO, entry("WITHDRAWAL_TO_INVOICE", -1, { inv: small }), /500 already paid from trust/) && balance() === "69500");
+  }
   ok("FO-7a fail: a refund to the client or a correction without a reason is refused; with one it is written",
     refused(DEMO, entry("REFUND_TO_CLIENT", -100), /money_trust_entry_reason_check/) && refused(DEMO, entry("CORRECTION", 100), /money_trust_entry_reason_check/)
-    && !!sql(DEMO, entry("REFUND_TO_CLIENT", -100, { reason: "Returned unused money" })) && balance() === "69900");
-  // Ten withdrawals of 100.00 at once from 699.00, on ten connections: six succeed, four are refused, nothing overdrawn.
+    && !!sql(DEMO, entry("REFUND_TO_CLIENT", -100, { reason: "Returned unused money" })) && balance() === "69400");
+  // Ten withdrawals of 100.00 at once from 694.00, on ten connections: six succeed, four are refused, nothing overdrawn.
   const par = await race(10, () => entry("WITHDRAWAL_TO_INVOICE", -10000, { inv: I1 }));
-  ok("FO-7a pass (parallel, READ COMMITTED): 10 withdrawals of 100.00 at once from 699.00 — 6 written, 4 refused (23514), balance 99.00, never below zero",
-    par.filter((r) => r.value).length === 6 && par.filter((r) => r.code === "23514").length === 4 && balance() === "9900", par.map((r) => r.code ?? "ok"));
-  sql(DEMO, pay(u(1105), "key-trust-dep-03", { req: u(1100), into: "TRUST", amount: 50000 })); sql(DEMO, entry("DEPOSIT", 50000, { pay: u(1105) }));
-  const parRR = await race(8, () => entry("WITHDRAWAL_TO_INVOICE", -10000, { inv: I1 }), "repeatable read");
+  ok("FO-7a pass (parallel, READ COMMITTED): 10 withdrawals of 100.00 at once from 694.00 — 6 written, 4 refused (23514), balance 94.00, never below zero",
+    par.filter((r) => r.value).length === 6 && par.filter((r) => r.code === "23514").length === 4 && balance() === "9400", par.map((r) => r.code ?? "ok"));
+  sqlLast(DEMO, deposit(u(1105), "key-trust-dep-03", 50000, { req: u(1100) }));
+  const parRR = await race(8, () => entry("WITHDRAWAL_TO_INVOICE", -1000, { inv: I1 }), "repeatable read");
   const okRR = parRR.filter((r) => r.value).length;
-  ok("FO-7a pass (parallel, REPEATABLE READ, stale snapshots): 8 withdrawals at once from 599.00 — the ledger never forks or goes below zero; the others are refused (40001, 23505 or 23514)",
-    okRR >= 1 && okRR <= 5 && parRR.every((r) => r.value || ["40001", "23505", "23514"].includes(r.code ?? "")) && Number(balance()) === 59900 - okRR * 10000 && Number(balance()) >= 0, parRR.map((r) => r.code ?? "ok"));
+  ok("FO-7a pass (parallel, REPEATABLE READ, stale snapshots): 8 withdrawals of 10.00 at once from 594.00 — the ledger never forks or goes below zero; the others are refused (40001, 23505 or 23514)",
+    okRR >= 1 && parRR.every((r) => r.value || ["40001", "23505", "23514"].includes(r.code ?? "")) && Number(balance()) === 59400 - okRR * 1000, parRR.map((r) => r.code ?? "ok"));
+  ok("FO-7a fail: an entry on another party's trust request is refused", refused(DEMO, entry("CORRECTION", 100, { reason: "x", pid: P2, req: u(1100) }), /trust request's party/));
+  ok("FO-7a fail (review round 1, m2): a \"Trust first\" payment on Client B's invoice cannot be held for Client A",
+    refused(DEMO, deposit(u(1109), "key-tf-other-01", 1000, { inv: u(700) }), /held for that invoice's party/));
+  const TF = sqlLast(DEMO, deposit(u(1110), "key-tf-own-0001", 1000, { inv: I1 }));
+  ok("FO-7a pass / fail (AG-6-69 rule 5; review round 1, m3): a \"Trust first\" payment on the party's own invoice is held for it and gets the payment receipt; a trust receipt for it is refused",
+    !!TF && refused(DEMO, receipt("TRUST", "trust_entry_id", TF), /not paid on an invoice/) && sql(DEMO, receipt("PAYMENT", "payment_id", u(1110))).startsWith("R-"));
   ok("FO-7a pass: the ledger per party sums to its entries — seq runs 1..n with no gap, and each balance is the running sum",
     sql(DEMO, `select bool_and(seq = rn and balance_after_minor = running) from (select seq, balance_after_minor, row_number() over w as rn, sum(amount_minor) over w as running
       from money_trust_entry where firm_id = '${firmA}' window w as (partition by person_id, company_id, currency order by seq)) t`) === "t");
-  ok("FO-7a fail: an entry on another party's trust request is refused", refused(DEMO, entry("CORRECTION", 100, { reason: "x", pid: P2, req: u(1100) }), /trust request's party/));
+  {
+    // break B-4: a payment on a request share-locks it, so an amount change waits for the payment and then sees it.
+    sql(DEMO, req(u(1111), true, "person_id", P2, 1000));
+    const c1 = new pg.Client({ connectionString: urlOf(DEMO) }), c2 = new pg.Client({ connectionString: urlOf(DEMO) });
+    await c1.connect(); await c2.connect(); conns.push(c1, c2);
+    await c1.query("begin"); await c1.query(deposit(u(1112), "key-b4-race-0001", 1000, { req: u(1111), who: P2 }));
+    await c2.query("begin");
+    const change = c2.query(`update money_trust_request set amount_minor = 5 where id = '${u(1111)}'`).then(() => "changed", (e: { message?: string }) => e.message ?? "error");
+    await new Promise((r) => setTimeout(r, 300));
+    await c1.query("commit");
+    const outcome = await change; await c2.query("rollback");
+    ok("FO-7a fail (parallel, break B-4): an amount change racing a payment on the request waits for it, then is refused (money is recorded on it)",
+      /has money recorded on it/.test(outcome) && sql(DEMO, `select amount_minor from money_trust_request where id = '${u(1111)}'`) === "1000", outcome);
+    await c1.end(); await c2.end(); conns.splice(conns.indexOf(c1), 1); conns.splice(conns.indexOf(c2), 1);
+  }
 
   // ------------------------------------------------------------------------------------------------------ write-offs
   const writeOff = (inv: string, amount = 2500, reason = "Wire fee") => `insert into money_write_off (firm_id, invoice_id, amount_minor, currency, reason, created_by) values ('${firmA}', '${inv}', ${amount}, 'CAD', '${reason}', 'user-R') returning amount_minor`;
@@ -315,35 +420,43 @@ try {
   ok("FO-7a fail (rev 13): a second write-off on one invoice is refused", refused(DEMO, writeOff(u(701), 100), /money_write_off_firm_id_invoice_id_key/, "23505"));
   ok("FO-7a fail (rev 13): a write-off update or delete is refused (insert-only)",
     refused(DEMO, `update money_write_off set amount_minor = 1 where invoice_id = '${u(701)}'`, /never changed or removed/, "42501") && refused(DEMO, `delete from money_write_off where invoice_id = '${u(701)}'`, /never changed or removed/, "42501"));
-  ok("FO-7a fail: a write-off on a draft, without a reason, or over the invoice's total is refused",
-    refused(DEMO, writeOff(u(610)), /draft invoice cannot have one/) && refused(DEMO, writeOff(u(702), 100, ""), /money_write_off_text_check/) && refused(DEMO, writeOff(u(702), 11301), /more than the invoice's total/));
+  ok("FO-7a fail: a write-off on a draft, without a reason, or over what is left is refused",
+    refused(DEMO, writeOff(u(610)), /draft invoice cannot have one/) && refused(DEMO, writeOff(u(702), 100, ""), /money_write_off_text_check/) && refused(DEMO, writeOff(u(702), 11300), /more than is left on the invoice \(11299\)/));
+  ok("FO-7a fail (break B-8): after a full credit note nothing is left to write off (and after a write-off, a full credit note credits only the rest: 87.99)",
+    sql(DEMO, credit(u(703), 11299, true)).startsWith("CN-") && refused(DEMO, writeOff(u(703), 1), /more than is left on the invoice \(0\)/)
+    && refused(DEMO, credit(u(701), 8800, true), /more than is left to credit on the invoice \(8799\)/) && sql(DEMO, `begin; ${credit(u(701), 8799, true)}; rollback;`).startsWith("CN-"));
 
   // ------------------------------------------------------------------------------------------- the "To move" list
   const batch = (id: string, opts: { undoes?: string; reason?: string; date?: string | null } = {}) =>
     `insert into money_move_batch (id, firm_id, currency, transfer_date, undoes_batch_id, reason, recorded_by) values ('${id}', '${firmA}', 'CAD', ${opts.date === null ? "null" : `'${opts.date ?? "2026-11-20"}'`}, ${opts.undoes ? `'${opts.undoes}'` : "null"}, ${opts.reason ? `'${opts.reason}'` : "null"}, 'user-R') returning id`;
   const moveLine = (b: string, src: string, kind = "TRUST_APPLIED", dir = "TRUST_TO_OPERATING", amount = 30000) =>
     `insert into money_move_line (firm_id, batch_id, kind, direction, currency, amount_minor, ${kind === "TRUST_APPLIED" ? "source_trust_entry_id" : "source_payment_id"}) values ('${firmA}', '${b}', '${kind}', '${dir}', 'CAD', ${amount}, '${src}') returning move_ordinal`;
+  // "I moved these": one click writes the batch and its lines in one transaction.
+  const moved = (b: string, ...lines: string[]) => `${batch(b)}; ${lines.join("; ")}`;
   const B1 = u(1300), B2 = u(1301), UNDO = u(1302), B3 = u(1303);
-  sql(DEMO, batch(B1)); sql(DEMO, batch(B2));
-  ok("FO-7a pass (AG-6-73 rule 3): \"I moved these\" — a batch with a date and the trust application (300.00, trust → operating)", sql(DEMO, moveLine(B1, WD)) === "1");
-  ok("FO-7a fail: the same trust application in a second batch while the first stands is refused", refused(DEMO, moveLine(B2, WD), /already moved in batch/, "23505"));
+  ok("FO-7a pass (AG-6-73 rule 3): \"I moved these\" — a batch with a date and the trust application (300.00, trust → operating)", sqlLast(DEMO, moved(B1, moveLine(B1, WD))) === "1");
+  ok("FO-7a fail: the same trust application in a second batch while the first stands is refused", refused(DEMO, moved(B2, moveLine(B2, WD)), /already moved in batch/, "23505"));
   ok("FO-7a fail (rev 13): a move line update or delete is refused (insert-only); a batch update is refused",
     refused(DEMO, `update money_move_line set amount_minor = 1 where batch_id = '${B1}'`, /never changed or removed/, "42501") && refused(DEMO, `delete from money_move_line where batch_id = '${B1}'`, /never changed or removed/, "42501")
     && refused(DEMO, `update money_move_batch set transfer_date = '2026-11-21' where id = '${B1}'`, /never changed or removed/, "42501"));
-  ok("FO-7a fail: a line that is not the whole withdrawal, the wrong direction, or a wrong-account amount in the wrong direction is refused",
-    refused(DEMO, moveLine(B2, WD, "TRUST_APPLIED", "TRUST_TO_OPERATING", 100), /moves its whole withdrawal/) && refused(DEMO, moveLine(B2, WD, "TRUST_APPLIED", "OPERATING_TO_TRUST"), /moves its whole withdrawal/)
-    && refused(DEMO, moveLine(B2, u(1103), "WRONG_ACCOUNT", "TRUST_TO_OPERATING", 500), /received into OPERATING moves out of it/));
-  ok("FO-7a pass: money for trust received into operating moves operating → trust (wrong account)", sql(DEMO, moveLine(B2, u(1103), "WRONG_ACCOUNT", "OPERATING_TO_TRUST", 500)) === "1");
+  ok("FO-7a fail: a trust application moving more than its withdrawal or the wrong way, or a wrong-account amount the wrong way, is refused",
+    refused(DEMO, moved(B2, moveLine(B2, WD, "TRUST_APPLIED", "TRUST_TO_OPERATING", 30001)), /moves at most its withdrawal/) && refused(DEMO, moved(B2, moveLine(B2, WD, "TRUST_APPLIED", "OPERATING_TO_TRUST")), /moves at most its withdrawal/)
+    && refused(DEMO, moved(B2, moveLine(B2, u(1103), "WRONG_ACCOUNT", "TRUST_TO_OPERATING", 500)), /received into OPERATING moves out of it/));
+  ok("FO-7a pass: money for trust received into operating moves operating → trust (wrong account)", sqlLast(DEMO, moved(B2, moveLine(B2, u(1103), "WRONG_ACCOUNT", "OPERATING_TO_TRUST", 500))) === "1");
+  ok("FO-7a fail (review round 1 m5, break B-7): a recorded batch never gains a line later", refused(DEMO, moveLine(B2, u(1102), "WRONG_ACCOUNT", "TRUST_TO_OPERATING", 1), /a recorded batch is never added to/));
+  ok("FO-7a fail (review round 1 m6, break B-11): a card fee on the trust account names a card payment into trust (none exists while card into trust waits)",
+    refused(DEMO, moved(u(1307), moveLine(u(1307), u(1103), "CARD_FEE_ON_TRUST", "OPERATING_TO_TRUST", 1)), /card fee on the trust account is for a card payment into trust/));
   ok("FO-7a fail (rev 13): an undo batch without a reason, or with a reason but without the batch it undoes, is refused",
     refused(DEMO, batch(UNDO, { undoes: B1, date: null }), /money_move_batch_kind_check/) && refused(DEMO, batch(UNDO, { reason: "Bank transfer failed" }), /money_move_batch_kind_check/));
-  ok("FO-7a pass (AG-6-73 rule 6): undo names the batch it undoes and a reason; the trust application then moves again (ordinal 2)",
-    sql(DEMO, batch(UNDO, { undoes: B1, reason: "Bank transfer failed", date: null })) === UNDO && sql(DEMO, batch(B3)) === B3 && sql(DEMO, moveLine(B3, WD)) === "2");
-  ok("FO-7a fail: a batch is undone once, an undo is never undone, and an undo carries no lines",
+  ok("FO-7a pass (AG-6-73 rules 4, 6): undo names the batch it undoes and a reason; the trust application then moves again (ordinal 2), here net of 100.00 returned before moving (review round 1, m8)",
+    sql(DEMO, batch(UNDO, { undoes: B1, reason: "Bank transfer failed", date: null })) === UNDO && sqlLast(DEMO, moved(B3, moveLine(B3, WD, "TRUST_APPLIED", "TRUST_TO_OPERATING", 20000))) === "2");
+  ok("FO-7a fail: a batch is undone once, an undo is never undone, an undo carries no lines, and an undone batch never gains a line",
     refused(DEMO, batch(u(1304), { undoes: B1, reason: "Again" }), /money_move_batch_firm_id_undoes_batch_id_key/, "23505")
-    && refused(DEMO, batch(u(1304), { undoes: UNDO, reason: "Undo the undo" }), /an undo is never undone/) && refused(DEMO, moveLine(UNDO, u(1103), "WRONG_ACCOUNT", "OPERATING_TO_TRUST", 1), /undo batch carries no lines/));
+    && refused(DEMO, batch(u(1304), { undoes: UNDO, reason: "Undo the undo" }), /an undo is never undone/) && refused(DEMO, moveLine(UNDO, u(1103), "WRONG_ACCOUNT", "OPERATING_TO_TRUST", 1), /undo batch carries no lines/)
+    && refused(DEMO, moveLine(B1, u(1103), "WRONG_ACCOUNT", "OPERATING_TO_TRUST", 1), /a recorded batch is never added to/));
   const W2 = sql(DEMO, entry("WITHDRAWAL_TO_INVOICE", -100, { inv: I1 }));
-  const B4 = u(1305), B5 = u(1306); sql(DEMO, batch(B4)); sql(DEMO, batch(B5));
-  const two = await race(2, (i) => moveLine([B4, B5][i], W2, "TRUST_APPLIED", "TRUST_TO_OPERATING", 100));
+  const B4 = u(1305), B5 = u(1306);
+  const two = await race(2, (i) => moved([B4, B5][i], moveLine([B4, B5][i], W2, "TRUST_APPLIED", "TRUST_TO_OPERATING", 100)));
   ok("FO-7a pass (parallel): two people ticking the same line at once — one batch holds it, the other is refused (23505)",
     two.filter((r) => r.value === "1").length === 1 && two.filter((r) => r.code === "23505").length === 1 && sql(DEMO, `select count(*) from money_move_line where source_trust_entry_id = '${W2}'`) === "1", two);
 
@@ -363,7 +476,7 @@ try {
     INSERT_ONLY.every((t) => refused(DEMO, `truncate ${t} cascade`, /never changed or removed/, "42501")));
   const fns = (db: string) => sql(db, `select string_agg(proname, ',' order by proname) from pg_proc where pronamespace = 'public'::regnamespace`).split(",");
   const added = fns(DEMO).filter((f) => !fns(BARE).includes(f));
-  ok("FO-7a pass (rows rev 15.2): every function the migration adds is named money_ (21 of them)", added.length === 21 && added.every((f) => f.startsWith("money_")), added);
+  ok("FO-7a pass (rows rev 15.2): every function the migration adds is named money_ (23 of them)", added.length === 23 && added.every((f) => f.startsWith("money_")), added);
 } finally {
   for (const c of conns) await c.end().catch(() => undefined);
   for (const d of dbs) await d.$disconnect().catch(() => undefined);
