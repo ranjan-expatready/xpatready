@@ -10,9 +10,10 @@
 //     an unknown slug (`sendPublicNotFound`, which FO-3's routes use for theirs).
 // Only the Host header is read: X-Forwarded-Host and any firm named in the path, query or headers are ignored, so firm
 // A's address never serves firm B's page. Wildcard DNS and the certificate are PF-8's.
+import { readHost } from "./rules.ts";
 import type { WebAddresses } from "./service.ts";
 
-type Req = { method: string; path: string; originalUrl?: string; url: string; protocol?: string; headers: Record<string, string | string[] | undefined>; publicFirm?: { firmId: string } };
+type Req = { method: string; path: string; originalUrl?: string; url: string; rawHeaders?: string[]; protocol?: string; headers: Record<string, string | string[] | undefined>; publicFirm?: { firmId: string } };
 type Res = { status(code: number): Res; setHeader(k: string, v: string): unknown; end(body?: string): unknown };
 type Next = (err?: unknown) => void;
 
@@ -59,11 +60,16 @@ function pathAndQuery(req: Req): { pathname: string; tail: string } {
 export function webAddressHost(addresses: Pick<WebAddresses, "resolveHost">) {
   return (req: Req, res: Res, next: Next) => {
     req.publicFirm = undefined;
+    // Two Host headers, either naming a firm's address: refused, never routed by the first (break N6).
+    const hosts = (req.rawHeaders ?? []).filter((_, i, a) => i % 2 === 1 && a[i - 1].toLowerCase() === "host");
+    if (hosts.length > 1 && hosts.some((h) => readHost(h).kind !== "main")) return sendPublicNotFound(req, res);
     addresses.resolveHost(first(req.headers.host)).then((r) => {
       if (r.kind === "main") return next();
       if (r.kind === "firm") {
+        // An absolute-form request line (never sent by a browser) is refused on a firm's address: the app routes its raw
+        // target, which this check could not see as the same path (break N1).
         const { pathname } = pathAndQuery(req);
-        if (ODD_PATH.test(pathname) || !isPublicPath(pathname)) return sendPublicNotFound(req, res);
+        if (!(req.originalUrl ?? req.url).startsWith("/") || ODD_PATH.test(pathname) || !isPublicPath(pathname)) return sendPublicNotFound(req, res);
         req.publicFirm = { firmId: r.firmId };
         return next();
       }

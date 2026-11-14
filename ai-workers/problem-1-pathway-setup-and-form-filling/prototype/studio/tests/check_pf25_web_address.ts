@@ -16,6 +16,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { execFileSync, spawnSync } from "node:child_process";
 import { request } from "node:http";
+import { connect } from "node:net";
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fakeAudit } from "../ports/audit.ts";
@@ -56,6 +57,15 @@ function pf25Diff(db: string): string[] {
   const r = spawnSync(join(STUDIO, "node_modules", ".bin", "prisma"), ["migrate", "diff", "--config", cfg, "--from-config-datasource", "--to-schema", SCHEMA, "--script"], { cwd: STUDIO, encoding: "utf8" });
   if (r.status !== 0) throw new Error(`migrate diff: ${r.stdout}${r.stderr}`);
   return `${r.stdout}`.split("\n").filter((l) => /web_address|address_history/.test(l));
+}
+
+/** A raw HTTP/1.1 request, exactly as written (duplicate Host headers, an absolute-form target): the status line's code. */
+function rawHttp(port: number, text: string) {
+  return new Promise<number>((resolve, reject) => {
+    const sock = connect(port, "127.0.0.1", () => sock.write(text));
+    let got = ""; sock.setEncoding("utf8"); sock.on("data", (c) => (got += c)); sock.on("error", reject);
+    sock.on("close", () => resolve(Number(/^HTTP\/1\.1 (\d{3})/.exec(got)?.[1] ?? 0)));
+  });
 }
 
 /** One HTTP request with any Host header (fetch forbids setting Host). */
@@ -120,6 +130,8 @@ try {
     refused(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-two', 'maple-three', 'Sample reason', 'staff:t'); commit`, /the address did not change/)
     && refused(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-two', 'maple-three', E'\\t\\u00a0ab\\u00a0\\t', 'staff:t'); rollback`, /platform_firm_address_history_reason/)
     && refused(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-two', 'maple-three', E'Renamed \\u202e evil', 'staff:t'); rollback`, /platform_firm_address_history_reason/)
+    && ["\u061c", "\u180e", "\u2061"].every((c) => refused(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-two', 'maple-three', E'Renamed ${c} now', 'staff:t'); rollback`, /platform_firm_address_history_reason/))
+    && refused(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-two', 'maple-three', E'\u200d\u200ca\u200c\u2060\u1680', 'staff:t'); rollback`, /platform_firm_address_history_reason/)
     && sql(EMPTY, `select address from platform_firm_web_address where firm_id = '${firmX}'`) === "maple-two");
   ok("PF-25 fail (database): web addresses are written under READ COMMITTED only (REPEATABLE READ and SERIALIZABLE refused)",
     ["repeatable read", "serializable"].every((lvl) => refused(EMPTY, `begin isolation level ${lvl}; insert into platform_firm_web_address (firm_id, address, set_by, updated_at) select id, 'iso-test', 'system:t', now() from platform_firm where key = 'firm-x2'; insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), 'firm-iso', 'I', 'CA', 'i@i.example.com', now()); insert into platform_firm_web_address (firm_id, address, set_by, updated_at) select id, 'iso-test', 'system:t', now() from platform_firm where key = 'firm-iso'; commit`, /READ COMMITTED only/)));
@@ -130,9 +142,11 @@ try {
     && refused(EMPTY, `with f as (insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), 'firm-y', 'Y', 'CA', 'y@y.example.com', now()) returning id) insert into platform_firm_web_address (firm_id, address, set_by, updated_at) select id, 'maple', 'system:sign-up', now() from f`, /held for another firm's redirect/)
     && sql(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, until, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-two', 'maple', now() + interval '100 years', 'Sample back', 'staff:t'); update platform_firm_web_address set address = 'maple' where firm_id = '${firmX}'; commit; select address from platform_firm_web_address where firm_id = '${firmX}'`) === "maple");
 
-  ok("PF-25 pass (database): the database sets until to exactly 90 days after changed_at, whatever the writer sent (1 second, 100 years)",
-    sql(EMPTY, `select bool_and(until = changed_at + interval '90 days') from platform_firm_address_history where old_address is not null`) === "t");
-  sql(EMPTY, `set session_replication_role = replica; insert into platform_firm_address_history (id, firm_id, old_address, new_address, until, reason, changed_by, changed_at) values (gen_random_uuid(), (select id from platform_firm where key='sample-solo'), 'old-solo', 'sample-solo', now() - interval '10 days', 'Sample, backdated', 'staff:t', now() - interval '100 days')`);
+  sql(EMPTY, `begin; set local timezone = 'America/Toronto'; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple', 'maple-tz', 'Zone test', 'staff:t'); update platform_firm_web_address set address = 'maple-tz' where firm_id = '${firmX}'; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-tz', 'maple', 'Zone test back', 'staff:t'); update platform_firm_web_address set address = 'maple' where firm_id = '${firmX}'; commit`);
+  ok("PF-25 pass (database, break N4): until is exactly 2160 hours after changed_at whatever the writer sent (1 second, 100 years) and whatever the session's time zone (written in Toronto, read in Casablanca and UTC)",
+    sql(EMPTY, `select bool_and(extract(epoch from until - changed_at) = 2160 * 3600) from platform_firm_address_history where old_address is not null`) === "t"
+    && ["Africa/Casablanca", "UTC"].every((tz) => sql(EMPTY, `set timezone = '${tz}'; select count(*) from platform_firm_address_history where old_address is not null and until <> changed_at + interval '2160 hours'`) === "0"));
+  sql(EMPTY, `set session_replication_role = replica; insert into platform_firm_address_history (id, firm_id, old_address, new_address, until, reason, changed_by, changed_at) values (gen_random_uuid(), (select id from platform_firm where key='sample-solo'), 'old-solo', 'sample-solo', now() - interval '240 hours', 'Sample, backdated', 'staff:t', now() - interval '2400 hours')`);
   ok("PF-25 pass (database): an address whose 90 days ended (a backdated record) is taken by another firm",
     sql(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple', 'old-solo', 'Takes a released address', 'staff:t'); update platform_firm_web_address set address = 'old-solo' where firm_id = '${firmX}'; commit; select address from platform_firm_web_address where firm_id = '${firmX}'`) === "old-solo");
   sql(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'old-solo', 'maple', 'Back to maple', 'staff:t'); update platform_firm_web_address set address = 'maple' where firm_id = '${firmX}'; commit`);
@@ -193,7 +207,7 @@ try {
     first.oldAddress === null && first.redirectUntil === null && addressOf(firmZ) === "zeta-law"
     && sql(EMPTY, `select coalesce(old_address, '-') || '>' || new_address || '|' || reason || '|' || coalesce(until::text, '-') from platform_firm_address_history where firm_id = '${firmZ}'`) === "->zeta-law|First address set by support|-"
     && sql(EMPTY, `select count(*) from audit_event where action = 'firm.web_address.changed' and detail->>'historyId' = '${first.historyId}'`) === "1");
-  const badReasons = await Promise.all(["\t\u00a0ab\u00a0\t", "Renamed \u202e evil", "x".repeat(501)].map((reason) => problemOf(() => svc.change(ours, firmZ, { address: "zeta-two", reason }))));
+  const badReasons = await Promise.all(["\t\u00a0ab\u00a0\t", "Renamed \u202e evil", "Renamed \u061c now", "\u200d\u200ca\u200c\u2060\u1680", "x".repeat(501)].map((reason) => problemOf(() => svc.change(ours, firmZ, { address: "zeta-two", reason }))));
   ok("PF-25 fail (break m9): a reason padded to under 3 characters, with a direction control, or over 500 characters → 422",
     badReasons.every((p) => p?.status === 422 && typeof (p.body.fields as Record<string, string>)?.reason === "string"), badReasons);
   const race = await Promise.allSettled([real.change(ours, firmZ, { address: "zeta-one", reason: "Race one" }), real.change(ours, firmZ, { address: "zeta-two", reason: "Race two" })]);
@@ -217,7 +231,7 @@ try {
   ok("PF-25 fail: two labels deep, or a label that breaks the rules, is never a firm (a.law-firm-a.localhost, -x.localhost)",
     readHost("a.law-firm-a.localhost").kind === "none" && readHost("-x.localhost").kind === "none" && !checkAddressShape("a.b").ok);
   ok("PF-25 fail (break m1): an empty, zero, out-of-range or second port, or two trailing dots, under a firm suffix is never ExpatReady's own site",
-    ["law-firm-a.localhost:", "law-firm-a.localhost:0", "law-firm-a.localhost:99999", "law-firm-a.localhost:4400:4400", "law-firm-a.localhost..", "localhost..", "x.expatready.com:abc"].every((h) => readHost(h).kind === "none")
+    ["law-firm-a.localhost:", "law-firm-a.localhost:0", "law-firm-a.localhost:99999", "law-firm-a.localhost:4400:4400", "law-firm-a.localhost..", "localhost..", "x.expatready.com:abc", "law-firm-a.localhost\t:4400", "law-firm-a.localhost :4400", "law-firm-a.localhost,x"].every((h) => readHost(h).kind === "none")
     && JSON.stringify(readHost("law-firm-a.localhost:0004400")) === JSON.stringify({ kind: "label", address: "law-firm-a", suffix: "localhost", port: "4400" }) && readHost("[::1]:4400").kind === "main");
   ok("PF-25 pass: the new address serves firm A (its id only)", JSON.stringify(await svc.resolveHost("law-firm-a.localhost:4400")) === JSON.stringify({ kind: "firm", firmId: firmA, address: "law-firm-a" }));
   const r0 = await svc.resolveHost("sample-firm.expatready.com");
@@ -296,6 +310,14 @@ try {
   const absolute = await http(port, `sample-solo.localhost:${port}`, "https://evil.example/x?y=1");
   ok("PF-25 fail (break m2): an absolute-URI request on an old address redirects to its path and query only, never to another site",
     absolute.status === 301 && absolute.headers.location === `http://solo-law.localhost:${port}/x?y=1`, absolute.headers.location);
+  const rawCodes = await Promise.all([
+    rawHttp(port, `GET http://x/foo/../api/public/site HTTP/1.1\r\nHost: law-firm-a.localhost:${port}\r\nConnection: close\r\n\r\n`),
+    rawHttp(port, `GET /api/public/site HTTP/1.1\r\nHost: law-firm-a.localhost:${port}\r\nHost: localhost:${port}\r\nConnection: close\r\n\r\n`),
+    rawHttp(port, `GET /api/health HTTP/1.1\r\nHost: localhost:${port}\r\nHost: law-firm-a.localhost:${port}\r\nConnection: close\r\n\r\n`),
+    rawHttp(port, `GET /api/public/site HTTP/1.1\r\nHost: law-firm-a.localhost:${port}\r\nConnection: close\r\n\r\n`),
+  ]);
+  ok("PF-25 fail (break N1, N6): an absolute-form request on a firm's address, and two Host headers either naming a firm, get the plain not-found; one Host header serves",
+    rawCodes.join(",") === "404,404,404,200", rawCodes);
   const movedPublic = await http(port, `sample-solo.expatready.com`, "/book");
   ok("PF-25 pass: under expatready.com the redirect is always https", movedPublic.status === 301 && movedPublic.headers.location === "https://solo-law.expatready.com/book", movedPublic.headers.location);
   const avail = await http(port, `localhost:${port}`, "/api/public/web-address/availability?address=law-firm-a");

@@ -95,6 +95,9 @@ export function readHost(hostHeader: unknown): HostKind {
   if (typeof hostHeader !== "string" || !hostHeader.trim()) return { kind: "main" };
   const raw = hostHeader.trim().toLowerCase();
   if (raw.startsWith("[")) return { kind: "main" };   // an IPv6 literal: never a firm
+  // A character no host name holds (a space, a tab, a comma: break N5): never a firm, and never ExpatReady's own site
+  // when it names a firm suffix anywhere.
+  if (/[^a-z0-9.:-]/.test(raw)) return ADDRESS_HOST_SUFFIXES.some((s) => raw.includes(s)) ? { kind: "none" } : { kind: "main" };
   const colon = raw.indexOf(":");
   const name = colon < 0 ? raw : raw.slice(0, colon), portPart = colon < 0 ? null : raw.slice(colon + 1);
   const bare = name.replace(/\.+$/, "");

@@ -76,18 +76,18 @@ CREATE FUNCTION platform_web_address_allowed(a text) RETURNS boolean LANGUAGE sq
      AND a NOT LIKE 'xn--%'
      AND a <> ALL (ARRAY['www', 'api', 'app', 'admin', 'mail', 'status', 'help', 'book', 'portal'])
 $$;
--- A reason: 3-500 characters once spaces of any kind (also no-break and zero-width) are trimmed; no control or
--- direction-changing character (break m6, m9). The service applies the same rule (service.ts readReason).
+-- A reason: 3-500 characters once spaces of any kind (also no-break, zero-width and joiners) are trimmed; no control,
+-- direction-changing or invisible operator character (break m6, m9, N3). The service applies the same rule (service.ts readReason).
 CREATE FUNCTION platform_web_address_reason_ok(r text) RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
-  SELECT length(regexp_replace(r, '^[\s\u00a0\u2000-\u200b\u2028\u2029\u202f\u205f\u3000\ufeff]+|[\s\u00a0\u2000-\u200b\u2028\u2029\u202f\u205f\u3000\ufeff]+$', '', 'g')) BETWEEN 3 AND 500
-     AND r !~ '[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]'
+  SELECT length(regexp_replace(r, '^[\s\u00a0\u1680\u180e\u2000-\u200d\u2028\u2029\u202f\u205f\u2060\u3000\ufeff]+|[\s\u00a0\u1680\u180e\u2000-\u200d\u2028\u2029\u202f\u205f\u2060\u3000\ufeff]+$', '', 'g')) BETWEEN 3 AND 500
+     AND r !~ '[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u061c\u180e\u200e\u200f\u202a-\u202e\u2061-\u2064\u2066-\u206f]'
 $$;
 ALTER TABLE "platform_firm_web_address"
   ADD CONSTRAINT "platform_firm_web_address_allowed" CHECK (platform_web_address_allowed("address")),
   ADD CONSTRAINT "platform_firm_web_address_set_by" CHECK ("set_by" ~ '^(staff|system|seed):[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$');
 ALTER TABLE "platform_firm_address_history"
   ADD CONSTRAINT "platform_firm_address_history_addresses" CHECK (("old_address" IS NULL OR platform_web_address_allowed("old_address")) AND platform_web_address_allowed("new_address") AND "old_address" IS DISTINCT FROM "new_address"),
-  ADD CONSTRAINT "platform_firm_address_history_until" CHECK (("old_address" IS NULL AND "until" IS NULL) OR ("old_address" IS NOT NULL AND "until" = "changed_at" + interval '90 days')),
+  ADD CONSTRAINT "platform_firm_address_history_until" CHECK (("old_address" IS NULL AND "until" IS NULL) OR ("old_address" IS NOT NULL AND "until" = "changed_at" + interval '2160 hours')),
   ADD CONSTRAINT "platform_firm_address_history_reason" CHECK (platform_web_address_reason_ok("reason")),
   ADD CONSTRAINT "platform_firm_address_history_changed_by" CHECK ("changed_by" ~ '^(staff|system|seed):[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$');
 
@@ -159,7 +159,8 @@ CREATE TRIGGER "platform_firm_address_history_no_truncate" BEFORE TRUNCATE ON "p
 -- A history row names the firm's address as it is now (no made-up hold on someone's address), or no old address for a
 -- firm that has none. changed_at is always the database's own transaction time and until exactly 90 days after it,
 -- whatever the writer sent: the address trigger above can then tell a record written in this transaction (savepoints
--- included), and no hold is shorter or longer than SA2-D8's 90 days (break m6).
+-- included), and no hold is shorter or longer than SA2-D8's 90 days (break m6), counted as 2160 hours so the session's
+-- time zone never moves it (break N4: '90 days' crosses a daylight-saving change differently per zone).
 CREATE FUNCTION platform_firm_address_history_names_current() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   PERFORM platform_web_address_lock(coalesce(NEW."old_address", NEW."new_address"));
@@ -171,7 +172,7 @@ BEGIN
     RAISE EXCEPTION 'platform_firm_address_history_names_current: % is not this firm''s web address', NEW."old_address" USING ERRCODE = 'check_violation';
   END IF;
   NEW."changed_at" := now();
-  NEW."until" := CASE WHEN NEW."old_address" IS NULL THEN NULL ELSE now() + interval '90 days' END;
+  NEW."until" := CASE WHEN NEW."old_address" IS NULL THEN NULL ELSE now() + interval '2160 hours' END;
   RETURN NEW;
 END $$;
 CREATE TRIGGER "platform_firm_address_history_names_current" BEFORE INSERT ON "platform_firm_address_history" FOR EACH ROW EXECUTE FUNCTION platform_firm_address_history_names_current();

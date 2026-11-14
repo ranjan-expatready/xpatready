@@ -46,9 +46,9 @@ const problem = (status: number, code: string, title: string, detail: string, ex
 
 /** Spaces of any kind at either end (also no-break and zero-width), and characters a reason may not hold (controls and
  *  direction changes: break m9); the migration's platform_web_address_reason_ok is the same rule. */
-const EDGE_SPACE = /^[\s\u00a0\u2000-\u200b\u2028\u2029\u202f\u205f\u3000\ufeff]+|[\s\u00a0\u2000-\u200b\u2028\u2029\u202f\u205f\u3000\ufeff]+$/g;
+const EDGE_SPACE = /^[\s\u00a0\u1680\u180e\u2000-\u200d\u2028\u2029\u202f\u205f\u2060\u3000\ufeff]+|[\s\u00a0\u1680\u180e\u2000-\u200d\u2028\u2029\u202f\u205f\u2060\u3000\ufeff]+$/g;
 // eslint-disable-next-line no-control-regex
-const BAD_CHARS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
+const BAD_CHARS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u061c\u180e\u200e\u200f\u202a-\u202e\u2061-\u2064\u2066-\u206f]/;
 
 /** The reason as kept, or the message for the field. */
 export function readReason(input: unknown): { ok: true; reason: string } | { ok: false; message: string } {
