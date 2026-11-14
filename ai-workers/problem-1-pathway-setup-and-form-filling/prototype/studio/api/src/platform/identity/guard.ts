@@ -54,8 +54,9 @@ export class PlatformGuard implements CanActivate, OnModuleInit {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest<Req>();
-    if (!PLATFORM_PATH.test(req.path ?? req.url ?? "")) return true;
     const access = this.reflector.getAllAndOverride<PlatformAccess>(PLATFORM_ACCESS, [ctx.getHandler(), ctx.getClass()]);
+    // A declared platform route is guarded whatever the path's letter case (break M1); an undeclared one on these paths is refused.
+    if (!access && !PLATFORM_PATH.test(req.path ?? req.url ?? "")) return true;
     if (!access) forbidden("This route declares no permission keys, so it is refused (default deny).", "AUTHZ_UNCONFIGURED");
     if (access.kind === "sign-in") return true;
     const h = req.headers.authorization, auth = Array.isArray(h) ? h[0] : h;

@@ -36,11 +36,16 @@ export function identityPortFromConfig(clock: PlatformClock): IdentityPort {
 // --------------------------------------------------------------------------------------------------------- input checks
 /** PF-3 review m9: an email with any space, line break, control or invisible format character is refused (not trimmed),
  *  so two addresses that look the same can never sit side by side. */
+/** No lone surrogate (broken text would be stored as a replacement character, break m7): encodeURIComponent refuses one. */
+const wellFormed = (s: string) => { try { encodeURIComponent(s); return true; } catch { return false; } };
 const HIDDEN = /[\s\p{Zs}\p{Zl}\p{Zp}\p{Cc}\p{Cf}\u00ad\u180e\u2000-\u200f\u2028-\u202f\u205f-\u2064\u3000\ufeff]/u;
 export function emailOf(v: unknown): string {
   if (typeof v !== "string" || !v) return problem(400, "Check the email", "Give the person's email address.", { code: "EMAIL_REQUIRED" });
   if (HIDDEN.test(v)) return problem(400, "Check the email", "The email contains a space or an invisible character. Type it again without them.", { code: "EMAIL_INVALID" });
-  if (v.length > 254 || !/^[^@]{1,64}@[^@.]+(\.[^@.]+)+$/.test(v)) return problem(400, "Check the email", "That is not an email address (name@example.com).", { code: "EMAIL_INVALID" });
+  if (v.length > 254 || !/^[^@]{1,64}@[^@.]+(\.[^@.]+)+$/.test(v) || /[<>()[\]\\,;:"]/.test(v)) return problem(400, "Check the email", "That is not an email address (name@example.com).", { code: "EMAIL_INVALID" });
+  // Break m5: one spelling per address. Letters typed in two ways (an accent as a separate mark) or full-width letters are
+  // refused, so two addresses that look the same cannot both be stored.
+  if (!wellFormed(v) || v.normalize("NFKC") !== v) return problem(400, "Check the email", "The email has unusual characters (an accent typed as a separate mark, or full-width letters). Type it again.", { code: "EMAIL_INVALID" });
   return v.toLowerCase();
 }
 export function rolesOf(v: unknown): PlatformRole[] {
@@ -50,16 +55,19 @@ export function rolesOf(v: unknown): PlatformRole[] {
   if (new Set(v).size !== v.length) return problem(400, "Choose a role", "Each role once.", { code: "ROLE_TWICE" });
   return v as PlatformRole[];
 }
-/** A reason of 1-200 characters (AG-1-15), after trimming; required where the rule says so. */
+/** A reason of 1-200 characters (AG-1-15), after trimming; required where the rule says so. Invisible characters alone are
+ *  no reason (break m3); control characters and broken text are refused (break m4, m7). */
+const VISIBLE = (s: string) => s.replace(/[\s\p{Z}\p{Cf}]/gu, "").length > 0;
 export function reasonOf(v: unknown, required: boolean, what = "reason"): string | null {
-  if (v === undefined || v === null || (typeof v === "string" && !v.trim())) return required ? problem(400, "Give a reason", `Give a ${what} (1 to 200 characters).`, { code: "REASON_REQUIRED" }) : null;
+  if (v === undefined || v === null || (typeof v === "string" && !VISIBLE(v))) return required ? problem(400, "Give a reason", `Give a ${what} (1 to 200 characters).`, { code: "REASON_REQUIRED" }) : null;
   if (typeof v !== "string") return problem(400, "Give a reason", `The ${what} is text.`, { code: "REASON_REQUIRED" });
+  if (/\p{Cc}/u.test(v) || !wellFormed(v)) return problem(400, "Check the reason", `The ${what} contains a control character. Type it again.`, { code: "REASON_INVALID" });
   const t = v.trim();
   if ([...t].length > 200) return problem(400, "Shorten the reason", `The ${what} is at most 200 characters.`, { code: "REASON_TOO_LONG" });
   return t;
 }
 const textOf = (v: unknown, what: string) => {
-  if (typeof v !== "string" || !v.trim() || [...v.trim()].length > 100 || /[\p{Cc}\p{Cf}]/u.test(v)) return problem(400, "Check the licence record", `Give the ${what} (1 to 100 characters).`, { code: "CREDENTIAL_INVALID" });
+  if (typeof v !== "string" || !v.trim() || [...v.trim()].length > 100 || /[\p{Cc}\p{Cf}]/u.test(v) || !wellFormed(v)) return problem(400, "Check the licence record", `Give the ${what} (1 to 100 characters).`, { code: "CREDENTIAL_INVALID" });
   return v.trim();
 };
 
@@ -84,7 +92,7 @@ export class PlatformIdentity implements OnModuleInit {
     if (staff.status !== "ACTIVE") return unauthorized(staff.status === "DEACTIVATED" ? "This staff account has been deactivated. Ask your firm's Owner or Admin." : "This staff account is suspended. Ask your firm's Owner or Admin.", "STAFF_NOT_ACTIVE");
     const authMs = id.authTime * 1000;
     // Cognito: a session with a later sign-in time than the last one seen is a new sign-in, which ends the older one.
-    if (id.via === "cognito" && (!staff.lastSignInAt || staff.lastSignInAt.getTime() < authMs)) await this.recordSignIn(staff.firmId, staff.firm.key, staff.id, new Date(authMs), "cognito", staff.lastSignInAt !== null);
+    if (id.via === "cognito" && (!staff.lastSignInAt || staff.lastSignInAt.getTime() < authMs)) await this.recordSignIn(staff.firmId, staff.firm.key, staff.id, "cognito", (last) => (last !== null && last >= authMs ? null : authMs));
     const rev = await this.db.platformSessionRevocation.findFirst({ where: firmScope(staff.firmId, { staffId: staff.id }), orderBy: { revokedAt: "desc" } });
     // A session that started at or before the person's last revocation is refused (deactivation, a newer sign-in).
     if (rev && authMs <= rev.revokedAt.getTime()) return unauthorized(rev.reason === "another-device" ? ANOTHER_DEVICE : "This session was ended. Sign in again.", rev.reason === "another-device" ? "SIGNED_IN_ELSEWHERE" : "SESSION_REVOKED");
@@ -95,13 +103,21 @@ export class PlatformIdentity implements OnModuleInit {
   }
 
   /** A new sign-in ends every older session of the person (one session at a time, AG-1-55): one revocation 1 ms before
-   *  the new session's sign-in time, so a session that started earlier is refused and this one is not. */
-  private async recordSignIn(firmId: string, firmKey: string, staffId: string, at: Date, via: string, hadSession: boolean) {
-    await this.db.$transaction(async (tx) => {
-      const moved = await tx.platformStaff.updateMany({ where: firmScope(firmId, { id: staffId, OR: [{ lastSignInAt: null }, { lastSignInAt: { lt: at } }] }), data: { lastSignInAt: at } });
-      if (!moved.count) return;   // another request recorded this sign-in already
-      if (hadSession) await tx.platformSessionRevocation.create({ data: { firmId, staffId, revokedAt: new Date(at.getTime() - 1), reason: "another-device" } });
+   *  the new session's sign-in time, so a session that started earlier is refused and this one is not. The person's row is
+   *  locked while the time is chosen, so parallel sign-ins are taken one after the other and each ends the one before it
+   *  (break m1). atOf: the new session's time (ms) from the last sign-in and the last revocation, or null for none. */
+  private async recordSignIn(firmId: string, firmKey: string, staffId: string, via: string, atOf: (lastMs: number | null, revokedMs: number | null) => number | null): Promise<number | null> {
+    return this.db.$transaction(async (tx) => {
+      const [row] = await tx.$queryRaw<{ last: Date | null }[]>`select last_sign_in_at as last from platform_staff where id = ${staffId}::uuid and firm_id = ${firmScope(firmId).firmId}::uuid for update`;
+      if (!row) return null;
+      const rev = await tx.platformSessionRevocation.findFirst({ where: firmScope(firmId, { staffId }), orderBy: { revokedAt: "desc" }, select: { revokedAt: true } });
+      const atMs = atOf(row.last?.getTime() ?? null, rev?.revokedAt.getTime() ?? null);
+      if (atMs === null) return null;   // another request recorded this sign-in already
+      const at = new Date(atMs), hadSession = row.last !== null;
+      await tx.platformStaff.update({ where: { id: staffId }, data: { lastSignInAt: at } });
+      if (hadSession) await tx.platformSessionRevocation.create({ data: { firmId, staffId, revokedAt: new Date(atMs - 1), reason: "another-device" } });
       await auditStaff(tx, { firmId, firmKey, actor: actorWord(staffId), action: "platform.staff.sign_in", entityKey: staffId, summary: `a staff member signed in (${via}); ${hadSession ? "their older session was ended" : "first session"}`, detail: { staffId, via, at: at.toISOString() } });
+      return atMs;
     });
   }
 
@@ -116,9 +132,8 @@ export class PlatformIdentity implements OnModuleInit {
     if (staff.status !== "ACTIVE") return unauthorized("This staff account is not active. Ask your firm's Owner or Admin.", "STAFF_NOT_ACTIVE");
     if (body.secondStep !== true) return unauthorized("Two-step sign-in is required for every staff member: finish the second step (secondStep: true).", "TWO_STEP_REQUIRED");
     // The new session starts after the last sign-in and the last revocation (a deactivation in the same millisecond).
-    const rev = await this.db.platformSessionRevocation.findFirst({ where: firmScope(firm.id, { staffId: staff.id }), orderBy: { revokedAt: "desc" }, select: { revokedAt: true } });
-    const authMs = Math.max(this.clock.now(), (staff.lastSignInAt?.getTime() ?? 0) + 1, (rev?.revokedAt.getTime() ?? 0) + 1);
-    await this.recordSignIn(firm.id, firm.key, staff.id, new Date(authMs), "local stand-in", staff.lastSignInAt !== null);
+    const authMs = await this.recordSignIn(firm.id, firm.key, staff.id, "local stand-in", (last, revoked) => Math.max(this.clock.now(), (last ?? 0) + 1, (revoked ?? 0) + 1));
+    if (authMs === null) return unauthorized("No staff member of that firm signs in with that name.", "UNKNOWN_STAFF");
     return { token: this.port.issue(staff.id, { authTimeMs: authMs, secondStep: true }), tokenType: "Bearer", expiresIn: 3600, staffId: staff.id, firmKey: firm.key };
   }
 
@@ -129,10 +144,17 @@ export class PlatformIdentity implements OnModuleInit {
   }
 
   // ------------------------------------------------------------------------------------------------------ shared rules
-  /** One transaction holding the firm's row lock. */
-  private inFirm<T>(firmId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
-    const id = firmScope(firmId).firmId;
-    return this.db.$transaction(async (tx) => { await tx.$queryRaw`select id from platform_firm where id = ${id}::uuid for update`; return fn(tx); });
+  /** One transaction holding the firm's row lock. Under the lock the actor is checked again (break m2): a request already
+   *  past the guard when its sender was deactivated, or signed in elsewhere, changes nothing. */
+  private inFirm<T>(actor: StaffContext, fn: (tx: Tx) => Promise<T>): Promise<T> {
+    const id = firmScope(actor.firmId).firmId;
+    return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`select id from platform_firm where id = ${id}::uuid for update`;
+      const me = await tx.platformStaff.findFirst({ where: firmScope(id, { id: actor.staffId }), select: { status: true } });
+      const rev = await tx.platformSessionRevocation.findFirst({ where: firmScope(id, { staffId: actor.staffId }), orderBy: { revokedAt: "desc" }, select: { revokedAt: true } });
+      if (me?.status !== "ACTIVE" || (rev && actor.authTime * 1000 <= rev.revokedAt.getTime())) unauthorized("Your session ended before this change was made. Sign in again.", "SESSION_REVOKED");
+      return fn(tx);
+    });
   }
 
   /** Seats used = ACTIVE + SUSPENDED staff + invitations neither accepted, revoked nor expired (database clock); the
@@ -153,7 +175,7 @@ export class PlatformIdentity implements OnModuleInit {
     if (added.includes("OWNER") || removed.includes("OWNER")) {
       if (!actor.roles.includes("OWNER")) forbidden("Only an Owner gives or removes the Owner role.", "OWNER_ONLY");
       if (!reason) problem(400, "Give a reason", "Giving or removing the Owner role needs a written reason.", { code: "REASON_REQUIRED" });
-      if (this.clock.now() / 1000 - actor.authTime > STEP_UP_SECONDS) forbidden("Confirm it is you first: giving or removing the Owner role needs an identity check in the last 5 minutes. Sign in again, then retry.", "STEP_UP_REQUIRED");
+      this.stepUp(actor, "giving or removing the Owner role");
     }
     if (added.length) {
       const held = new Set(actor.keys);
@@ -161,6 +183,11 @@ export class PlatformIdentity implements OnModuleInit {
       const beyond = [...new Set(needed.filter((k) => !held.has(k.permissionKey)).map((k) => k.role))];
       if (beyond.length) forbidden(`You can give only roles whose every permission you hold yourself; ${beyond.join(", ")} holds permissions you do not.`, "ROLE_BEYOND_OWN_KEYS");
     }
+  }
+
+  /** An Owner-level change needs an identity check (sign-in) in the last 5 minutes (AG-1-42). */
+  private stepUp(actor: StaffContext, what: string) {
+    if (this.clock.now() / 1000 - actor.authTime > STEP_UP_SECONDS) forbidden(`Confirm it is you first: ${what} needs an identity check in the last 5 minutes. Sign in again, then retry.`, "STEP_UP_REQUIRED");
   }
 
   /** The only-Owner guard (SA-6-44, AG-1-22, BR-27): refusing writes an audit line of its own, kept although the change is
@@ -184,7 +211,7 @@ export class PlatformIdentity implements OnModuleInit {
   async changeRoles(actor: StaffContext, id: string, body: { roles?: unknown; reason?: unknown }) {
     const to = rolesOf(body.roles), reason = reasonOf(body.reason, false);
     let refuse = false;
-    const out = await this.inFirm(actor.firmId, async (tx) => {
+    const out = await this.inFirm(actor, async (tx) => {
       const t = await this.target(tx, actor.firmId, id);
       const from = t.grants.map((g) => g.role);
       const added = to.filter((r) => !from.includes(r)), removed = from.filter((r) => !to.includes(r));
@@ -205,13 +232,14 @@ export class PlatformIdentity implements OnModuleInit {
   async deactivate(actor: StaffContext, id: string, body: { reason?: unknown }) {
     const reason = reasonOf(body.reason, true, "deactivation reason")!;
     let refuse = false;
-    const out = await this.inFirm(actor.firmId, async (tx) => {
+    const out = await this.inFirm(actor, async (tx) => {
       const t = await this.target(tx, actor.firmId, id);
       if (t.status === "DEACTIVATED") return problem(409, "Already deactivated", "This person is already deactivated.", { code: "ALREADY_DEACTIVATED" });
       const isOwner = t.grants.some((g) => g.role === "OWNER");
       // An Owner is deactivated only by an Owner (the Owner role is protected the same way, SA-6-29; else an Admin could
       // remove an Owner by deactivating them).
       if (isOwner && !actor.roles.includes("OWNER")) forbidden("Only an Owner deactivates an Owner.", "OWNER_ONLY");
+      if (isOwner) this.stepUp(actor, "deactivating an Owner");   // break M3: the same check as removing the Owner role
       if (isOwner && t.status === "ACTIVE" && await this.onlyOwner(tx, actor, t.id)) { refuse = true; return null; }
       const now = new Date(this.clock.now());
       await tx.platformStaff.update({ where: { id: t.id }, data: { status: "DEACTIVATED", deactivationReason: reason } });
@@ -226,10 +254,11 @@ export class PlatformIdentity implements OnModuleInit {
 
   async reactivate(actor: StaffContext, id: string, body: { reason?: unknown }) {
     const reason = reasonOf(body.reason, true, "reactivation reason")!;
-    return this.inFirm(actor.firmId, async (tx) => {
+    return this.inFirm(actor, async (tx) => {
       const t = await this.target(tx, actor.firmId, id);
       if (t.status !== "DEACTIVATED") return problem(409, "Not deactivated", "Only a deactivated person can be reactivated.", { code: "NOT_DEACTIVATED" });
       if (t.grants.some((g) => g.role === "OWNER") && !actor.roles.includes("OWNER")) forbidden("Only an Owner reactivates an Owner.", "OWNER_ONLY");
+      if (t.grants.some((g) => g.role === "OWNER")) this.stepUp(actor, "reactivating an Owner");   // break M3
       await this.seatCheck(tx, actor.firmId);
       await tx.platformStaff.update({ where: { id: t.id }, data: { status: "ACTIVE", deactivationReason: null } });
       await auditStaff(tx, { firmId: actor.firmId, firmKey: actor.firmKey, actor: actorWord(actor.staffId), action: "platform.staff.reactivated", entityKey: t.id, summary: "a staff member was reactivated (they sign in again)", detail: { staffId: t.id, reason } });
@@ -240,10 +269,10 @@ export class PlatformIdentity implements OnModuleInit {
   /** A person's licence record (AG-1-30, -31): their own without a key, anyone's with agent/firm-credential:manage. */
   async saveCredential(actor: StaffContext, id: string, body: { representativeType?: unknown; licensingBody?: unknown; licenceNumber?: unknown }) {
     const own = id.toLowerCase() === actor.staffId;
-    if (!own && !actor.keys.includes("agent/firm-credential:manage")) forbidden("You can change only your own licence record.", "NOT_ALLOWED");
     const data = { representativeType: textOf(body.representativeType, "representative type"), licensingBody: textOf(body.licensingBody, "licensing body"), licenceNumber: textOf(body.licenceNumber, "licence number") };
-    return this.inFirm(actor.firmId, async (tx) => {
-      const t = await this.target(tx, actor.firmId, id);
+    return this.inFirm(actor, async (tx) => {
+      const t = await this.target(tx, actor.firmId, id);   // another firm's id: 404 first, whatever the key (break m6)
+      if (!own && !actor.keys.includes("agent/firm-credential:manage")) forbidden("You can change only your own licence record.", "NOT_ALLOWED");
       const before = await tx.platformStaffCredential.findFirst({ where: firmScope(actor.firmId, { staffId: t.id }) });
       const changed = (Object.keys(data) as (keyof typeof data)[]).filter((k) => !before || before[k] !== data[k]);
       await tx.platformStaffCredential.upsert({ where: { firmId_staffId: { firmId: actor.firmId, staffId: t.id } }, create: { firmId: actor.firmId, staffId: t.id, ...data, updatedBy: actorWord(actor.staffId) }, update: { ...data, updatedBy: actorWord(actor.staffId) } });
@@ -267,7 +296,7 @@ export class PlatformIdentity implements OnModuleInit {
 
   async invite(actor: StaffContext, body: { email?: unknown; roles?: unknown; reason?: unknown }) {
     const email = emailOf(body.email), roles = rolesOf(body.roles), reason = reasonOf(body.reason, false);
-    return this.inFirm(actor.firmId, async (tx) => {
+    return this.inFirm(actor, async (tx) => {
       await this.roleRules(actor, null, roles, [], reason, tx);
       if (await tx.platformStaff.findFirst({ where: firmScope(actor.firmId, { email }), select: { id: true } })) problem(409, "Already on your staff", "This person is already on your firm's staff.", { code: "ALREADY_STAFF" });
       const [{ open }] = await tx.$queryRaw<{ open: number }[]>`select count(*)::int as open from platform_invitation where firm_id = ${actor.firmId}::uuid and email = ${email} and accepted_at is null and revoked_at is null and expires_at > now()`;
@@ -297,9 +326,13 @@ export class PlatformIdentity implements OnModuleInit {
 
   /** Resend: the old link is void (revoked) and a new one runs 72 hours from now; the seat is checked again (an expired
    *  invitation held no seat). */
-  async resend(actor: StaffContext, id: string) {
-    return this.inFirm(actor.firmId, async (tx) => {
+  async resend(actor: StaffContext, id: string, body: { reason?: unknown } = {}) {
+    const reason = reasonOf(body.reason, false);
+    return this.inFirm(actor, async (tx) => {
       const old = await this.openInvitation(tx, actor.firmId, id);
+      // Break M2: resending gives the invitation's roles again, so the same rules as inviting apply (an Admin cannot resend
+      // an Owner invitation, nor one with a role holding keys it lacks).
+      await this.roleRules(actor, null, old.roles, [], reason, tx);
       await tx.$executeRaw`update platform_invitation set revoked_at = now() where id = ${old.id}::uuid`;
       await this.seatCheck(tx, actor.firmId);
       const row = await this.insertInvitation(tx, actor.firmId, old.email, old.roles, actorWord(actor.staffId));
@@ -309,7 +342,7 @@ export class PlatformIdentity implements OnModuleInit {
   }
 
   async revoke(actor: StaffContext, id: string) {
-    return this.inFirm(actor.firmId, async (tx) => {
+    return this.inFirm(actor, async (tx) => {
       const inv = await this.openInvitation(tx, actor.firmId, id);
       await tx.$executeRaw`update platform_invitation set revoked_at = now() where id = ${inv.id}::uuid`;
       await auditInvitation(tx, { firmId: actor.firmId, firmKey: actor.firmKey, actor: actorWord(actor.staffId), action: "platform.invitation.revoked", entityKey: inv.id, summary: "an invitation was revoked (its seat is free)", detail: { invitationId: inv.id } });

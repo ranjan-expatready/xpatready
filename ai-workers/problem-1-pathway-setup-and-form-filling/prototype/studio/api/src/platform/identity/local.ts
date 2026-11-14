@@ -28,7 +28,7 @@ export class LocalIdentity implements IdentityPort {
 
   async verify(token: string): Promise<VerifiedIdentity> {
     const parts = token.split(".");
-    if (parts.length !== 3 || parts[0] !== HEADER) throw new IdentityRefused("This sign-in token is not one this server issued. Sign in again.");
+    if (parts.length !== 3 || parts[0] !== HEADER || !/^[A-Za-z0-9_-]{43}$/.test(parts[2])) throw new IdentityRefused("This sign-in token is not one this server issued. Sign in again.");
     const given = Buffer.from(parts[2], "base64url"), want = this.sign(`${parts[0]}.${parts[1]}`);
     if (given.length !== want.length || !timingSafeEqual(given, want)) throw new IdentityRefused("This sign-in token is not one this server issued. Sign in again.");
     let c: Record<string, unknown>;

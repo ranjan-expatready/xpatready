@@ -233,8 +233,11 @@ try {
     && sql(DB, `select status from platform_staff where id = '${S}'`) === "ACTIVE", soloSelf);
   const tT = await tokenOf("user-T");
   const both = await Promise.all([call(L.base, "POST", `/api/platform/staff/${T}/deactivate`, { token: tR, body: { reason: "race" } }), call(L.base, "POST", `/api/platform/staff/${R}/deactivate`, { token: tT, body: { reason: "race" } })]);
-  ok("PF-4 fail: two Owners deactivating each other at once — one wins, the other gets the only-Owner 403; one active Owner remains",
-    both.map((b) => b.status).sort().join() === "200,403" && both.some((b) => b.body.detail === ONLY_OWNER)
+  // The loser is refused either by the only-Owner guard (403) or, when the winner's change committed first, because its own
+  // sender was deactivated meanwhile (401, re-checked under the firm lock: break m2). Either way exactly one Owner is left.
+  const lost = both.find((b) => b.status !== 200);
+  ok("PF-4 fail: two Owners deactivating each other at once — one wins, the other is refused (only-Owner 403, or 401 its sender deactivated); one active Owner remains",
+    both.filter((b) => b.status === 200).length === 1 && !!lost && ((lost.status === 403 && lost.body.detail === ONLY_OWNER) || (lost.status === 401 && lost.body.code === "SESSION_REVOKED"))
     && sql(DB, `select count(*) from platform_role_grant g join platform_staff s on s.id = g.staff_id where g.firm_id = '${FIRM_A}' and g.role = 'OWNER' and g.ended_at is null and s.status = 'ACTIVE'`) === "1", both);
   const [winner, loser] = both[0].status === 200 ? [{ id: R, token: tR, actor: "user-R" }, { id: T, actor: "user-T" }] : [{ id: T, token: tT, actor: "user-T" }, { id: R, actor: "user-R" }];
 
@@ -307,6 +310,57 @@ try {
   const otherCred = tO2 && await call(L.base, "PUT", `/api/platform/staff/${O}/credential`, { token: tO2, body: { representativeType: "RCIC", licensingBody: "CICC", licenceNumber: "R1111111" } });
   ok("PF-4 fail: another person's licence record needs agent/firm-credential:manage (a Case Manager without it → 403)",
     !!otherCred && (otherCred.status === 403 || (await call(L.base, "GET", "/api/platform/me", { token: tO2 })).body.keys.includes("agent/firm-credential:manage")), otherCred);
+
+  // ------------------------------------------------------------- the breaker's findings at 695051a3 (break-report.md)
+  const ch = (...c: number[]) => String.fromCharCode(...c);
+  const mixed = await Promise.all([
+    call(L.base, "POST", "/api/Platform/staff/invitations", { body: { email: "m1@example.com", roles: ["READ_ONLY"] } }),
+    call(L.base, "PATCH", `/api/PLATFORM/staff/${O}/roles`, { body: { roles: ["READ_ONLY"] } }),
+    call(L.base, "GET", "/api/Platform/me", { actor: "user-A" }),
+  ]);
+  const mixedToken = await call(L.base, "GET", "/api/Platform/me", { token: tR });
+  ok("PF-4 fail (break M1): a platform route in other letter case is still guarded — no session → 401 (never the handler, never a 500), a simulated person → 401; a staff session there is refused by core's link-only rule (403), never answered",
+    mixed.every((r) => r.status === 401) && mixedToken.status === 403, [...mixed.map((r) => [r.status, r.body.code]), mixedToken.status]);
+  const pending = (await call(L.base, "GET", "/api/platform/staff/invitations", { token: tR })).body.invitations as { id: string; email: string; status: string }[];
+  const four = pending.find((i) => i.email === "invitee.four@example.com" && i.status === "PENDING");
+  if (four) await call(L.base, "POST", `/api/platform/staff/invitations/${four.id}/revoke`, { token: tR });
+  const ownerInv = await call(L.base, "POST", "/api/platform/staff/invitations", { token: tR, body: { email: "owner.invite@example.com", roles: ["OWNER"], reason: "a second Owner for cover" } });
+  const adminResend = await call(L.base, "POST", `/api/platform/staff/invitations/${ownerInv.body.id}/resend`, { token: tAdmin });
+  ok("PF-4 fail (break M2): an Admin cannot resend an Owner invitation (403 OWNER_ONLY); the invitation stays as it was",
+    ownerInv.status === 201 && adminResend.status === 403 && adminResend.body.code === "OWNER_ONLY" && sql(DB, `select (revoked_at is null)::text from platform_invitation where id = '${ownerInv.body.id}'`) === "true", [ownerInv, adminResend]);
+  const ownerResend = await call(L.base, "POST", `/api/platform/staff/invitations/${ownerInv.body.id}/resend`, { token: tR, body: { reason: "a second Owner for cover" } });
+  ok("PF-4 pass (M2): an Owner resends it, with a reason and a fresh identity check", ownerResend.status === 200, ownerResend);
+  const deactT = await call(L.base, "POST", `/api/platform/staff/${T}/deactivate`, { token: tR, body: { reason: "on leave" } });
+  clock.t += 6 * 60 * 1000;
+  const staleReact = await call(L.base, "POST", `/api/platform/staff/${T}/reactivate`, { token: tR, body: { reason: "back" } });
+  ok("PF-4 fail (break M3): reactivating an Owner with an identity check older than 5 minutes → 403 STEP_UP_REQUIRED (deactivating them with a fresh one passed)",
+    deactT.status === 200 && staleReact.status === 403 && staleReact.body.code === "STEP_UP_REQUIRED" && sql(DB, `select status from platform_staff where id = '${T}'`) === "DEACTIVATED", [deactT.status, staleReact]);
+  tR = await tokenOf("user-R");
+  const freshReact = await call(L.base, "POST", `/api/platform/staff/${T}/reactivate`, { token: tR, body: { reason: "back" } });
+  clock.t += 6 * 60 * 1000;
+  const staleDeact = await call(L.base, "POST", `/api/platform/staff/${T}/deactivate`, { token: tR, body: { reason: "again" } });
+  ok("PF-4 fail (break M3): deactivating an Owner with an identity check older than 5 minutes → 403 STEP_UP_REQUIRED (reactivating with a fresh one passed)",
+    freshReact.status === 200 && staleDeact.status === 403 && staleDeact.body.code === "STEP_UP_REQUIRED" && sql(DB, `select status from platform_staff where id = '${T}'`) === "ACTIVE", [freshReact.status, staleDeact]);
+  tR = await tokenOf("user-R");
+  const many = await Promise.all(Array.from({ length: 8 }, () => signIn("user-S", "sample-solo")));
+  const live = await Promise.all(many.map((m) => call(L.base, "GET", "/api/platform/me", { token: m.body.token })));
+  ok("PF-4 fail (break m1): eight sign-ins at once leave exactly one live session (each ends the one before it)", many.every((m) => m.status === 200) && live.filter((r) => r.status === 200).length === 1, live.map((r) => r.status));
+  const identity = L.app.get(PlatformIdentity);
+  const ctxO = await identity.authenticate(tAdmin);
+  await tokenOf("user-O");   // user-O signs in elsewhere: the session behind ctxO is ended while its request is "in flight"
+  const inFlight = await identity.revoke(ctxO, ownerResend.body.id).then(() => null, (e) => e as { getStatus?: () => number; getResponse?: () => { code?: string } });
+  ok("PF-4 fail (break m2): a request already past the guard when its session ended changes nothing (re-checked under the firm lock: 401)",
+    inFlight?.getStatus?.() === 401 && inFlight.getResponse?.().code === "SESSION_REVOKED" && sql(DB, `select (revoked_at is null)::text from platform_invitation where id = '${ownerResend.body.id}'`) === "true", inFlight?.getResponse?.());
+  const reasons = await Promise.all([ch(0x200b), ch(0x200b, 0x2060), `a${ch(0)}b`, `x${ch(0xd800)}`].map((reason) => call(L.base, "POST", `/api/platform/staff/${extra.id}/reactivate`, { token: tR, body: { reason } })));
+  ok("PF-4 fail (break m3, m4, m7): a reason of invisible characters only, with a NUL, or with broken text → 400 (never a 404 or a save)", reasons.every((r) => r.status === 400), reasons.map((r) => [r.status, r.body.code]));
+  const emails = await Promise.all([`jose${ch(0x301)}@example.com`, `${ch(0xff41)}bc@example.com`, "<script>x@x.co", "a,b@x.co"].map((email) => call(L.base, "POST", "/api/platform/staff/invitations", { token: tR, body: { email, roles: ["READ_ONLY"] } })));
+  ok("PF-4 fail (break m5): an accent typed as a separate mark, full-width letters, <script> or a comma in an email → 400", emails.every((r) => r.status === 400 && r.body.code === "EMAIL_INVALID"), emails.map((r) => r.status));
+  ok("PF-4 pass (m5): the same address with its accent as one letter is a valid email", emailOf(`jos${ch(0xe9)}@example.com`) === `jos${ch(0xe9)}@example.com`);
+  const tT2 = await tokenOf("user-T");
+  const crossCred = await call(L.base, "PUT", `/api/platform/staff/${S}/credential`, { token: tT2, body: { representativeType: "RCIC", licensingBody: "CICC", licenceNumber: "R2222222" } });
+  ok("PF-4 fail (break m6): another firm's staff id on the licence route → 404 even without the key (never 403)", crossCred.status === 404, crossCred);
+  const junk = await call(L.base, "GET", "/api/platform/me", { token: `${tR}!!` });
+  ok("PF-4 fail (break m7): a stand-in token with junk after its signature → 401", junk.status === 401, junk);
 
   // ---------------------------------------------------- every change writes one audit line, in its transaction
   sql(DB, `create function pf4_force_audit_fail() returns trigger language plpgsql as $$ begin if new.action = 'platform.staff.deactivated' then raise exception 'pf4 forced audit failure'; end if; return new; end $$;

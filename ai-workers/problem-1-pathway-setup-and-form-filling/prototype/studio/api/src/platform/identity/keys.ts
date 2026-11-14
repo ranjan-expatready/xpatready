@@ -16,8 +16,9 @@ import { HttpException, HttpStatus, SetMetadata } from "@nestjs/common";
 export const PLATFORM_ACCESS = "platform:access";
 export type PlatformAccess = { kind: "keys"; keys: string[] } | { kind: "any-staff"; why: string } | { kind: "sign-in"; why: string };
 
-/** The paths the platform guard owns. Every other route is left exactly as it was. */
-export const PLATFORM_PATH = /^\/api\/(platform|front-office)(\/|$)/;
+/** The paths the platform guard owns, in any letter case (Express routes ignore case: break M1). Every other route is left
+ *  exactly as it was. The guard also takes any route that declares its access, whatever its path. */
+export const PLATFORM_PATH = /^\/api\/(platform|front-office)(\/|$)/i;
 /** Firm routes (every path the guard owns today) accept only the firm plane's keys. */
 export const FIRM_KEY = /^agent\/[a-z][a-z0-9-]*:[a-z][a-z0-9.-]*$/;
 
@@ -45,7 +46,7 @@ export const dutiesOf = (keys: ReadonlySet<string>): Duty[] => (Object.keys(DUTY
 /** What the guard puts on the request (req.platform). */
 export type StaffContext = { staffId: string; firmId: string; firmKey: string; roles: string[]; keys: string[]; duties: Duty[]; authTime: number; via: "local" | "cognito" };
 export const staffOf = (req: { platform?: StaffContext }): StaffContext => {
-  if (!req.platform) throw new Error("staffOf: the platform guard did not run for this route");
+  if (!req.platform) return unauthorized("Sign in first: this needs a staff member's session (a bearer token).");   // never a 500 (break M1)
   return req.platform;
 };
 

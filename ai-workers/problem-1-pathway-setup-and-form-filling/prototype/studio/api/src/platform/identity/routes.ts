@@ -16,7 +16,7 @@ export class PlatformIdentityController {
   me(r: R) { return this.id.me(staffOf(r)); }
   invite(r: R, b: B) { return this.id.invite(staffOf(r), b ?? {}); }
   invitations(r: R) { return this.id.invitations(staffOf(r)); }
-  resend(r: R, id: string) { return this.id.resend(staffOf(r), id); }
+  resend(r: R, id: string, b: B) { return this.id.resend(staffOf(r), id, b ?? {}); }
   revoke(r: R, id: string) { return this.id.revoke(staffOf(r), id); }
   roles(r: R, id: string, b: B) { return this.id.changeRoles(staffOf(r), id, b ?? {}); }
   deactivate(r: R, id: string, b: B) { return this.id.deactivate(staffOf(r), id, b ?? {}); }
@@ -32,7 +32,7 @@ decorate(C, "local", [Post("session/local"), HttpCode(200), StaffSignIn("the sig
 decorate(C, "me", [Get("me"), AnyStaff("a person's own identity")], [Req()]);
 decorate(C, "invite", [Post("staff/invitations"), PermissionKeys("agent/staff:manage")], [Req(), Body()]);
 decorate(C, "invitations", [Get("staff/invitations"), PermissionKeys("agent/staff:manage")], [Req()]);
-decorate(C, "resend", [Post("staff/invitations/:id/resend"), HttpCode(200), PermissionKeys("agent/staff:manage")], [Req(), Param("id")]);
+decorate(C, "resend", [Post("staff/invitations/:id/resend"), HttpCode(200), PermissionKeys("agent/staff:manage")], [Req(), Param("id"), Body()]);
 decorate(C, "revoke", [Post("staff/invitations/:id/revoke"), HttpCode(200), PermissionKeys("agent/staff:manage")], [Req(), Param("id")]);
 decorate(C, "roles", [Patch("staff/:id/roles"), PermissionKeys("agent/role:assign")], [Req(), Param("id"), Body()]);
 decorate(C, "deactivate", [Post("staff/:id/deactivate"), HttpCode(200), PermissionKeys("agent/staff:manage")], [Req(), Param("id"), Body()]);
