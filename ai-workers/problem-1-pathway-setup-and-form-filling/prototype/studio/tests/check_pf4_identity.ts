@@ -180,6 +180,14 @@ try {
   const cNewer = access({ auth_time: nowS() - 5 });
   const newer = await call(C.base, "GET", "/api/platform/me", { token: cNewer }), older = await call(C.base, "GET", "/api/platform/me", { token: cOlder });
   ok("PF-4 pass/fail: Cognito path — a newer sign-in works and ends the older session (\"You signed in on another device\")", newer.status === 200 && older.status === 401 && older.body.detail === ANOTHER_DEVICE, [newer.status, older.body]);
+  const fresh = await db.platformStaff.create({ data: { firmId: FIRM_B, email: "cognito.new@sample-solo.example.com", displayName: "New person (Sample)", status: "ACTIVE", identitySubject: "cognito-sub-new" } });
+  await db.platformRoleGrant.create({ data: { firmId: FIRM_B, staffId: fresh.id, role: "READ_ONLY", grantedBy: "check" } });
+  const deviceA = access({ sub: "cognito-sub-new", auth_time: nowS() - 600, iat: nowS() - 60 }), deviceB = access({ sub: "cognito-sub-new", auth_time: nowS() - 60 });
+  const firstB = await call(C.base, "GET", "/api/platform/me", { token: deviceB }), thenA = await call(C.base, "GET", "/api/platform/me", { token: deviceA });
+  ok("PF-4 fail (review r2-m1): a never-used account's first sign-ins — device B (newer) calls first, then device A (older, never used) is refused \"You signed in on another device\"",
+    firstB.status === 200 && thenA.status === 401 && thenA.body.detail === ANOTHER_DEVICE, [firstB.status, thenA.body]);
+  await db.platformRoleGrant.updateMany({ where: { staffId: fresh.id }, data: { endedAt: new Date(), endedBy: "check" } });
+  await db.platformStaff.update({ where: { id: fresh.id }, data: { status: "DEACTIVATED", deactivationReason: "check person" } });
   const noMfa = new CognitoIdentity({ userPoolId: POOL, clientId: CLIENT, mfaRequired: false });
   ok("PF-4 fail: PLATFORM_POOL_MFA_REQUIRED=false makes every Cognito sign-in refused, saying why",
     await throwsLike(() => noMfa.verify(cNewer), (e) => (e as { code?: string }).code === "TWO_STEP_REQUIRED" && /PLATFORM_POOL_MFA_REQUIRED=false/.test((e as Error).message)));

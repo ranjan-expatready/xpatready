@@ -86,3 +86,39 @@ None.
 A real Cognito pool (PF-4b); any browser or screen reader (no screen); an intended user's walk (D17, D20); the later commits (re-review).
 
 **Verdict: Block** (Request changes on 695051a3a952f9846d4caea8b981b0c1a23103c0). To fix: **M1** (resend runs the role rules) and **M2** (case-insensitive guard), each with a fail test. The Minors can follow.
+
+## Round 2: head 6b84dbd8 (diff from 695051a3 only, P-277; breaker report read)
+
+**Checks run:**
+* `check_pf4_identity.ts 4543` on a fresh `pf4rev` copy (stopped afterwards): **106/106**.
+* `check_pf3_platform_schema` 75/75 · `check_case_feed` 37/37 · `check_features_registry` 27/27 · `tsc`: no error in the changed files.
+* Mutations re-run on a scratch copy of 6b84dbd8: each of round 1's survivors now turns the check red (the own-licence check, SUSPENDED in the seat count, the stand-in's signature check and its expiry check). So do the new rules: resend's `roleRules`, the roles re-read, the Owner step-up on deactivation, and the sign-in row lock (8 parallel sign-ins → 8 live sessions).
+* Probes at the head:
+  * `PUT /API/platform/staff/<id>/credential` with no token → **401** on the copy (was 500).
+  * In process: `GET /API/PLATFORM/ME` with a simulated person → 401; with a staff token → core's 403 link-only.
+  * Every zone that `Intl` lists is accepted, and so are 28 modern IANA names (Asia/Kolkata, Europe/Kyiv, Pacific/Kanton, Etc/GMT-14 …). ETC/GMT+5 and Asia/KolKata are refused.
+
+**Round 1 findings:**
+* **M1 fixed.** `resend` runs `roleRules` (`service.ts` resend). An Admin's resend of an Owner invitation → 403 `OWNER_ONLY`, and the invitation is left as it was. An Owner's resend needs a reason and a fresh identity check.
+* **M2 fixed.** Three layers now guard these routes:
+  * any route that declares access is guarded whatever its path (`guard.ts:57-59`);
+  * `PLATFORM_PATH` is case-insensitive;
+  * `staffOf` answers 401.
+  
+  Each layer alone keeps the check green, so the test proves the outcome but not which layer gave it. That is defence in depth, not a finding.
+* **m2 fixed** (a Read-only person on another person's licence → 403; suspended staff hold a seat; the stand-in rejects a forged and an expired token).
+* **m3 fixed** (409 `ROLES_CHANGED` under the firm lock; status and revocation are re-checked too).
+* **m4 fixed for the stand-in** by the person's row lock.
+* **m6 fixed**, with one leftover spelling that needs no action: `Asia/Ho_chi_Minh` passes as a second spelling.
+* **m1** (the platform-audit workspace against d1 on a shared copy) and **m5** (`graph.mjs` cannot see `decorate()` routes) go to the tech lead, as stated. Both stay Minor and open.
+* **The only-Owner branch of `changeRoles`:** keep it. Since the actor is now re-read, the branch cannot be reached through the API (a racing Owner gets `ROLES_CHANGED` first). It is a cheap second wall, and a direct test adds nothing.
+
+**New (Minor, does not block):**
+* **r2-m1: on the Cognito path, a person's first sign-ins can leave two sessions live.** The cause: `recordSignIn` writes the "another device" revocation only when `last_sign_in_at` was already set (`service.ts` recordSignIn, `hadSession`). The guard skips an older `auth_time` and writes nothing for it.
+  * Run (in process, test key set): device A signs in (auth 10 min ago) but makes no call yet. Device B signs in (1 min ago) and calls `/me` → 200. A then calls `/me` → **200**, so both stay live until a third sign-in.
+  * Only a never-used account is affected (a newly accepted invitee), and only on the Cognito path, which nobody uses until PF-4b.
+  * Fix: always write the revocation at `at - 1`, or have the guard refuse `auth_time` older than `last_sign_in_at`. Add a fail test with no earlier session.
+
+No Blocker or Major is open at 6b84dbd81faa38f8f902f9247a4d456f3d1518a5. The journey score rises from 8 to 9 / 10: Correct data and Error recovery are now 1.
+
+**Verdict: Approve 6b84dbd81faa38f8f902f9247a4d456f3d1518a5**

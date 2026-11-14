@@ -115,7 +115,9 @@ export class PlatformIdentity implements OnModuleInit {
       if (atMs === null) return null;   // another request recorded this sign-in already
       const at = new Date(atMs), hadSession = row.last !== null;
       await tx.platformStaff.update({ where: { id: staffId }, data: { lastSignInAt: at } });
-      if (hadSession) await tx.platformSessionRevocation.create({ data: { firmId, staffId, revokedAt: new Date(atMs - 1), reason: "another-device" } });
+      // Always, even on a first recorded sign-in (review r2-m1): an older session that never made a call (Cognito device A
+      // signed in before device B) is ended too.
+      await tx.platformSessionRevocation.create({ data: { firmId, staffId, revokedAt: new Date(atMs - 1), reason: "another-device" } });
       await auditStaff(tx, { firmId, firmKey, actor: actorWord(staffId), action: "platform.staff.sign_in", entityKey: staffId, summary: `a staff member signed in (${via}); ${hadSession ? "their older session was ended" : "first session"}`, detail: { staffId, via, at: at.toISOString() } });
       return atMs;
     });
