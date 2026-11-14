@@ -1,0 +1,14 @@
+failed to connect to the docker API at unix:///var/run/docker.sock; check if the path is correct and if the daemon is running: dial unix /var/run/docker.sock: connect: no such file or directory
+up exit 1
+FAIL  health: GET /api/health answered 000 — curl: (7) Failed to connect to 127.0.0.1 port 4480 after 0 ms: Couldn't connect to server
+FAIL  first page: GET / answered 000 without the web app root
+SKIP  me: GET /api/platform/me waits for PF-4 on main (PLATFORM_ME=required runs it)
+FAIL  non-root: the image's user is 'unset (root)'
+FAIL  no secret: could not read the image's environment or history
+skeleton smoke: 4 step(s) failed (http://127.0.0.1:4480)
+smoke exit 1
+FAIL  health: GET /api/health answered 000 — curl: (7) Failed to connect to 127.0.0.1 port 4480 after 0 ms: Couldn't connect to server
+FAIL  first page: GET / answered 000 without the web app root
+SKIP  me: GET /api/platform/me waits for PF-4 on main (PLATFORM_ME=required runs it)
+skeleton smoke: 2 step(s) failed (http://127.0.0.1:4480)
+seeded exit 1 (must be non-zero)

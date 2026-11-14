@@ -1,0 +1,81 @@
+NOTICE:  database "xr_studio_pf3_empty_3759" does not exist, skipping
+NOTICE:  database "xr_studio_pf3_demo_3759" does not exist, skipping
+NOTICE:  database "xr_studio_pf3_bare_3759" does not exist, skipping
+PASS  PF-3: the migration has its own stamp, later than the newest on main before it (20261112150000_a24_case_number; P-348 (8))
+PASS  PF-3 pass: every migration applies to an empty database
+PASS  PF-3 pass: migrate diff from the migrated empty database to the schema names no PF-3 table or type
+PASS  PF-3 fail: a database without PF-3's migration differs from the schema (diff names the platform tables)
+PASS  PF-3 fail: the migration does not apply twice (it is never re-run silently)
+PASS  PF-3 pass: the migration applies to a demo-data copy and leaves its rows as they were
+PASS  PF-3 pass: migrate diff after it on the demo-data copy names no PF-3 table or type
+PASS  PF-3 pass: the starter roles' keys per role equal SA-06 v3.15 Appendix C (Owner 231, Admin 213, Case Manager 145, Case Officer 99, Billing / Finance 46, Read-only 40)
+PASS  PF-3 pass: every seeded key is a firm (agent/*) key; Owner-only keys are on Owner alone (SA6-D5)
+PASS  PF-3 fail: a key for a role that is not one of the six is refused
+PASS  PF-3 pass: three Sample plans, trial 14 days, no price set
+PASS  PF-3 pass: the seed adds the two Sample firms, four staff, their grants and three licence records
+PASS  PF-3 pass: the Sample firms keep their keys and Canada as country
+PASS  PF-3 pass: the seed run twice changes nothing (every PF-3 table's rows identical, timestamps too)
+PASS  PF-3 fail: a change a person made to a Sample row is not undone by the seed
+PASS  PF-3 fail: the seed into a database without the Sample plans is refused in words, and writes nothing
+PASS  PF-3 pass: after the seed every case's firm key matches a platform firm
+PASS  PF-3 fail: a case whose firm key no platform firm has is named
+PASS  PF-3 pass: every Sample user has one platform_staff row with its actor id (user-O, user-R, user-S, user-T)
+PASS  PF-3 pass: user-R and user-S are Case Managers with a licence record (and Owners: firm_admin); user-O a Case Officer
+PASS  PF-3 fail: a second staff row with an actor id already used is refused
+PASS  PF-3 pass: the rest of a firm changes (its operating name)
+PASS  PF-3 fail: a firm's country_code cannot change
+PASS  PF-3 pass: a person without a licence record gets one
+PASS  PF-3 fail: a second licence record for one person is refused
+PASS  PF-3 pass: another firm with its own contact email is accepted
+PASS  PF-3 fail: a contact email belongs to one firm (the same email, or the same in capitals, is refused)
+PASS  PF-3 fail: a country that is not two capital letters is refused
+PASS  PF-3 fail: a second open invitation for the same firm and email is refused
+PASS  PF-3 pass: once revoked, the email can be invited again; another firm may invite the same email
+PASS  PF-3 fail: an invitation living longer than 72 hours is refused
+PASS  PF-3 pass: webhook receipts: one per service and event id (the same id from another service is another receipt)
+PASS  PF-3 fail: the same service and event id twice is refused (a repeat is ignored by the handler)
+PASS  PF-3 pass: a module event is written (insert)
+PASS  PF-3 fail: module_event refuses update, delete and truncate
+PASS  PF-3 pass: a sign-up link is used once (it records its firm)
+PASS  PF-3 fail: a used sign-up link is refused a second time; one living over 14 days is refused
+PASS  PF-3 fail: a second live subscription for one firm is refused
+PASS  PF-3 pass: every table but platform_plan, platform_role_permission and platform_setting_definition has firm_id first in an index
+PASS  PF-3 fail: a table with firm_id only second in its index is named
+PASS  PF-3 pass: firmScope(A) returns firm A's rows only (3 staff), firmScope(B) firm B's (1)
+PASS  PF-3 fail: firm B's staff id looked up through firmScope(A) is not found (404, never 403)
+PASS  PF-3 fail: a where clause naming firm B inside firmScope(A), or a firm id that is not one, is refused before any query
+PASS  PF-3 pass: an unset key reads its default (currency CAD, two-step off until founder question 3, business hours Mon-Fri 09:00-17:00)
+PASS  PF-3 fail: a value that fails its registered schema is refused and nothing is written
+PASS  PF-3 fail: an unregistered key is refused
+PASS  PF-3 pass: a setting change is saved and writes one audit line (who, the firm, from and to)
+PASS  PF-3 fail: a forced audit failure rolls the setting change back (one transaction)
+PASS  PF-3 pass: inside a caller's transaction the change and its audit line are written together
+PASS  PF-3 fail: the caller's transaction rolling back takes the setting and its audit line with it
+PASS  PF-3 pass: readSettings gives every registered key, defaults filled in
+PASS  PF-3 fail: a firm that does not exist cannot be given a setting
+PASS  PF-3 pass: another module registers its own key; the definition is stored with its JSON schema on first write
+PASS  PF-3 fail: a key registered twice, or with a default that fails its own schema, is refused at registration
+PASS  PF-3 fail (break m): a setting change with no one making it is refused
+PASS  PF-3 fail (break m): a time zone not in its own spelling is refused (america/toronto)
+PASS  PF-3 pass (break m): firmScope with the firm id in capitals is the same firm
+PASS  PF-3 fail (break B-2): a grant, licence record or session revocation of firm B naming firm A's person is refused
+PASS  PF-3 pass (break B-2): the same grant in the person's own firm is accepted
+PASS  PF-3 fail (break B-3): an ended Sample subscription is not brought back by the seed
+PASS  PF-3 fail (break B-4): a firm's key cannot change (cases carry it)
+PASS  PF-3 pass (break B-4): a Sample person whose actor id a person cleared is left as it is, and the seed still runs
+PASS  PF-3 pass (break B-5): an expired open invitation does not block a new one; it is closed at its expiry
+PASS  PF-3 fail (break B-5): an open invitation not yet expired still blocks a second
+PASS  PF-3 fail (break m): an invitation both accepted and revoked, or with a null role, is refused
+PASS  PF-3 fail (break m): an email with spaces around it, or an owner or billing email in capitals, is refused
+PASS  PF-3 fail (break B-1): while one transaction holds an unwritten event, a second writer waits (seq follows commit order; no event is skipped by a reader)
+PASS  PF-3 fail (break B-1): a seq the writer gives is replaced by the next in order
+PASS  PF-3 pass (break B-1): after both commit, seq increases in commit order
+PASS  PF-3 fail (break R2-2): a staff member cannot be moved to another firm (their grants and licence never follow)
+PASS  PF-3 fail (break R2-2): a grant's firm cannot be changed under its person either
+PASS  PF-3 pass (break R2-3): current IANA names are accepted (Asia/Kolkata, Europe/Kyiv, America/Argentina/Buenos_Aires, Etc/UTC)
+PASS  PF-3 fail (break R2-6): an email with a tab, a newline, a non-breaking or zero-width space is refused
+PASS  PF-3 fail (break R2-7): an invitation listing a role twice, or accepted after it expired, is refused
+PASS  PF-3: no secret column — no PF-3 column is named like a password, secret or raw token
+
+75 passed, 0 failed
+exit 0
