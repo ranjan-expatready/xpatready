@@ -1,0 +1,226 @@
+{
+ "_about": "Hand-kept risk list for the cockpit (P-591). Seeded 14 Nov from MVP-CHECKLIST.md section C items marked Not started. trigger_date null = the gate before the first real firm's data. status: open, watching or closed. The tech lead keeps it current; the data script flags section C items marked Not started that are missing here.",
+ "as_of": "2026-11-14",
+ "risks": [
+  {
+   "id": "C2",
+   "risk": "Walls between firms are not yet on the case-side tables",
+   "owner": "tech lead (release)",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Shape a case-side walls row with the case-side contract; size it in the 19 Nov count",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C2; P-575, P-584"
+  },
+  {
+   "id": "C5",
+   "risk": "No outside security test booked",
+   "owner": "founder",
+   "trigger_date": "2026-11-16",
+   "trigger": "2026-11-16",
+   "mitigation": "Book the test on Monday 16 Nov",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C5; P-551"
+  },
+  {
+   "id": "C6",
+   "risk": "No security self-check against OWASP ASVS level 2",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Add a self-check row after sign-in (PF-4) merges",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C6; MVP-CHECKLIST C6 (no decision yet)"
+  },
+  {
+   "id": "C8",
+   "risk": "Known vulnerable libraries not fixed (Dependabot alerts open)",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Shape SEC-1 and fix the high alerts first",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C8; P-587"
+  },
+  {
+   "id": "C9",
+   "risk": "Secrets not yet in a managed store",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Add a row with the cloud set-up (PF-8)",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C9; MVP-CHECKLIST C9 (no decision yet)"
+  },
+  {
+   "id": "C10",
+   "risk": "Uploads not scanned for viruses or checked by type",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Shape rows for map rows 66 and 67",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C10; MVP-CHECKLIST C10 (no decision yet)"
+  },
+  {
+   "id": "C12",
+   "risk": "No hosting in Canada yet; cloud account not opened",
+   "owner": "founder",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Open the cloud account (M4), then shape PF-8",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C12; P-559, P-586"
+  },
+  {
+   "id": "C13",
+   "risk": "Backups and a tested restore not in place",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Shape PF-8 with a restore drill",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C13; P-586"
+  },
+  {
+   "id": "C15",
+   "risk": "Speed for about 100 firms not checked under load",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Add a load check before the gate",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C15; P-562"
+  },
+  {
+   "id": "C16",
+   "risk": "No logs, metrics or alerts that wake a person",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Shape map row 13",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C16; MVP-CHECKLIST C16 (no decision yet)"
+  },
+  {
+   "id": "C17",
+   "risk": "No named people for on call",
+   "owner": "founder",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Name the on-call roles before the first customer",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C17; P-551"
+  },
+  {
+   "id": "C18",
+   "risk": "No incident and breach response with named roles",
+   "owner": "founder",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Name the roles; shape map row 86 (breach register)",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C18; P-551"
+  },
+  {
+   "id": "C20",
+   "risk": "No cloud deploy with a way back to the last good version",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Shape with PF-8",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C20; MVP-CHECKLIST C20 (no decision yet)"
+  },
+  {
+   "id": "C21",
+   "risk": "Outside accounts not opened, so their review clocks have not started",
+   "owner": "founder",
+   "trigger_date": "2026-11-16",
+   "trigger": "2026-11-16",
+   "mitigation": "Open them from 16 Nov with the tech lead filling the forms while the founder watches",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C21; P-580, P-586"
+  },
+  {
+   "id": "C22",
+   "risk": "Running cost not sized; no budget alarm",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Size for about 100 firms once hosting is chosen",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C22; P-562"
+  },
+  {
+   "id": "C23",
+   "risk": "Counsel has not read the retainer, trust handling, terms and data location (Unconfirmed: no counsel)",
+   "owner": "founder",
+   "trigger_date": "2026-11-16",
+   "trigger": "2026-11-16",
+   "mitigation": "Engage counsel on Monday 16 Nov",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C23; P-551"
+  },
+  {
+   "id": "C25",
+   "risk": "No named privacy officer",
+   "owner": "founder",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Name the role before the gate",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C25; MVP-CHECKLIST C25 (no decision yet)"
+  },
+  {
+   "id": "C26",
+   "risk": "No written statement of what data leaves Canada (Unconfirmed: no counsel)",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Write the statement; settle the AI choice",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C26; P-559, P-561"
+  },
+  {
+   "id": "C28",
+   "risk": "A person's access request cannot yet be answered",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Shape map rows 34 and 85",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C28; MVP-CHECKLIST C28 (no decision yet)"
+  },
+  {
+   "id": "C31",
+   "risk": "Trust ledger not reviewed by an outsider or an accountant (Unconfirmed: no counsel)",
+   "owner": "founder",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Book the review",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C31; MVP-CHECKLIST C31 (map open item 4)"
+  },
+  {
+   "id": "C32",
+   "risk": "Regulator's rules not yet read for conflict, complaints and identity checks (Unconfirmed: no counsel)",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Read and cite at the source",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C32; P-579"
+  },
+  {
+   "id": "C33",
+   "risk": "No narrow launch scope written for the first firm",
+   "owner": "tech lead",
+   "trigger_date": null,
+   "trigger": "gate before the first real firm's data",
+   "mitigation": "Write it from MVP-CHECKLIST",
+   "status": "open",
+   "source": "MVP-CHECKLIST.md C33; P-551"
+  }
+ ]
+}

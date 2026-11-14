@@ -1,0 +1,14 @@
+{
+  "_about": "Hand-kept map from MVP-CHECKLIST.md's Module column to the boxes on the cockpit's architecture view (P-591). A row counts in every module its Module cell names (split on '+'; text in brackets ignored). match: Module-column names, lower case. rule multi: rows that span two or more modules or 'All' (they meet through the shared ports, P-576). The tech lead edits this when a module is renamed.",
+  "as_of": "2026-11-14",
+  "modules": [
+    {"id": "platform", "name": "Platform", "kind": "module", "match": ["platform"], "groups": ["A", "B", "C", "E", "H", "L"], "what": "Sign-in, firms, billing, messages, automation, portal login, complaints, running the service", "source": "P-575, P-584"},
+    {"id": "front", "name": "Front office", "kind": "module", "match": ["front office"], "groups": ["C", "D", "F", "H", "K"], "what": "Leads, booking, retainers, signing, compliance checks", "source": "P-575, P-584"},
+    {"id": "money", "name": "Client money", "kind": "module", "match": ["client money"], "groups": ["G", "H"], "what": "Trust and operating money, invoices, statements", "source": "P-575, P-584"},
+    {"id": "case", "name": "Case side", "kind": "module", "match": ["case side"], "groups": ["A", "C", "H", "I", "J", "K"], "what": "Cases, documents, people and facts", "source": "P-575, P-558"},
+    {"id": "engine", "name": "Forms and configurator engine", "kind": "engine", "match": ["configurator"], "groups": ["K"], "what": "Government forms, the pathway set-up, AI on top", "source": "MVP-CHECKLIST.md group K"},
+    {"id": "audit", "name": "Audit", "kind": "module", "match": ["audit"], "groups": ["A", "L"], "what": "Audit trail, keep periods, privacy registers", "source": "P-571, P-575"},
+    {"id": "ports", "name": "Shared ports layer", "kind": "layer", "rule": "multi", "match": [], "groups": [], "what": "Contracts between modules: ports and fakes first", "source": "P-576"},
+    {"id": "unowned", "name": "No module named yet", "kind": "gap", "match": ["not named"], "groups": ["I", "J", "L"], "what": "Rows with no module owner yet (documents, dashboards, privacy registers)", "source": "MVP-CHECKLIST.md Flags"}
+  ]
+}

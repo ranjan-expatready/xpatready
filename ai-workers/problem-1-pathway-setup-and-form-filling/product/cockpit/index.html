@@ -1,0 +1,461 @@
+<title>Founder's Progress Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+:root{
+  color-scheme:light;
+  --bg:#eef1f4; --panel:#ffffff; --panel2:#f6f8fa; --ink:#111a22; --ink2:#46535f; --ink3:#6f7c88; --line:#d5dbe1;
+  --accent:#0b5f8a; --accent-soft:#dcebf3;
+  --good:#17703f; --good-soft:#dcf0e3; --prog:#1d5fa8; --prog-soft:#dde8f6;
+  --wait:#9a5b00; --wait-soft:#fbeccf; --bad:#b3261e; --bad-soft:#f8dcd9; --none:#5e6a75; --none-soft:#e7ebee;
+  --hot:#c2410c;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0c1116; --panel:#141b22; --panel2:#19222b; --ink:#e6edf3; --ink2:#a9b6c2; --ink3:#7d8b98; --line:#26313c;
+    --accent:#5fb3e0; --accent-soft:#132c3b;
+    --good:#4cc283; --good-soft:#123222; --prog:#6ea8f0; --prog-soft:#152940; --wait:#e8a740; --wait-soft:#3a2a0e;
+    --bad:#f0726a; --bad-soft:#3d1715; --none:#95a3b0; --none-soft:#222c35; --hot:#fb8b4c;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0c1116; --panel:#141b22; --panel2:#19222b; --ink:#e6edf3; --ink2:#a9b6c2; --ink3:#7d8b98; --line:#26313c;
+  --accent:#5fb3e0; --accent-soft:#132c3b;
+  --good:#4cc283; --good-soft:#123222; --prog:#6ea8f0; --prog-soft:#152940; --wait:#e8a740; --wait-soft:#3a2a0e;
+  --bad:#f0726a; --bad-soft:#3d1715; --none:#95a3b0; --none-soft:#222c35; --hot:#fb8b4c;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--sans);font-variant-numeric:tabular-nums;overflow-x:hidden}
+.wrap{max-width:1120px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-right,0px)) 72px max(16px,env(safe-area-inset-left,0px))}
+.num,td.n,.mono{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:.92em}
+a{color:var(--accent)}
+/* sticky strip */
+.strip{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);margin:0;padding:8px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px))}
+.strip-in{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0;cursor:help}
+.tile .k{font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .v{font:600 19px/1.15 var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .s{font-size:11px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile.alert{border-color:var(--bad);box-shadow:inset 3px 0 0 var(--bad)}
+.tile.warn{box-shadow:inset 3px 0 0 var(--wait)}
+header.top{padding:18px 0 4px}
+header.top h1{font:600 22px/1.2 var(--sans);margin:0}
+header.top p{margin:4px 0 0;color:var(--ink2);font-size:13px}
+/* sections */
+section{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin:14px 0;padding:14px 14px 16px;min-width:0}
+section>h2{font:600 16px/1.25 var(--sans);margin:0;display:flex;gap:8px;align-items:baseline}
+section>h2 .no{font:500 11px var(--mono);color:var(--ink3)}
+section>.why{margin:2px 0 12px;color:var(--ink2);font-size:13px}
+h3{font:600 13px/1.3 var(--sans);margin:14px 0 6px;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}
+.grid2{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:760px){.grid2{grid-template-columns:1fr 1fr}}
+.box{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--ink3);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+td.n,th.n{text-align:right;white-space:nowrap}
+.muted{color:var(--ink3)}
+.small{font-size:12.5px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;cursor:help;min-width:0}
+.kpi .k{font-size:12px;color:var(--ink2)}
+.kpi .v{font:600 22px/1.2 var(--mono)}
+.kpi .s{font-size:11.5px;color:var(--ink3)}
+[data-src]{cursor:help}
+/* pills: tone by colour AND by shape mark */
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 8px 1px 6px;font-size:12px;font-weight:500;white-space:nowrap;border:1px solid transparent;line-height:1.5}
+.pill::before{content:"";width:8px;height:8px;flex:none;background:currentColor}
+.t-good{background:var(--good-soft);color:var(--good)} .t-good::before{border-radius:50%}
+.t-prog{background:var(--prog-soft);color:var(--prog)} .t-prog::before{clip-path:polygon(0 0,100% 50%,0 100%)}
+.t-wait{background:var(--wait-soft);color:var(--wait)} .t-wait::before{clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.t-bad{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)} .t-bad::before{clip-path:polygon(50% 0,100% 100%,0 100%)}
+.t-none{background:var(--none-soft);color:var(--none)} .t-none::before{background:transparent;border:1.5px solid currentColor;width:7px;height:7px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+/* lists */
+ul.items{list-style:none;margin:0;padding:0}
+ul.items li{padding:8px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:10px;align-items:start}
+ul.items li>.tag{max-width:8.5em;white-space:normal;overflow-wrap:anywhere}
+ul.items li>div{min-width:0;overflow-wrap:anywhere}
+ul.items li:last-child{border-bottom:0}
+.tag{font:500 12px var(--mono);color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 5px;white-space:nowrap}
+.oneline{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.oneline>div{background:var(--panel);padding:8px 10px;cursor:help}
+.oneline .k{font-size:11.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em}
+.oneline .v{font:600 17px/1.3 var(--mono)}
+.oneline .s{font-size:12px;color:var(--ink2)}
+svg text{font-family:var(--sans)}
+.svgwrap{width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12.5px;background:var(--panel2);cursor:help}
+.chip b{font-weight:600}
+.bar{display:flex;height:22px;border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.bar>span{display:block;height:100%}
+.sq{display:grid;grid-template-columns:repeat(auto-fill,minmax(18px,1fr));gap:3px}
+.sq i{display:block;aspect-ratio:1;border-radius:3px;cursor:help}
+.groupgrid{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:760px){.groupgrid{grid-template-columns:1fr 1fr}}
+.grp{border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.grp h4{margin:0 0 6px;font-size:13.5px;display:flex;justify-content:space-between;gap:8px}
+.grp .row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:3px 0;border-top:1px dashed var(--line)}
+.grp .row span:first-child{min-width:0}
+.trend{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.trend>div{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;cursor:help}
+.err{border:2px solid var(--bad);background:var(--bad-soft);color:var(--ink);border-radius:8px;padding:14px;margin:18px 0}
+.srcbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--ink);color:var(--bg);font-size:12.5px;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:none}
+.srcbar.on{display:block}
+.srcbar b{font-weight:600}
+.example{display:inline-block;border:1px dashed var(--wait);color:var(--wait);border-radius:4px;padding:0 6px;font-size:11.5px;margin-left:6px}
+.modlist{margin-top:10px}
+.dim{opacity:.55}
+@media(max-width:520px){
+  .strip-in{gap:4px}.tile{padding:4px 5px}.tile .v{font:600 15px/1.2 var(--sans)}.tile .k{font-size:10px;text-transform:none;letter-spacing:0}.tile .s{display:none}
+  section{padding:12px 10px 14px}
+  th,td{padding:5px 6px}
+}
+</style>
+
+<div class="strip" id="strip"><div class="strip-in" id="stripIn">
+  <div class="tile"><div class="k">Needs you</div><div class="v">&#x2026;</div></div>
+  <div class="tile"><div class="k">Release 1</div><div class="v">&#x2026;</div></div>
+  <div class="tile"><div class="k">qa Works</div><div class="v">&#x2026;</div></div>
+  <div class="tile"><div class="k">Next date</div><div class="v">&#x2026;</div></div>
+  <div class="tile"><div class="k">Data age</div><div class="v">&#x2026;</div></div>
+</div></div>
+<div class="wrap" id="app">
+  <header class="top"><h1>Founder's Progress Board</h1><p>Pathway Configurator, Release 1. Every number comes from the data script; hover or tap a number to see where it comes from.</p></header>
+  <div id="body"><p class="muted">Loading data.json&#x2026;</p></div>
+</div>
+<div class="srcbar" id="srcbar" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+var D=null;
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];});}
+function v(x){return x&&typeof x==="object"&&"v" in x?x.v:x;}
+function src(x){return x&&typeof x==="object"&&x.src?x.src:"";}
+function S(s){return s?' data-src="'+esc(s)+'" title="'+esc(s)+'"':"";}
+function nz(x,suf){return x==null?'<span class="muted">n/a</span>':esc(x)+(suf||"");}
+function fmtDate(iso){if(!iso)return "not dated";var d=new Date(iso+"T00:00:00");return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}
+function short(iso){if(!iso)return "not dated";var d=new Date(iso+"T00:00:00");return d.toLocaleDateString("en-GB",{day:"numeric",month:"short"});}
+function pill(text,tone,s){return '<span class="pill t-'+tone+'"'+S(s)+'>'+esc(text)+'</span>';}
+var TONE={"qa Works":"good","Merged":"prog","In PR":"prog","Shaped":"wait","Not shaped":"none",
+  "Works":"good","Built, awaiting qa":"prog","Partial":"wait","Not tested":"none","Broken":"bad","Not built":"none",
+  "Merge queue":"good","Ready for label":"prog","Building":"prog","Concept":"none","CI running":"prog","CI red":"bad","Question to Lead":"wait",
+  "pushing":"good","quiet":"wait","blocked":"bad","ready":"good","in PR":"prog","merged":"good"};
+function tone(s){return TONE[s]||"none";}
+function toneVar(t){return "var(--"+t+")";}
+function ageText(h){if(h==null)return "n/a";if(h<1)return Math.round(h*60)+" min";if(h<48)return (Math.round(h*10)/10)+" h";return Math.round(h/24)+" d";}
+function section(no,id,title,why,inner){return '<section id="'+id+'"><h2><span class="no">'+no+'</span>'+esc(title)+'</h2><p class="why">'+esc(why)+'</p>'+inner+'</section>';}
+function kpi(label,val,sub,s,cls){return '<div class="kpi'+(cls?" "+cls:"")+'"'+S(s)+'><div class="k">'+esc(label)+'</div><div class="v">'+val+'</div>'+(sub?'<div class="s">'+sub+'</div>':"")+'</div>';}
+
+/* source bar on tap */
+var bar=document.getElementById("srcbar"),barT=null;
+document.addEventListener("click",function(e){
+  var el=e.target.closest("[data-src]");
+  var mod=e.target.closest("[data-mod]");
+  if(mod){showModule(mod.getAttribute("data-mod"));}
+  if(!el){bar.classList.remove("on");return;}
+  bar.innerHTML="<b>Source:</b> "+esc(el.getAttribute("data-src"));
+  bar.classList.add("on");clearTimeout(barT);barT=setTimeout(function(){bar.classList.remove("on");},7000);
+});
+document.addEventListener("keydown",function(e){
+  if((e.key==="Enter"||e.key===" ")&&e.target.getAttribute&&e.target.getAttribute("data-mod")){e.preventDefault();showModule(e.target.getAttribute("data-mod"));}
+});
+
+function dataAgeH(){return D?(Date.now()-Date.parse(D.freshness.generated_at))/3600000:null;}
+
+function renderStrip(){
+  var s=D.summary,el=document.getElementById("stripIn");
+  var ny=v(s.needs_you),bu=v(s.burnup_pct),w=v(s.works)||[null,null],nd=v(s.next_date),age=dataAgeH();
+  var ageCls=age>6?"alert":age>2?"warn":"";
+  el.innerHTML=
+   '<div class="tile'+(ny>0?" alert":"")+'"'+S(src(s.needs_you))+'><div class="k">Needs you</div><div class="v">'+nz(ny)+'</div><div class="s">open items</div></div>'+
+   '<div class="tile"'+S(src(s.burnup_pct))+'><div class="k">Rows done</div><div class="v">'+nz(bu,"%")+'</div><div class="s">rows at qa Works</div></div>'+
+   '<div class="tile"'+S(src(s.works))+'><div class="k">qa Works</div><div class="v">'+nz(w[0])+'<span class="muted">/'+nz(w[1])+'</span></div><div class="s">capabilities</div></div>'+
+   '<div class="tile"'+S(src(s.next_date))+'><div class="k">Next date</div><div class="v">'+(nd?esc(short(nd.date)):"none")+'</div><div class="s">'+(nd?esc(nd.kind)+", in "+nd.days_left+" d":"")+'</div></div>'+
+   '<div class="tile '+ageCls+'"'+S("generated "+D.freshness.generated_ist+"; amber over 2 h, red over 6 h")+'><div class="k">Data age</div><div class="v">'+ageText(age)+'</div><div class="s">'+esc(D.freshness.generated_ist||"")+'</div></div>';
+}
+
+/* 1 needs you */
+function rNeeds(){
+  var n=D.needs_you,h='<ul class="items">';
+  n.asks.forEach(function(a){h+='<li'+S(a.src)+'><span class="tag">'+esc(a.id)+'</span><div><div>'+esc(a.ask)+'</div><div class="small muted">'+esc(a.status)+'</div></div></li>';});
+  n.pr_questions.forEach(function(q){h+='<li'+S(q.src)+'><span class="tag">#'+q.n+'</span><div><div>Question for the tech lead, open '+ageText(q.age_h)+'</div><div class="small muted">'+esc(q.title)+'</div></div></li>';});
+  if(v(n.for_founder))h+='<li'+S(src(n.for_founder))+'><span class="tag">For you</span><div class="small">'+esc(v(n.for_founder))+'</div></li>';
+  if(v(n.waiting_line))h+='<li'+S(src(n.waiting_line))+'><span class="tag">Waiting</span><div class="small">'+esc(v(n.waiting_line))+'</div></li>';
+  if(!n.asks.length&&!n.pr_questions.length)h+='<li class="muted">Nothing open.</li>';
+  return section("01","needs","Needs you","Your open asks and the questions waiting on an answer. This is the only place they are listed.",h+'</ul>');
+}
+
+/* 2 system map + team */
+function rSystem(){
+  var vs=D.value_stream;
+  var h='<div class="svgwrap" id="vsm"></div><p class="small muted"'+S(vs.note)+'>'+esc(vs.note)+' The orange box is the stage taking the most time.</p>';
+  h+='<h3>Our team right now</h3>'+rTeam();
+  return section("02","map","You are here: the factory","Each row moves left to right. The count is how many sit in that stage now; the time is their median wait.",h);
+}
+function drawVSM(){
+  var host=document.getElementById("vsm");if(!host)return;
+  var st=D.value_stream.stages,bn=D.value_stream.bottleneck,W=host.clientWidth||360;
+  var cols=W<520?2:4,gap=W<520?22:26,bw=(W-gap*(cols-1))/cols,bh=88,rows=Math.ceil(st.length/cols),H=rows*bh+(rows-1)*30+4;
+  var s='<svg width="100%" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Value stream from shaped rows to Release 1 rows done">';
+  s+='<defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--ink3)"/></marker></defs>';
+  var pos=st.map(function(_,i){var r=Math.floor(i/cols),c=i%cols;if(r%2===1)c=cols-1-c;return {x:c*(bw+gap),y:r*(bh+30),r:r};});
+  for(var i=0;i<st.length-1;i++){var a=pos[i],b=pos[i+1];
+    if(a.r===b.r){var dir=b.x>a.x?1:-1;var x1=dir>0?a.x+bw:a.x,x2=dir>0?b.x-2:b.x+bw+2;s+='<line x1="'+x1+'" y1="'+(a.y+bh/2)+'" x2="'+x2+'" y2="'+(b.y+bh/2)+'" stroke="var(--ink3)" stroke-width="1.5" marker-end="url(#ah)"/>';}
+    else{s+='<line x1="'+(a.x+bw/2)+'" y1="'+(a.y+bh)+'" x2="'+(b.x+bw/2)+'" y2="'+(b.y-2)+'" stroke="var(--ink3)" stroke-width="1.5" marker-end="url(#ah)"/>';}}
+  st.forEach(function(g,i){var p=pos[i],hot=g.id===bn,c=v(g.count),w=v(g.wait_h);
+    s+='<g data-src="'+esc(src(g.count)+" | wait: "+src(g.wait_h))+'"><title>'+esc(src(g.count)+" | wait: "+src(g.wait_h))+'</title>';
+    s+='<rect x="'+(p.x+.75)+'" y="'+(p.y+.75)+'" width="'+(bw-1.5)+'" height="'+(bh-1.5)+'" rx="6" fill="'+(hot?"var(--wait-soft)":"var(--panel2)")+'" stroke="'+(hot?"var(--hot)":"var(--line)")+'" stroke-width="'+(hot?2.5:1)+'"/>';
+    s+='<svg x="'+(p.x+8)+'" y="'+p.y+'" width="'+Math.max(0,bw-14)+'" height="'+bh+'">';
+    s+='<text x="0" y="17" font-size="11.5" fill="var(--ink2)">'+esc(g.name)+'</text>';
+    s+='<text x="0" y="44" font-size="24" font-weight="600" fill="var(--ink)" style="font-family:var(--mono)">'+(c==null?"n/a":esc(c))+'</text>';
+    s+='<text x="0" y="64" font-size="11" fill="'+(hot?"var(--hot)":"var(--ink3)")+'">'+(w==null?"wait not measured":"median "+ageText(w))+'</text>'+(hot?'<text x="0" y="80" font-size="11" font-weight="600" fill="var(--hot)">Taking the most time</text>':"")+'</svg></g>';});
+  host.innerHTML=s+'</svg>';
+}
+function rTeam(){
+  var t=D.team,c=v(t.counts)||{},ss=t.sessions||[];
+  if(!ss.length)return '<p class="muted"'+S(src(t.counts))+'>Lead input missing: no session list.</p>';
+  var ex=D.freshness.lead_input_example?'<span class="example">example data</span>':"";
+  var h='<div class="kpis" style="margin-bottom:8px">'+kpi("Cloud lanes pushing",nz(c.cloud_running),"pushed in the last 90 min",src(t.counts))+kpi("Cloud lanes quiet or blocked",nz(c.cloud_idle),"",src(t.counts))+kpi("Mac sessions",nz(c.mac),"Leads, standbys, local lanes",src(t.counts))+'</div>';
+  ["cloud","mac"].forEach(function(k){var g=ss.filter(function(s){return s.kind===k;});if(!g.length)return;
+    h+='<div class="small muted" style="margin:6px 0 4px">'+(k==="cloud"?"Cloud":"Mac")+ex+'</div><div class="chips">';
+    g.forEach(function(s){h+='<span class="chip"'+S(src(t.counts)+"; idle "+(s.idle_min==null?"n/a":s.idle_min+" min"))+'>'+pill(s.chip,tone(s.chip))+'<b>'+esc(s.name)+'</b><span class="muted">'+esc(s.role||"")+(s.row?" \u00b7 "+esc(s.row):"")+(s.pr?" \u00b7 #"+esc(s.pr):"")+(s.idle_min!=null?" \u00b7 idle "+esc(s.idle_min)+" min":"")+'</span></span>';});
+    h+='</div>';});
+  h+='<p class="small muted"'+S(src(t.demo))+'>Demo: '+esc(src(t.demo))+'</p>';
+  return h;
+}
+
+/* 3 status line */
+function rStatus(){
+  var s=D.status_line,w=v(s.works)||[],r=v(s.rows_done)||[],nc=v(s.next_committed),fc=v(s.build_forecast);
+  var h='<div class="oneline">'+
+   '<div'+S(src(s.works))+'><div class="k">qa Works</div><div class="v">'+nz(w[0])+' / '+nz(w[1])+'</div><div class="s">capabilities proven by qa</div></div>'+
+   '<div'+S(src(s.rows_done))+'><div class="k">Release 1 rows done</div><div class="v">'+nz(r[0])+' / '+nz(r[1])+'</div><div class="s">'+nz(v(s.rows_merged_or_better))+' merged or better</div></div>'+
+   '<div'+S(src(s.next_committed))+'><div class="k">Next committed date</div><div class="v">'+(nc?esc(short(nc.date)):"none")+'</div><div class="s">'+(nc?esc(nc.what):"")+'</div></div>'+
+   '<div'+S(src(s.build_forecast))+'><div class="k">Build forecast</div><div class="v">'+(fc&&fc.date?esc(short(fc.date))+(fc.date_to?"\u2013"+esc(short(fc.date_to)):""):"none")+'</div><div class="s">'+(fc?esc(fc.kind)+" \u00b7 "+esc(fc.source):"")+'</div></div>'+
+   '<div'+S("generated "+D.freshness.generated_ist)+'><div class="k">Data age</div><div class="v">'+ageText(dataAgeH())+'</div><div class="s">main '+esc(v(D.freshness.main_sha)||"n/a")+'</div></div></div>';
+  return section("03","status","Status in one line","Where Release 1 stands today, against the dates.",h);
+}
+
+/* 4 plan */
+function rPlan(){
+  var p=D.plan,h='<div class="legend">'+pill("committed","good")+pill("forecast","wait")+'</div><div class="box"><table><thead><tr><th>Level</th><th>What</th><th>Date</th><th class="n">Days</th><th>Kind</th><th>Source</th></tr></thead><tbody>';
+  var ds=p.dates.slice().sort(function(a,b){if(a.level!==b.level)return a.level==="high"?-1:1;return (a.date||"9999").localeCompare(b.date||"9999");});
+  ds.forEach(function(d){h+='<tr'+S(p.src+" \u00b7 "+d.source+(d.note?" \u00b7 "+d.note:""))+'><td>'+esc(d.level)+'</td><td>'+esc(d.what)+(d.note?'<div class="small muted">'+esc(d.note)+'</div>':"")+'</td><td class="mono" style="white-space:nowrap">'+(d.date?esc(fmtDate(d.date))+(d.date_to?" \u2013 "+esc(fmtDate(d.date_to)):""):'<span class="muted">not dated</span>')+'</td><td class="n">'+(d.days_left==null?"":d.days_left<0?'<span class="muted">past</span>':d.days_left)+'</td><td>'+pill(d.kind,d.kind==="committed"?"good":"wait")+'</td><td class="mono small">'+esc(d.source)+'</td></tr>';});
+  h+='</tbody></table></div><p class="small muted">Dates kept in cockpit/plan.json, as of '+esc(p.as_of)+'; each names the decision that sets it.</p>';
+  return section("04","plan","Plan and dates","High-level and mid-level dates in one table; forecasts stay forecasts until measured.",h);
+}
+
+/* 5 architecture */
+function rArch(){
+  return section("05","arch","Product architecture","Each module, filled by the share of its Release 1 rows at qa Works (dark) and merged (light). Tap a module for its capabilities.",
+    '<div class="svgwrap" id="archsvg"></div><div class="legend"><span class="pill t-good">qa Works share</span><span class="pill t-prog">merged share</span></div><div class="modlist" id="modlist"><p class="small muted">Tap a module to list its capabilities.</p></div>');
+}
+function drawArch(){
+  var host=document.getElementById("archsvg");if(!host)return;
+  var M=D.architecture.modules,W=host.clientWidth||360,narrow=W<620;
+  var mods=M.filter(function(m){return m.kind==="module";}),layer=M.filter(function(m){return m.kind==="layer";}),low=M.filter(function(m){return m.kind!=="module"&&m.kind!=="layer";});
+  var cols=narrow?2:mods.length,gap=10,bw=(W-gap*(cols-1))/cols,bh=88,r1=Math.ceil(mods.length/cols);
+  var y=0,s="",H;
+  function box(m,x,y,w,h){var d=m.done_share||0,g=m.merged_share||0,lbl=m.total+" rows \u00b7 "+Math.round(d*100)+"% Works";
+    var o='<g data-mod="'+esc(m.id)+'" tabindex="0" role="button" aria-label="'+esc(m.name+", "+lbl)+'" style="cursor:pointer"><title>'+esc(m.name+": "+(m.what||"")+" \u2014 "+m.src)+'</title>';
+    o+='<rect x="'+(x+.75)+'" y="'+(y+.75)+'" width="'+(w-1.5)+'" height="'+(h-1.5)+'" rx="6" fill="var(--panel2)" stroke="'+(m.kind==="gap"?"var(--wait)":"var(--line)")+'" stroke-dasharray="'+(m.kind==="gap"?"4 3":"")+'"/>';
+    o+='<rect x="'+(x+1)+'" y="'+(y+h-10)+'" width="'+Math.max(0,(w-2)*g)+'" height="9" fill="var(--prog-soft)"/><rect x="'+(x+1)+'" y="'+(y+h-10)+'" width="'+Math.max(0,(w-2)*d)+'" height="9" fill="var(--good)"/>';
+    var c=m.counts||{};o+='<svg x="'+(x+8)+'" y="'+y+'" width="'+Math.max(0,w-14)+'" height="'+(h-10)+'">';
+    o+='<text x="0" y="18" font-size="13" font-weight="600" fill="var(--ink)">'+esc(m.name)+'</text>';
+    o+='<text x="0" y="36" font-size="11.5" fill="var(--ink2)" style="font-family:var(--mono)">'+esc(m.total)+' rows \u00b7 '+Math.round(d*100)+'% Works</text>';
+    o+='<text x="0" y="52" font-size="11" fill="var(--ink3)">'+esc(Math.round(g*100)+"% merged \u00b7 "+(c["In PR"]||0)+" in PR")+'</text>';
+    o+='<text x="0" y="67" font-size="11" fill="var(--ink3)">'+esc((c["Shaped"]||0)+" shaped \u00b7 "+(c["Not shaped"]||0)+" not shaped")+'</text></svg></g>';return o;}
+  mods.forEach(function(m,i){var r=Math.floor(i/cols),c=i%cols;s+=box(m,c*(bw+gap),r*(bh+gap),bw,bh);});
+  y=r1*(bh+gap);
+  layer.forEach(function(m){s+=box(m,0,y,W,bh);y+=bh+gap;});
+  var lc=narrow?1:low.length,lw=(W-gap*(lc-1))/lc;
+  low.forEach(function(m,i){var r=Math.floor(i/lc),c=i%lc;s+=box(m,c*(lw+gap),y+r*(bh+gap),lw,bh);});
+  H=y+Math.ceil(low.length/lc)*(bh+gap);
+  host.innerHTML='<svg width="100%" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Modules of the product and their progress">'+s+'</svg>';
+}
+function showModule(id){
+  var m=D.architecture.modules.filter(function(x){return x.id===id;})[0],el=document.getElementById("modlist");if(!m||!el)return;
+  var h='<h3>'+esc(m.name)+' \u00b7 '+m.total+' rows</h3><p class="small muted"'+S(m.src)+'>'+esc(m.what||"")+'</p><div class="box"><table><tbody>';
+  m.rows.forEach(function(r){h+='<tr><td class="mono n">'+r.map+'</td><td>'+esc(r.cap)+'</td><td>'+pill(r.status,tone(r.status))+'</td></tr>';});
+  el.innerHTML=h+'</tbody></table></div>';
+}
+
+/* 6 capabilities */
+function rCaps(){
+  var C=D.capabilities,cnt=v(C.counts)||{},tot=C.total||1,order=["qa Works","Merged","In PR","Shaped","Not shaped"];
+  var h='<h3>Release 1 burn-up: '+tot+' Build rows</h3><div class="bar"'+S(src(C.counts))+'>';
+  order.forEach(function(k){var n=cnt[k]||0;if(n)h+='<span style="width:'+(100*n/tot)+'%;background:'+toneVar(tone(k))+'" title="'+esc(k+": "+n)+'"></span>';});
+  h+='</div><div class="legend">';order.forEach(function(k){h+=pill(k+" "+(cnt[k]||0),tone(k),src(C.counts));});h+='</div>';
+  h+='<div class="groupgrid">';
+  C.groups.forEach(function(g){var rs=C.rows.filter(function(r){return r.group===g.id;});var done=rs.filter(function(r){return r.status==="qa Works";}).length;
+    h+='<div class="grp"><h4><span>'+esc(g.id+". "+g.name)+'</span><span class="mono muted"'+S(src(C.counts))+'>'+done+'/'+rs.length+'</span></h4>';
+    rs.forEach(function(r){h+='<div class="row"'+S("MVP-CHECKLIST.md row "+r.map+" \u00b7 "+r.module+" \u00b7 "+r.backlog)+'><span>'+esc(r.map+" "+r.cap)+'</span>'+pill(r.status,tone(r.status))+'</div>';});h+='</div>';});
+  h+='</div><h3>qa capabilities ('+(v(C.qa)||[]).length+')</h3>';
+  (v(C.qa_by_milestone)||[]).forEach(function(m){h+='<div class="small" style="margin:4px 0"'+S(src(C.qa_by_milestone))+'><b>'+esc(m.milestone)+'</b>: <span class="mono">'+m.works+' of '+m.total+'</span> Works</div>';});
+  var qs=v(C.qa)||[];["M2","M3","T"].forEach(function(ms){var g=qs.filter(function(q){return q.m===ms;});if(!g.length)return;
+    h+='<div class="small muted" style="margin:6px 0 3px">'+esc(ms)+'</div><div class="sq">';
+    g.forEach(function(q){var t=tone(q.status);h+='<i style="background:'+toneVar(t)+(t==="none"?";background:transparent;border:1.5px solid var(--none)":"")+'" title="'+esc(q.id+" "+q.status+": "+q.name)+'" data-src="'+esc(q.id+" \u00b7 "+q.status+" \u00b7 "+q.name+" \u2014 "+src(C.qa))+'"></i>';});h+='</div>';});
+  h+='<div class="legend">'+pill("Works","good")+pill("Built, awaiting qa","prog")+pill("Partial","wait")+pill("Broken","bad")+pill("Not tested or built","none")+'</div>';
+  return section("06","caps","Capabilities","Every Release 1 row by group with its status, then the qa capabilities as one square each.",h);
+}
+
+/* 7 building */
+function rBuilding(){
+  var B=D.building,h='<div class="legend">';
+  var counts={};B.prs.forEach(function(p){counts[p.station]=(counts[p.station]||0)+1;});
+  Object.keys(counts).forEach(function(k){h+=pill(k+" "+counts[k],tone(k),B.src);});
+  h+='</div><div class="box"><table><thead><tr><th>PR</th><th>Title</th><th>Station</th><th class="n">Last push</th><th>CI</th><th>Head</th></tr></thead><tbody>';
+  B.prs.forEach(function(p){h+='<tr'+S(B.src+" \u00b7 labels: "+(p.labels.join(", ")||"none")+(p.reviewer_approve_on_head?" \u00b7 Reviewer Approve on head":""))+(p.records?' class="dim"':"")+'><td class="mono">#'+p.n+'</td><td>'+esc(p.title)+(p.draft?' <span class="small muted">draft</span>':"")+'</td><td>'+pill(p.station,tone(p.station))+'</td><td class="n">'+ageText(p.push_age_h)+'</td><td>'+pill(p.ci,p.ci==="success"?"good":p.ci==="failure"||p.ci==="error"?"bad":p.ci==="pending"?"prog":"none")+'</td><td class="mono small">'+esc(p.sha)+'</td></tr>';});
+  if(!B.prs.length)h+='<tr><td colspan="6" class="muted">No open PRs read.</td></tr>';
+  h+='</tbody></table></div><p class="small muted">Faded rows are records PRs (lead:, qa:).</p>';
+  var ow=v(B.owners)||[];
+  if(ow.length){h+='<h3>Row owners in BACKLOG.md</h3><div class="box"><table'+S(src(B.owners))+'><thead><tr><th>Owner</th><th>Journey</th><th>Rows</th></tr></thead><tbody>';ow.forEach(function(o){h+='<tr><td>'+esc(o.owner)+'</td><td>'+esc(o.journey)+'</td><td class="small">'+esc(o.rows)+'</td></tr>';});h+='</tbody></table></div><p class="small muted">'+esc(src(B.owners))+'</p>';}
+  return section("07","building","Building: who is doing what","Every open pull request, the stage it sits at and how long since its last push. Sessions are in section 02.",h);
+}
+
+/* 8 quality */
+function rQuality(){
+  var Q=D.quality,sc=v(Q.sev_counts)||{},fl=v(Q.flaky)||{};
+  var h='<div class="kpis">'+kpi("Open Critical",nz(sc.Critical),"",src(Q.sev_counts),sc.Critical?"":"")+kpi("Open Major",nz(sc.Major),"a Major keeps a capability Partial",src(Q.sev_counts))+kpi("Open Minor",nz(sc.Minor),"",src(Q.sev_counts))+
+    kpi("Closed after retest",nz(v(Q.closed_total)),nz(v(Q.closed_7d))+" in the last 7 days",src(Q.closed_total)+" | "+src(Q.closed_7d))+
+    kpi("Works demotions",nz((v(Q.demotions)||[]).length),"days Works fell, 14 days",src(Q.demotions))+
+    kpi("Flaky ledger",nz(fl.release_or_hand_lines),"release lines; "+nz(fl.rule_lines)+" rule lines",src(Q.flaky)+" \u2014 "+(fl.note||""))+
+    kpi("Review rounds",nz(v(Q.review_rounds)),"",src(Q.review_rounds))+'</div>';
+  var mj=Q.open_major||[];
+  h+='<h3>Open Major and Critical ('+mj.length+')</h3><div class="box"><table><thead><tr><th>Bug</th><th>Severity</th><th>Capability</th><th>What happens</th></tr></thead><tbody>';
+  mj.forEach(function(b){h+='<tr'+S(Q.src)+'><td class="mono">'+esc(b.id)+'</td><td>'+pill(b.sev,b.sev==="Critical"?"bad":"wait")+'</td><td class="mono small">'+esc(b.cap)+'</td><td class="small">'+esc(b.what)+'</td></tr>';});
+  if(!mj.length)h+='<tr><td colspan="4" class="muted">None open.</td></tr>';
+  return section("08","quality","Testing and quality","What qa has found and not yet closed, and whether proven capabilities slipped.",h+'</tbody></table></div>');
+}
+
+/* 9 devops */
+function bars(days,a,b,partial,s){
+  var W=640,H=120,n=days.length,bw=W/n,mx=Math.max.apply(null,a.concat([1]));
+  var o='<svg width="100%" viewBox="0 0 '+W+' '+(H+26)+'" role="img" aria-label="Merges per day, 14 days"'+S(s)+'>';
+  for(var i=0;i<n;i++){var ha=H*a[i]/mx,hb=H*b[i]/mx,x=i*bw+3;
+    o+='<rect x="'+x+'" y="'+(H-ha)+'" width="'+(bw-6)+'" height="'+ha+'" fill="var(--prog-soft)" stroke="var(--prog)" stroke-width=".5"><title>'+esc(days[i]+": "+a[i]+" merges, "+b[i]+" app code"+(partial[i]?" (not all classified)":""))+'</title></rect>';
+    o+='<rect x="'+(x+3)+'" y="'+(H-hb)+'" width="'+(bw-12)+'" height="'+hb+'" fill="var(--good)"><title>'+esc(days[i]+": "+b[i]+" app-code merges")+'</title></rect>';
+    if(i%2===n%2||n<8)o+='<text x="'+(x+(bw-6)/2)+'" y="'+(H+20)+'" font-size="'+(document.getElementById("body").clientWidth<520?20:12)+'" text-anchor="middle" fill="var(--ink3)">'+esc(days[i].slice(8))+'</text>';}
+  return o+'</svg>';
+}
+function rDevops(){
+  var p=D.pipeline,m=v(D.merges_per_day)||{days:[],all:[],app:[],partial:[]},bt=v(p.batches)||[];
+  var h='<p class="small muted">'+esc(p.band_note)+'</p><div class="kpis">'+
+   kpi(p.deploy_freq.label,nz(v(p.deploy_freq)),"app code "+nz(v(p.deploy_freq.app_code))+" a day",src(p.deploy_freq)+" | "+src(p.deploy_freq.app_code))+
+   kpi(p.lead_time_h.label,nz(v(p.lead_time_h)," h"),"median, n="+nz(p.lead_time_h.n),src(p.lead_time_h))+
+   kpi(p.change_fail.label,nz(v(p.change_fail),"%"),"reverts "+nz(v(p.change_fail.reverts))+" \u00b7 batch failures "+nz(v(p.change_fail.batch_fail),"%"),src(p.change_fail)+" | "+src(p.change_fail.reverts)+" | "+src(p.change_fail.batch_fail))+
+   kpi(p.restore_h.label,nz(v(p.restore_h)," h"),v(p.restore_h.open_red)?"red since "+esc(v(p.restore_h.open_red)):"main line green",src(p.restore_h))+
+   kpi("Approved to merged",nz(v(p.queue_wait_min)," min"),"median; p90 "+nz(p.queue_wait_min.p90," min")+", n="+nz(p.queue_wait_min.n),src(p.queue_wait_min))+
+   kpi("Merge-queue batches",nz(bt[0]),nz(bt[1])+" failed \u00b7 "+nz(bt[2])+" cancelled",src(p.batches))+
+   kpi("CI minutes a day",nz(v(p.ci_min_per_day)),"run time (approx), 7-day average",src(p.ci_min_per_day))+
+   kpi("CI time thrown away",nz(v(p.thrown_share),"%"),"target under 20%",src(p.thrown_share))+'</div>';
+  h+='<h3>Merges per day, 14 days</h3>'+bars(m.days,m.all,m.app,m.partial,src(D.merges_per_day))+'<div class="legend"><span class="pill t-prog">all merges</span><span class="pill t-good">app-code merges (P-500)</span></div>';
+  return section("09","devops","DevOps: delivery pipeline","How fast and how safely changes reach main. DORA's four keys, with proxies marked.",h);
+}
+
+/* 10 resources */
+function rRes(){
+  var R=D.resources,ex=D.freshness.lead_input_example?'<span class="example">example data</span>':"";
+  function L(x,suf){return v(x)==null?'<span class="muted" style="font-size:13px">Lead input missing</span>':esc(v(x))+(suf||"");}
+  var df=v(R.disk_free_gb);
+  var h='<div class="kpis">'+kpi("Disk free",nz(df," GB"),df!=null&&df<10?pill("below 10 GB","bad"):"floor 10 GB",src(R.disk_free_gb),df!=null&&df<10?"alert":"")+
+   kpi("Weekly plan used",L(R.weekly_pct,"%"),v(R.weekly_resets)?"resets "+esc(v(R.weekly_resets)):"",src(R.weekly_pct))+
+   kpi("Burn",L(R.burn_pct_per_h," %/h"),"",src(R.burn_pct_per_h))+
+   kpi("Paid today",v(R.paid_usd_today)==null?L(R.paid_usd_today):"US$"+esc(v(R.paid_usd_today)),"",src(R.paid_usd_today))+
+   kpi("GitHub API left",nz(v(R.api_left)),"this hour, after the run",src(R.api_left))+'</div>'+(ex?'<p class="small">'+ex+'</p>':"");
+  return section("10","resources","Resources","What we are spending: plan capacity, money and disk.",h);
+}
+
+/* 11 risks */
+function rRisks(){
+  var K=D.risks,h='<div class="box"><table><thead><tr><th>ID</th><th>Risk</th><th>Owner</th><th>By</th><th>Status</th></tr></thead><tbody>';
+  K.items.forEach(function(r){h+='<tr'+S(K.src+" \u00b7 "+r.source+" \u00b7 mitigation: "+r.mitigation)+'><td class="mono">'+esc(r.id)+'</td><td>'+esc(r.risk)+'<div class="small muted">'+esc(r.mitigation)+'</div></td><td class="small">'+esc(r.owner)+'</td><td class="small mono" style="white-space:nowrap">'+(r.trigger_date?esc(short(r.trigger_date)):'<span class="muted">gate</span>')+'</td><td>'+pill(r.status,r.status==="closed"?"good":r.status==="watching"?"wait":"bad")+'</td></tr>';});
+  h+='</tbody></table></div>';
+  var un=v(K.unlisted)||[];
+  if(un.length)h+='<p class="small"'+S(src(K.unlisted))+'>'+pill(un.length+" launch items not in this list","wait")+' '+esc(un.map(function(x){return x.id;}).join(", "))+'</p>';
+  return section("11","risks","Risks","What could stop the first real firm going live, who owns it and by when. \"Gate\" means before the first real firm's data.",h);
+}
+
+/* 12 healing */
+function rHeal(){
+  var H=D.healing,bl=v(H.blocked)||[],cr=v(H.ci_red_prs)||[],qs=v(H.questions)||[];
+  var h='<div class="kpis">'+kpi("Lanes restarted",nz(v(H.restarts)),"",src(H.restarts))+kpi("Lanes nudged",nz(v(H.nudges)),"",src(H.nudges))+
+   kpi("PRs healed after red CI",nz(v(H.healed_prs)),"median red to green "+nz(H.healed_prs.median_h," h"),src(H.healed_prs))+
+   kpi("Blocked lanes",nz(bl.length),bl.map(function(b){return esc(b.name);}).join(", "),src(H.blocked),bl.length?"alert":"")+
+   kpi("PRs red now",nz(cr.length),cr.map(function(c){return "#"+c.n+" "+ageText(c.push_age_h);}).join(", "),src(H.ci_red_prs))+
+   kpi("Open questions",nz(qs.length),qs.map(function(q){return "#"+q.n+" "+ageText(q.age_h);}).join(", "),src(H.questions))+'</div>';
+  return section("12","healing","Is everyone autonomous and healing?","Whether lanes fix themselves or need a push, and what is stuck now.",h);
+}
+
+/* 13 improving */
+function spark(xs,good){
+  var W=200,H=40,pts=[],ys=xs.filter(function(x){return x!=null;});if(ys.length<2)return '<span class="muted small">too few points</span>';
+  var mn=Math.min.apply(null,ys),mx=Math.max.apply(null,ys);if(mx===mn){mx+=1;mn-=1;}
+  xs.forEach(function(x,i){if(x!=null)pts.push((i*W/(xs.length-1)).toFixed(1)+","+(H-3-(x-mn)/(mx-mn)*(H-6)).toFixed(1));});
+  var last=pts[pts.length-1].split(",");
+  return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="height:40px"><line x1="0" x2="'+W+'" y1="'+(H/2)+'" y2="'+(H/2)+'" stroke="var(--line)" stroke-dasharray="2 3"/><polyline points="'+pts.join(" ")+'" fill="none" stroke="var(--accent)" stroke-width="1.8" vector-effect="non-scaling-stroke"/><circle cx="'+last[0]+'" cy="'+last[1]+'" r="3" fill="var(--accent)"/></svg>';
+}
+function rImprove(){
+  var I=D.improving,h='<div class="trend">';
+  ["app_merges","works","lead_h","batch_fail"].forEach(function(k){var t=I.trends[k];
+    var arrow=t.dir==="up"?"rising":t.dir==="down"?"falling":t.dir==="flat"?"flat":"no comparison";
+    var tn=t.better===true?"good":t.better===false?"bad":"none";
+    h+='<div'+S(t.src+" \u00b7 this week "+t.this_week+" vs week before "+t.week_before)+'><div class="small">'+esc(t.label)+'</div><div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px"><span class="mono" style="font-size:20px;font-weight:600">'+nz(t.latest)+'</span>'+pill(arrow,tn)+'</div>'+spark(I.series[k],t.better)+'<div class="small muted">7-day average '+nz(t.this_week)+' against '+nz(t.week_before)+'</div></div>';});
+  return section("13","improving","How we are improving","Fourteen days of the measures that matter, this week against the week before.",h+'</div>');
+}
+
+/* 14 learnings */
+function rLearn(){
+  var L=D.learnings,h='<h3>Kept lessons</h3><ul class="items">';
+  L.kept.forEach(function(k){h+='<li'+S("cockpit/learnings.json \u00b7 "+k.source)+'><span class="tag">'+esc(short(k.date))+'</span><div><div>'+esc(k.lesson)+'</div><div class="small muted">Changed: '+esc(k.changed)+' ('+esc(k.source)+')</div></div></li>';});
+  h+='</ul><h3>Newest decisions</h3><ul class="items">';
+  L.decisions.forEach(function(d){h+='<li'+S(d.src)+'><span class="tag">'+esc(d.id)+'</span><div class="small">'+esc(d.title)+'</div></li>';});
+  return section("14","learnings","Learnings","What we learned and what it changed, plus the newest decisions.",h+'</ul>');
+}
+
+/* 15 backlog */
+function rBacklog(){
+  var B=D.backlog,by=v(B.by_lane)||{},h='<div class="box"><table'+S(src(B.by_lane))+'><thead><tr><th>Lane</th><th class="n">Ready</th><th class="n">Blocked</th><th class="n">In PR</th><th class="n">Merged</th></tr></thead><tbody>';
+  Object.keys(by).sort().forEach(function(k){var r=by[k];h+='<tr><td>'+esc(k)+'</td><td class="n">'+r.ready+'</td><td class="n">'+r.blocked+'</td><td class="n">'+r["in PR"]+'</td><td class="n">'+r.merged+'</td></tr>';});
+  h+='</tbody></table></div><p class="small"'+S(src(B.x_rows))+'>After the first build (X rows): <b class="mono">'+nz(v(B.x_rows))+'</b></p><p class="small muted">'+esc(src(B.by_lane))+'</p>';
+  return section("15","backlog","Backlog","Rows waiting to be built, by lane: ready to start, or blocked by another row.",h);
+}
+
+function rFresh(){
+  var F=D.freshness,R=D.run||{};
+  var h='<div class="kpis">'+kpi("Generated",esc(F.generated_ist),"",F.generated_at)+kpi("main",esc(v(F.main_sha)||"n/a"),"last commit "+esc(F.main_at_ist||"n/a"),src(F.main_sha))+
+   kpi("Records read from",'<span style="font-size:13px">'+esc(v(F.records_copy))+'</span>',"",src(F.records_copy))+
+   kpi("Lead input age",F.lead_input_age_h.v==null?'<span class="muted" style="font-size:13px">Lead input missing</span>':ageText(F.lead_input_age_h.v),F.lead_input_example?"example data":"",src(F.lead_input_age_h))+
+   kpi("Pipeline numbers age",ageText(v(F.flow_measure_age_h)),"",src(F.flow_measure_age_h))+
+   kpi("Script run",nz(R.seconds," s"),nz(R.api_calls)+" API calls","cockpit-data.py")+'</div>';
+  if(R.errors&&R.errors.length)h+='<h3>Notes from the run</h3><ul class="items small">'+R.errors.map(function(e){return '<li>'+esc(e)+'</li>';}).join("")+'</ul>';
+  return section("16","fresh","Freshness","How old each input is.",h);
+}
+
+function render(){
+  renderStrip();
+  var parts=[rNeeds,rSystem,rStatus,rPlan,rArch,rCaps,rBuilding,rQuality,rDevops,rRes,rRisks,rHeal,rImprove,rLearn,rBacklog,rFresh];
+  var out="";parts.forEach(function(f){try{out+=f();}catch(e){out+='<section><p class="err">This block could not be drawn: '+esc(e.message)+'</p></section>';}});
+  document.getElementById("body").innerHTML=out;
+  drawVSM();drawArch();
+}
+var rt=null;window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){if(D){drawVSM();drawArch();}},150);});
+setInterval(function(){if(D)renderStrip();},60000);
+
+fetch("data.json",{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+.then(function(d){D=d;render();})
+.catch(function(e){
+  document.getElementById("stripIn").innerHTML='<div class="tile alert" style="grid-column:1/-1"><div class="k">Data</div><div class="v">not loaded</div></div>';
+  document.getElementById("body").innerHTML='<div class="err"><b>The board could not load its data (data.json).</b><br>'+esc(e.message)+'<br>Run <span class="mono">python3 product/tools/cockpit-data.py --out &lt;folder&gt;/data.json</span> and publish data.json next to this page. Nothing on this page is shown without it.</div>';
+});
+})();
+</script>

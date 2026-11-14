@@ -1,0 +1,12 @@
+{
+  "_about": "Hand-kept plan dates for the cockpit (P-591). One row per date; the page shows only these. kind: committed (a founder yes or a ruling fixes it) or forecast (a measured or sized estimate). level: high or mid. date: ISO day or null when not yet dated; date_to: the end of a range. Every row names the decision that sets it. The tech lead updates a row when its source decision changes.",
+  "as_of": "2026-11-14",
+  "dates": [
+    {"id": "H1", "level": "high", "what": "Release 1 built: all 101 Build rows", "date": "2027-01-12", "date_to": "2027-01-14", "kind": "forecast", "source": "P-586 (4)", "note": "About 12-14 Jan at 3 changes per capability; stays a forecast until the 19 Nov count. Earlier lines (P-558): about 4 Jan at ~5 confirmed a day, 12-16 Dec at 8-9, 5 Dec at 12."},
+    {"id": "H2", "level": "high", "what": "Gate before the first real firm's data: launch readiness list done, repository private", "date": null, "kind": "committed", "source": "P-589 (3), P-590 (1); MVP-CHECKLIST.md section C", "note": "The gate is decided; no date is set yet."},
+    {"id": "M1", "level": "mid", "what": "Five-day count settles the date line and the conversion", "date": "2026-11-19", "kind": "committed", "source": "P-586 (4), P-570 (3), P-558 (3)"},
+    {"id": "M2", "level": "mid", "what": "Bake (M3.5) passed: 0 Majors and both walks", "date": "2026-11-19", "kind": "forecast", "source": "P-499", "note": "Walk 2 waits on BK-24, then the BK-20 re-run (STATE.md)."},
+    {"id": "M3", "level": "mid", "what": "Counsel engaged and an outside security test booked", "date": "2026-11-16", "kind": "committed", "source": "P-551"},
+    {"id": "M4", "level": "mid", "what": "Outside accounts opened so their review clocks start (cloud, email sending, payments, signing)", "date": "2026-11-16", "kind": "forecast", "source": "MVP-CHECKLIST.md C21 (P-580, P-586)"}
+  ]
+}

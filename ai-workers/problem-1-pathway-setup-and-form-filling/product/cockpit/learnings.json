@@ -1,0 +1,8 @@
+{
+  "_about": "Hand-kept lessons for the cockpit (P-591): date, lesson, what changed, source. Newest first. The tech lead adds one when a decision changes how we work.",
+  "learnings": [
+    {"date": "2026-11-14", "lesson": "Numbers the founder reads must come from script data, never from prose.", "changed": "One live cockpit fed by a script, refreshed hourly; every report opens with its link; a fresh reviewer checks it weekly.", "source": "P-591 (3)"},
+    {"date": "2026-11-14", "lesson": "\"please dont use anything that is cheap and not gold class from public repo\" (founder)", "changed": "Code, data feeds or packages from public repositories are used only when they meet the gold-class bar.", "source": "P-587 (1)"},
+    {"date": "2026-11-14", "lesson": "A date stays a forecast until it is measured.", "changed": "The build date (about 12-14 Jan) is shown as a forecast; the 19 Nov five-day count settles the line and the conversion.", "source": "P-586 (4)"}
+  ]
+}
