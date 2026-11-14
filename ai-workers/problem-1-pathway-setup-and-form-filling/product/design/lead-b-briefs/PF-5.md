@@ -15,6 +15,8 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime P
 
 **Outbox (PF-3 review m8):** write any `module_event` row **last** in its transaction.
 
+**Plan changes are not in the Customer Portal (rows rev 13, Lead B (3)):** set the portal up with plan switching **off** (card update, invoices and cancel stay on); plan changes, with the downgrade check SA-3-58 needs, are PF-16's. Say the portal configuration in the PR.
+
 **Must still be true:** every existing suite, the demo reset and the checkpoint load (C10.1) pass unchanged; PF-3's Sample firms keep working as before.
 
 **Duplicate check (P-526):** before building, search BACKLOG, open PRs, `main`'s code (`git grep -i 'stripe\|signup\|subscription'` under `api/src`; ignore CSS stripes) and BUGS; one `Duplicate check:` line in the PR.
