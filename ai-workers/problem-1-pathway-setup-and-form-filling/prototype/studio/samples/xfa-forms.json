@@ -1,5 +1,5 @@
 {
- "about": "B170c (P-464, P-470; design/xfa-reuse-analysis-2026-11-11.md §4.1 row c, §4.2 (7)): the XFA engine's descriptor of each form's own Validate (its Validate button, validated flag, first-missing-field variable, barcode container and clear button, as SOM paths from the form's root subform), keyed by the official file's SHA-256 (official-sources/ircc/manifest.json), so another edition never borrows one. Copied unchanged from the engine's own test files named in `source`. Forms are data: the adapter (engine/xfa/index.ts) holds no form number or box name. A form with no record here is answered 'reads' when the engine reads it (its own check cannot run without a descriptor), else 'not available' with the engine's reason.",
+ "about": "B170c (P-464, P-470; design/xfa-reuse-analysis-2026-11-11.md §4.1 row c, §4.2 (7)): the XFA engine's descriptor of each form's own Validate (its Validate button, validated flag, first-missing-field variable, barcode container and clear button, as SOM paths from the form's root subform), keyed by the official file's SHA-256 (official-sources/ircc/manifest.json), so another edition never borrows one. Copied unchanged from the engine's own test files named in `source`. Forms are data: the adapter (engine/xfa/index.ts) holds no form number or box name. A form with no record here is answered 'reads' when the engine reads it (its own check cannot run without a descriptor), else 'not available' with the engine's reason. BK-25: known_form_defects names a defect of a form's own script, cited, that the adapter accepts only after the form's own Validate completed (engine/xfa/index.ts KnownFormDefect).",
  "forms": [
   {
    "form": "IMM 5257",
@@ -29,7 +29,14 @@
     "barcodes": "Barcodes",
     "clearButton": "Page1.ButtonsHeader.ValidateButton[1]"
    },
-   "source": "packages/xfa-engine/src/__tests__/fixtures/form-data/imm1295.pack.json"
+   "source": "packages/xfa-engine/src/__tests__/fixtures/form-data/imm1295.pack.json",
+   "known_form_defects": [
+    {
+     "class": "subform",
+     "member": "C1CertificateIssueDate",
+     "why": "IMM 1295 (09-2023)'s own Validate script, once the form is complete, runs xfa.host.setFocus(Page4.Consent1.Signature.C1CertificateIssueDate), a node its own template does not have (the date is Page4.Consent0.C1CertificateIssueDate; prototype/expected/source-text/imm1295e.xfa-template.txt). The engine's own corpus test names exactly this member after Validate (packages/xfa-engine/src/__tests__/corpus/form-cases.ts, unsupportedAfterValidate). BK-25."
+    }
+   ]
   }
  ]
 }

@@ -31,17 +31,50 @@ export function yesNoCodes(b: Box | undefined): { yes: string; no: string } | nu
  *  script's marks (; = { } ( ) or a dotted name), so a piece of the form's code or two captions run together never passes.
  *  Spacing and the two apostrophes are read alike; nothing else is. False when the form's text is not saved. */
 export function inFormText(officialFile: string | null | undefined, words: string): boolean {
+  const w = norm(words);
+  if (w.length < 20 || !/^[A-Z][^?]*\?$/.test(w) || /[;={}()]|\b\w+\.\w+\b/.test(w)) return false;
+  return savedTextHas(officialFile, w);
+}
+const norm = (t: string) => t.replace(/[\u2018\u2019]/g, "'").replace(/\s+/g, " ").trim();
+/** Whether the form's saved text (prototype/expected/source-text/<file>.xfa-template.txt, its header line left out) holds
+ *  `w` as it is; false when the form's text is not saved. */
+function savedTextHas(officialFile: string | null | undefined, w: string): boolean {
   const stem = /([^/]+)\.pdf$/i.exec(officialFile ?? "")?.[1];
   if (!stem || !/^[\w-]+$/.test(stem)) return false;
   let text: string;
   try { text = readFileSync(join(import.meta.dirname, "..", "..", "..", "expected", "source-text", `${stem}.xfa-template.txt`), "utf8"); } catch { return false; }
-  const norm = (t: string) => t.replace(/[\u2018\u2019]/g, "'").replace(/\s+/g, " ").trim();
-  const w = norm(words);
-  if (w.length < 20 || !/^[A-Z][^?]*\?$/.test(w) || /[;={}()]|\b\w+\.\w+\b/.test(w)) return false;
   const body = norm(text.split("\n").slice(1).join(" ")); // the first line is the file's own header, not the form's words
-  return body.includes(w);
+  return body.includes(norm(w));
+}
+/** BK-25 (P-170, AGENTS rule 4): a Yes/No box the form prints as a statement the person answers YES or NO, not as a
+ *  question (IMM 5707's "I was physically present at the marriage ceremony", YES 1 / NO 2): its reading's own heading, taken
+ *  only when it is a whole sentence of the form's words (20 characters or more and under the reading's 120-character cut,
+ *  a capital first, no "?", none of a script's marks) and the form's saved text shows it whole: the words, then at once the
+ *  box's own first printed choice (review M2 on #1747: a heading the reading cut, such as background question 5's "…or
+ *  organization which has", runs on into more words in the saved text, so it is refused). Null otherwise. */
+export function printedStatement(b: Box | undefined, officialFile: string | null | undefined): string | null {
+  const h = norm(b?.heading ?? ""), first = (b?.options ?? []).find((o) => Array.isArray(o) && o[0])?.[0];
+  if (h.length < 20 || h.length >= 120 || !first || !/^[A-Z][^?]*[A-Za-z.]$/.test(h) || /^Question\b|[;={}()*]|\b\w+\.\w+\b/.test(h)) return null;
+  return savedTextHas(officialFile, `${h} ${norm(first)} `) ? h : null;
 }
 
+/** BK-25: the people the mapped form fields of a box's row name: the nearest block above the box that holds any mapped form
+ *  field (IMM 5707's "…Spouse[0].PaddedEntry[0]"), each person once. Pure. */
+export function rowPeople(rows: { dataPath: string; outcome: string; person: string | null; status?: string }[], dataPath: string): string[] {
+  const parts = dataPath.split(".");
+  for (let n = parts.length - 1; n > 1; n--) {
+    const block = `${parts.slice(0, n).join(".")}.`;
+    const mapped = rows.filter((r) => r.dataPath !== dataPath && r.dataPath.startsWith(block) && r.outcome === "mapped" && r.status !== "RETIRED" && r.person);
+    if (mapped.length) return [...new Set(mapped.map((r) => r.person!))];
+  }
+  return [];
+}
+/** BK-25 (review M3 on #1747): whether asking a box nothing fills yet about `person` (none: the form's subject) goes against
+ *  what its row's mapped form fields name (rowPeople): a named person must be the row's one person; no name is refused only
+ *  where the row names one other person (IMM 5707's spouse row), since a page of mixed rows does not say. Pure. */
+export function rowPersonRefused(named: string[], person?: string): boolean {
+  return person ? named.length !== 1 || named[0] !== person : named.length === 1 && named[0] !== "form_subject";
+}
 /** B52 (P-334 (5)): an application form's Yes/No form fields worked out from other answers, each asked as its own question
  *  (api/src/own-question.ts), so the shared placement step asks them and C4.11's conditions land on them. B88 (P-319): the
  *  table is data, studio/samples/own-yes-no.json, with each box's words and the form's own question it quotes (Sample,
@@ -60,7 +93,12 @@ export type AskedWhen = { fact: string; equals: string };
 /** `form`: another form the combination files (QA-318: IMM 5257 SCH1), when the box is not on its application form.
  *  `field`: the library Yes/No field it asks, when another form already asks the same question of the person (review M1 on
  *  #1272: one answer fills both forms); else the field of the same label, else a new one. */
-export type OwnYesNo = { form?: string; field?: string; dataPath: string; label: string; meaning: string; question?: string; checkpointOnly?: boolean; followUps?: string[]; askedWhen?: AskedWhen };
+/** BK-25: `person`, for a box in a row about another person of the case (IMM 5707's spouse row), that person's role on the
+ *  form, as the row's other form fields name it (the door checks it). */
+/** P-598: `later`, asked only after every other combination's release 1, when the box's form edition is shared with them
+ *  (IMM 5707, every paper combination's family form): a reviewed release is never edited, so the others pick it up at their
+ *  next release (api/src/features/checkpoint/110-release-one.ts). */
+export type OwnYesNo = { form?: string; field?: string; person?: string; later?: boolean; dataPath: string; label: string; meaning: string; question?: string; checkpointOnly?: boolean; followUps?: string[]; askedWhen?: AskedWhen };
 
 /** QA-165 (AGENTS rule 4, P-170: nothing guessed): why the form asks the Yes/No form field `dataPath` only when `when.fact`
  *  is `when.equals`, or null when its own script does not say so. The script's rule (samples/form-script-requirements.json)

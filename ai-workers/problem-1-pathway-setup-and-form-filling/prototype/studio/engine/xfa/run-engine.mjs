@@ -9,6 +9,9 @@
 //   clock       the wall clock the form's scripts see (ms since 1970); timezone: the form's local zone
 // Writes one line to stdout, as JSON: the engine's answer in the engine's own terms (raw); ./index.ts turns it into ours.
 // The engine runs strict: a member it does not model stops the run, and is reported as a refusal, never skipped.
+// BK-25: unless the form's record names a defect of the form's own script (knownDefects: [{ class, member }], ./index.ts);
+// then the run is not strict, and a skipped member is accepted only when every one skipped is named and the form's own
+// Validate completed; anything else is still a refusal.
 // Exit 0 whenever the engine answered, a refusal included (a refused form is an answer, never a crash); exit 1 only when
 // the request itself could not be read. No form number, box name or program here (P-319, P-425): forms are data.
 import { readFileSync } from 'node:fs';
@@ -50,7 +53,8 @@ try {
   const pdf = await X.openXfaPdf(new Uint8Array(readFileSync(request.file)));
   // Strict (review Major 1, §4.2 (4)): a form script that touches a member the engine does not model stops the run
   // (UNSUPPORTED_MEMBER), so no answer ever rests on script the engine skipped; the engine's own real-form tests run so.
-  runtime = await X.createFormRuntime(pdf, { host: HOST, clock: { now: () => request.clock }, timezone: request.timezone, strict: true });
+  const known = (Array.isArray(request.knownDefects) ? request.knownDefects : []).filter((d) => typeof d?.class === 'string' && typeof d?.member === 'string');
+  runtime = await X.createFormRuntime(pdf, { host: HOST, clock: { now: () => request.clock }, timezone: request.timezone, strict: known.length === 0 });
   runtime.load();
   const pages = runtime.layout().pages.length;
   let answer;
@@ -67,7 +71,10 @@ try {
   }
   // And if anything was still skipped, the answer is not whole: say so, never pass it on.
   const skipped = (runtime.unsupported ?? []).map((u) => `${u.class ?? '?'}.${u.member ?? '?'}`);
-  say(skipped.length ? { kind: 'refused', code: 'UNSUPPORTED_MEMBER', message: `the form's script used what the engine does not model: ${skipped.slice(0, 5).join(', ')}` } : answer);
+  const named = new Set(known.map((d) => `${d.class}.${d.member}`));
+  const accepted = skipped.length > 0 && answer.kind === 'complete' && skipped.every((m) => named.has(m));
+  if (accepted) answer.knownDefects = [...new Set(skipped)];
+  say(skipped.length && !accepted ? { kind: 'refused', code: 'UNSUPPORTED_MEMBER', message: `the form's script used what the engine does not model: ${skipped.slice(0, 5).join(', ')}` } : answer);
 } catch (e) {
   say(refusal(e));
 } finally {

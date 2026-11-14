@@ -27,7 +27,9 @@ const PASSES = await featureSteps<PlacementPass>(join(FEATURES_DIR, "placement")
 /** `leaveOut` (BK-16, P-496; the configured checkpoint's loader only, never the screen's step): forms whose boxes and line
  *  this run reads as if not yet on the combination, so a form the loader places in a later pass (a source marked "later"
  *  in samples/wave1.json) does not put its questions in the shared library before every combination's own forms. */
-export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, combinationId: string, leaveOut: ReadonlySet<string> = new Set()): Promise<PlacedFromParts> {
+/** `onlyPlacedInto` (P-598; the configured checkpoint's loader only, after release 1): check again only the sections this
+ *  run places into, on this combination as on the others, so a late placement never re-judges a choice it did not touch. */
+export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, combinationId: string, leaveOut: ReadonlySet<string> = new Set(), onlyPlacedInto = false): Promise<PlacedFromParts> {
   const c = await db.combination.findUniqueOrThrow({ where: { id: combinationId }, select: { workspaceId: true } });
   const built = (await buildSnapshot(db, c.workspaceId, combinationId, "draft")).snapshot;
   const kept = (x: { form_number?: string }) => !leaveOut.has(x.form_number ?? "");
@@ -41,7 +43,7 @@ export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, 
   // R2-m1 (QA-144 slice 2): the library's sections are shared, so a placement here can put a question into a section
   // another combination (or this one, earlier) has chosen. Every section chosen on this combination, and on any other
   // combination that chose a section placed into now, is checked again, and one that no longer qualifies is unchosen.
-  await keepChosenEveryones(db, studio, author, combinationId, new Set(out.placed.map((x) => x.section)), out);
+  await keepChosenEveryones(db, studio, author, combinationId, new Set(out.placed.map((x) => x.section)), out, onlyPlacedInto);
   return out;
 }
 

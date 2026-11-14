@@ -44,6 +44,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } });
   const loaded = await api("/demo/load", { method: "POST", data: { sample: "configured" } });
   step("setup: the configured checkpoint loads", loaded.status < 300, loaded.status);
+  // P-598 (tech lead on #1747, option 1): the configured load leaves another combination's pending change not submitted (the
+  // LMIA's IMM 5707 marriage question, which it takes at its next release). Scaffolding, as this walk's own draft edit is:
+  // the author submits it first, so the walk starts with nothing else waiting on the author.
+  const pending = ((await api("/draft")).body?.rows ?? []).filter((r) => r.held && /^Not submitted for review/.test(r.why ?? ""));
+  const submitted = [];
+  for (const r of pending) submitted.push((await api(`/combinations/${r.combinationId}/submit`, { method: "POST", data: { note: "Submitted by QA-421's setup as scaffolding (P-598): the configured load's pending change." } })).status);
+  const left = ((await api("/draft")).body?.rows ?? []).filter((r) => r.held && /^Not submitted for review/.test(r.why ?? "")).map((r) => r.label);
+  step("setup (P-598): the configured load's pending change on another combination is submitted first, so nothing else waits on the author", submitted.every((x) => x < 300) && left.length === 0, { pending: pending.map((r) => r.label), submitted, left });
   const vv = (loaded.body?.combinations ?? []).find((c) => /Visitor visa/.test(c.label));
   const ID = vv?.id;
   const req = (await api(`/combinations/${ID}/config?mode=draft`)).body?.snapshot?.document_requirements?.find((r) => r.provided_by === "client");

@@ -50,7 +50,7 @@ export type XfaDescriptor = {
 };
 
 export type XfaAnswer =
-  | { status: "passes"; pages: number; barcodeTexts: (string | null)[] }
+  | { status: "passes"; pages: number; barcodeTexts: (string | null)[]; knownDefects?: string[] }
   | { status: "stops_at"; pages: number; box: string | null; message: string | null }
   | { status: "reads"; pages: number; why: string }
   | { status: "not_available"; reason: string; code: string };
@@ -71,7 +71,15 @@ export type XfaAskOptions = {
   engineDir?: string;
   /** Where the form records are (default: samples/xfa-forms.json). */
   formsFile?: string;
+  /** BK-25: the defects of the form's own script its record names (default: the record's, by SHA-256). */
+  knownDefects?: KnownFormDefect[];
 };
+/** BK-25: a defect in a form's own script that its record names, cited (IMM 1295 (09-2023): after a complete Validate the
+ *  script focuses Page4.Consent1.Signature.C1CertificateIssueDate, a node its template does not have; the engine's own
+ *  corpus test, packages/xfa-engine/src/__tests__/corpus/form-cases.ts, expects exactly that one member). The run stays
+ *  strict unless a record names one; then a skipped member is accepted only when it is a named one and the form's own
+ *  Validate has completed, so a stop or a box is never reached past script the engine skipped. */
+export type KnownFormDefect = { class: string; member: string; why: string };
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STUDIO = resolve(HERE, "..", "..");
@@ -92,7 +100,7 @@ export function engineDirectory(from = HERE): string {
 }
 
 /** One form record (an official file's edition) with the engine's descriptor for it. */
-export type XfaFormRecord = { form: string; edition: string; official_file: string; form_sha256: string; descriptor: XfaDescriptor; source: string };
+export type XfaFormRecord = { form: string; edition: string; official_file: string; form_sha256: string; descriptor: XfaDescriptor; source: string; known_form_defects?: KnownFormDefect[] };
 /** The form records; a missing file is none, a file that does not read stops loudly (never every form silently bare). */
 export function xfaFormRecords(file = XFA_FORMS_FILE): XfaFormRecord[] {
   if (!existsSync(file)) return [];
@@ -103,6 +111,11 @@ export function xfaFormRecords(file = XFA_FORMS_FILE): XfaFormRecord[] {
 /** The descriptor recorded for this exact file (by SHA-256: another edition never borrows one), or null. */
 export function xfaDescriptorFor(sha256: string, file = XFA_FORMS_FILE): XfaDescriptor | null {
   return xfaFormRecords(file).find((r) => r.form_sha256 === sha256)?.descriptor ?? null;
+}
+
+/** BK-25: the known defects of the form's own script recorded for this exact file (by SHA-256), or none. */
+export function xfaKnownDefectsFor(sha256: string, file = XFA_FORMS_FILE): KnownFormDefect[] {
+  return xfaFormRecords(file).find((r) => r.form_sha256 === sha256)?.known_form_defects ?? [];
 }
 
 const isDescriptor = (d: unknown): d is XfaDescriptor => {
@@ -120,7 +133,8 @@ export function answerOf(raw: unknown): XfaAnswer {
       if (pages === null || !Array.isArray(r.barcodes)) return notAvailable("BAD_ANSWER", "the engine's answer could not be read");
       // Review minor 4: the form's own save step must have encoded its barcodes; a pass without them is no pass.
       if (r.barcodesValidated !== true) return notAvailable("NOT_ENCODED", "the form's own Validate completed, but its own save step did not encode its barcodes");
-      return { status: "passes", pages, barcodeTexts: r.barcodes.map((b: unknown) => (typeof b === "string" ? b : null)) };
+      // BK-25 (review m2 on #1747): a pass that went past a defect of the form's own script its record names says so.
+      return { status: "passes", pages, barcodeTexts: r.barcodes.map((b: unknown) => (typeof b === "string" ? b : null)), ...(Array.isArray(r.knownDefects) && r.knownDefects.length ? { knownDefects: r.knownDefects.map(String) } : {}) };
     case "incomplete":
       return pages === null ? notAvailable("BAD_ANSWER", "the engine's answer could not be read") : { status: "stops_at", pages, box: typeof r.firstMissingField === "string" ? r.firstMissingField : null, message: Array.isArray(r.messages) && typeof r.messages[0] === "string" ? (r.messages[0] as string) : null };
     case "reads":
@@ -141,13 +155,17 @@ export function answerOf(raw: unknown): XfaAnswer {
 export async function askXfaEngine(file: string, options: XfaAskOptions = {}): Promise<XfaAnswer> {
   const engine = options.engineDir ?? engineDirectory();
   if (!existsSync(join(engine, "dist", "index.js"))) return answerOf({ kind: "no_engine", message: `${join(engine, "dist", "index.js")} is missing` });
-  let descriptor = options.descriptor;
+  let descriptor = options.descriptor, knownDefects = options.knownDefects ?? [];
   if (descriptor === undefined) {
-    try { descriptor = xfaDescriptorFor(options.formSha256 ?? createHash("sha256").update(readFileSync(file)).digest("hex"), options.formsFile); }
-    catch (e) { const err = e as NodeJS.ErrnoException; return notAvailable(String(err?.code ?? "UNREADABLE"), `the form's file or its record cannot be read: ${String(err?.message ?? e)}`); }
+    try {
+      const sha = options.formSha256 ?? createHash("sha256").update(readFileSync(file)).digest("hex");
+      descriptor = xfaDescriptorFor(sha, options.formsFile);
+      if (!options.knownDefects) knownDefects = xfaKnownDefectsFor(sha, options.formsFile);
+    } catch (e) { const err = e as NodeJS.ErrnoException; return notAvailable(String(err?.code ?? "UNREADABLE"), `the form's file or its record cannot be read: ${String(err?.message ?? e)}`); }
   }
+  if (!knownDefects.every((d) => d && typeof d.class === "string" && typeof d.member === "string" && d.class !== "" && d.member !== "" && typeof d.why === "string" && d.why.length >= 20)) return notAvailable("BAD_DESCRIPTOR", "the form's record names a defect of its own script without its class, member and why (20 characters or more)");
   if (descriptor && !isDescriptor(descriptor)) return notAvailable("BAD_DESCRIPTOR", "the form's record does not describe its own Validate (each of validateButton, validatedFlag, validatedValue, firstMissingField and barcodes must be text)");
-  const request = JSON.stringify({ engine, file: resolve(file), descriptor, clock: options.clock ?? Date.now(), timezone: options.timezone ?? FIRM_ZONE });
+  const request = JSON.stringify({ engine, file: resolve(file), descriptor, knownDefects: knownDefects.map((d) => ({ class: d.class, member: d.member })), clock: options.clock ?? Date.now(), timezone: options.timezone ?? FIRM_ZONE });
   const limit = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   return new Promise<XfaAnswer>((done) => {
     let out = "", err = "", settled = false;

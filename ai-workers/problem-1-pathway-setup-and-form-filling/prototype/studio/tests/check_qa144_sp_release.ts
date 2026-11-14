@@ -41,8 +41,10 @@ type Question = { fact: string; about: string; why?: string };
   console.log(`      loaded in ${l.body.seconds.toFixed(1)} s; released ${JSON.stringify(l.body.released)}`);
 
   // The Done-when: the study permit is released by the checkpoint at US$0 with no block.
-  ok("QA-144 slice 3 pass: the configured checkpoint releases the Study permit (outside Canada): release 1, submitted by the author, approved by the Approver",
-    (l.body.released as string[]).some((x) => /Study permit › Outside Canada/.test(x)) && sql(`select version || '|' || approver_id || '|' || submitter_id from config_release where combination_id = '${sp}' order by version desc limit 1`) === "1|user-B|user-A",
+  // P-598 (tech lead on #1747): its release 1 as before, then a release 2 carrying the questions asked on IMM 5707, a form
+  // other combinations file too, after every combination's release 1; each submitted by the author, approved by the Approver.
+  ok("QA-144 slice 3 pass: the configured checkpoint releases the Study permit (outside Canada): release 1, then (P-598) release 2, each submitted by the author, approved by the Approver",
+    (l.body.released as string[]).some((x) => /Study permit › Outside Canada/.test(x)) && sql(`select string_agg(version || '|' || approver_id || '|' || submitter_id, ',' order by version) from config_release where combination_id = '${sp}'`) === "1|user-B|user-A,2|user-B|user-A",
     { released: l.body.released, row10: r("10").why?.slice(0, 300) });
   ok("QA-144 slice 3 fail: the study permit is not in row 10's refusals", !/Study permit › Outside Canada: /.test(r("10").why ?? "") && /Study permit › Outside Canada/.test(r("10").shows), r("10").why?.slice(0, 300));
   ok("QA-144 slice 3 fail-guard: no live AI call and nothing spent (US$0)", n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && ledger() === before && l.body.cost_usd === 0);
@@ -99,8 +101,14 @@ type Question = { fact: string; about: string; why?: string };
 
   // K1 (ruling 2): no study permit form field without a decision; the leftovers are filled by hand, with the rule's words.
   const spEditions = `select e.id from form_edition e join gov_form_def g on g.id = e.gov_form_def_id join combination_form f on f.gov_form_def_id = g.id where f.combination_id = '${sp}' and e.channel <> 'ONLINE'`;
-  ok("QA-144 slice 3 K1 pass: the study permit's form fields all have a decision (IMM 1294's 15 and IMM 5646's 30 leftovers filled by hand)", n(`select count(*) from form_field_map where form_edition_id in (${spEditions}) and outcome = 'unresolved' and status <> 'RETIRED'`) === 0
-    && n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label in ('IMM 1294 (06-2026)', 'IMM 5646 (01-2023)') and m.outcome = 'by_hand' and m.reason like 'Not proposed by the saved AI answer%'`) >= 45);
+  // BK-25 (#1747, P-533): three of IMM 1294's 15 leftovers (Background 2 c) and 6, and the consent) are now asked as their own
+  // questions in the form's words (samples/own-yes-no.json "sp.outside"): decided too, as mapped by a person, so the 45 are
+  // the leftovers filled by hand plus exactly those three, each named; none is left without a decision.
+  const OWN_1294 = (JSON.parse(readFileSync(join(import.meta.dirname, "..", "samples", "own-yes-no.json"), "utf8")).combinations["sp.outside"].boxes as { form?: string; dataPath: string }[]).filter((b) => !b.form).map((b) => b.dataPath);
+  const asked1294 = sql(`select string_agg(m.data_path, ',' order by m.data_path) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 1294 (06-2026)' and m.status <> 'RETIRED' and m.outcome = 'mapped' and m.origin = 'HUMAN' and m.reason like 'The form asks this Yes/No itself before its details%'`).split(",").filter(Boolean).sort();
+  const byHand45 = n(`select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label in ('IMM 1294 (06-2026)', 'IMM 5646 (01-2023)') and m.outcome = 'by_hand' and m.reason like 'Not proposed by the saved AI answer%'`);
+  ok("QA-144 slice 3 K1 pass: the study permit's form fields all have a decision (IMM 1294's 15 and IMM 5646's 30 leftovers: filled by hand, or, BK-25, IMM 1294's 2 c), 6 and consent asked as their own questions)", n(`select count(*) from form_field_map where form_edition_id in (${spEditions}) and outcome = 'unresolved' and status <> 'RETIRED'`) === 0
+    && OWN_1294.length === 3 && JSON.stringify(asked1294) === JSON.stringify([...OWN_1294].sort()) && byHand45 + asked1294.length >= 45, { byHand: byHand45, asked: asked1294, expected: OWN_1294 });
 
   // One marital status list for the shared fact, and IMM 1294's "Separated" given the code IMM 5257 already gives it.
   ok("QA-144 slice 3: person.marital_status keeps the Visitor visa's list (a second combination's list waits on To review)", sql(`select answer_list_key from canonical_field where canonical_field_key = 'person.marital_status' order by version desc limit 1`) === "marital_status");

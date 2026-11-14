@@ -13,7 +13,7 @@ import type { PlacedFromParts } from "./_parts.ts";
  *  just placed into (`touched`), and unchooses one that no longer qualifies (everyoneAnswers); on this combination it
  *  also chooses a touched section that now does. Exported for a placement made outside placeFromFormParts (the
  *  checkpoint's fact only a rule reads, review R1-m4). */
-export async function keepChosenEveryones(db: Db, studio: Studio, author: Actor, combinationId: string, touched: Set<string>, out: Pick<PlacedFromParts, "refused" | "selected" | "unselected">) {
+export async function keepChosenEveryones(db: Db, studio: Studio, author: Actor, combinationId: string, touched: Set<string>, out: Pick<PlacedFromParts, "refused" | "selected" | "unselected">, onlyTouched = false) {
   const { workspaceId } = await db.combination.findUniqueOrThrow({ where: { id: combinationId }, select: { workspaceId: true } });
   const live = await db.sectionQuestion.findMany({ where: { workspaceId: workspaceId, status: { not: "RETIRED" } }, select: { sectionKey: true, canonicalFieldKey: true } });
   const others = await db.sqrSectionSelection.findMany({ where: { sectionKey: { in: [...touched] }, workspaceId: workspaceId, combinationId: { not: combinationId }, combination: { retiredAt: null } }, select: { combinationId: true } });
@@ -22,7 +22,8 @@ export async function keepChosenEveryones(db: Db, studio: Studio, author: Actor,
   for (const id of [combinationId, ...new Set(others.map((x) => x.combinationId))]) {
     const qualifies = await everyoneAnswers(db, workspaceId, id, live);
     const chosen = new Set((await db.sqrSectionSelection.findMany({ where: { combinationId: id }, select: { sectionKey: true } })).map((x) => x.sectionKey));
-    for (const sec of id === combinationId ? chosen : [...chosen].filter((s) => touched.has(s))) {
+    // P-598: a late placement (onlyTouched) checks again only the sections it placed into, on this combination too.
+    for (const sec of id === combinationId && !onlyTouched ? chosen : [...chosen].filter((s) => touched.has(s))) {
       if (qualifies(sec)) continue;
       try { await studio.selectSection(author, id, sec, false); out.unselected.push(`${sec} (on ${nameOf.get(id)})`); } catch (err) { out.refused.push(`unchoose section ${sec}: ${String((err as Error).message).slice(0, 200)}`); }
     }
