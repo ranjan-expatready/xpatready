@@ -33,7 +33,8 @@
 | FO-6 | signing, vendor-neutral (+ P-564 email code) | shaped | after FO-5, PF-4 |
 | FO-6v | BoldSign adapter, 4 conditions checked first | released by P-563 | after FO-6; needs the founder's BoldSign sandbox key for Lead B's one Mac check |
 | PF-6 | staff screens (concept approved) | shaped (Q3 decided: required for all, reset button) | after PF-4b, PF-1 |
-| Shaped next (no rows yet) | FO-3b paid consults (after FO-7) · FO-3c consultation agreement at booking (Code s. 23; after FO-6) · FO-5s retainer/signing screens (concept first) · FO-7 invoices/receipts/payments (AG-06; trust per **question 5**) · FO-8 `prospect.won` with the case side · PF-8 cloud deploy (founder's Canadian cloud account) · PF-9 firm set-up checklist and settings screen · PF-10 import with a dry run (AG-18) | | shape two ahead |
+| FO-5s | retainer and signing screens | **concept r2 approved** after the fresh challenge (`screens/fo-5s-retainer-signing/`) | after FO-5, FO-6, FO-4, PF-1; founder's look due |
+| Shaped next (no rows yet) | FO-3b paid consults (after FO-7) · FO-3c consultation agreement at booking (Code s. 23; after FO-6) · PF-5s pricing/sign-up/profile screens (P-566; concept first) · FO-7 invoices/receipts/payments (AG-06; trust per **question 5**) · FO-8 `prospect.won` with the case side · PF-8 cloud deploy (founder's Canadian cloud account) · PF-9 firm set-up checklist and settings screen · PF-10 import with a dry run (AG-18) | | shape two ahead |
 
 ## Rulings received (all stand)
 P-559 (App.tsx line; schema folder rule; P-335/P-357 amended for PF/FO) · P-560 (FO follows AG-02; `prospect.won`; a person opens the case) · Lead 37: one audit trail (`audit_event` + `AuditPort.record(tx,…)`, AUD-1, release holder's; no audit table in our modules); front office owns the lead/prospect/client activity timeline (read view); firm settings are platform's typed settings home; representative of record = Case Manager with a licence, no rename in case code (`user-R`) · Lead 38: FO-1a/1b side by side · Lead 39: Atomic CRM design reference only · founder 22:3x 13 Nov: Corporate pipeline and script embed in month one · **P-561** BoldSign on 4 conditions → **P-563** confirmed after stream 4's comparison · **P-562** size for ~100 Canadian firms (50 to start where it saves effort) · **P-564** email one-time code before signing, firm setting on by default · **P-565** sessions past ~half context hand over.
@@ -44,7 +45,7 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 ## Next step for the fresh Lead B
 1. Read this file, then contracts §7, then the rows file's latest sections.
 2. Watch PR #1728 (PF-3) with the release holder; when it merges, ask for FO-1a and FO-1b to start from their briefs, and write the **PF-4** brief (then PF-4b, PF-5) two ahead.
-3. Shape **FO-7** after question 5 and **FO-5s** (retainer/signing screens: concept first, skill screen-concept).
+3. Shape **FO-7** (question 5 decided: contracts §7 §2.5; step 0 verifies a fees-to-operating processor set-up) and the **PF-5s** concept after A46's picks. FO-5s is done (concept r2 approved).
 4. Commit and push this file at every change (P-557); times only from `TZ=Asia/Kolkata date`.
 
 ## In flight
@@ -86,3 +87,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 07:59 IST: FO-5s concept drafting started (in-process Opus drafter → `screens/fo-5s-retainer-signing/concept-draft.md` + `design/board.html`); then a fresh challenger, then Lead B approval (P-223 (4)). If this session ends first, a fresh Lead B re-runs the draft from the skill screen-concept.
 * 14 Nov 08:03 IST: P-566 folded (contracts §7 §1.1, rows rev 6: PF-5 rewritten, PF-5s shaped). Q3-Q5 decided under P-566 (3) with evidence (register §C2; contracts §7 §1.2, §2.3-2.4, §2.5); PF-4, PF-4b, PF-6, FO-5b and the PF-4/PF-4b briefs aligned.
 * 14 Nov 08:07 IST: FO-5s concept r1 + board written (`screens/fo-5s-retainer-signing/`); the drafter's 10 gaps decided and folded (rows rev 6.1: FO-5, FO-6 amended, FO-5s added). Fresh challenger next.
+* 14 Nov 08:14 IST: FO-5s fresh challenge (Fable): 2 Blockers, 6 Majors, 10 Minors, all accepted; concept r2 approved (P-223 (4)); rows rev 6.2. Next: FO-7 shaping.
