@@ -90,8 +90,9 @@ ready_rows (§2 Q, R2-3, §11 R3, R3b, R3c): a BACKLOG row is ready when
   on" clause names a non-id dependency.
   Row text: every cell except the table's Done-when column (R3c), "**"
   removed, then cut into segments at "|" and "·";
-  inside a segment, text from a labelled field on ("decisions:", "Done when",
-  "Source:", case-insensitive) is dropped (R3b: never a dependency).
+  inside a segment, text from a labelled field ("decisions:", "Done when",
+  "Source:", case-insensitive) up to the next labelled "Waits on:" field (colon
+  required) or the segment end is dropped (R3b: never a dependency).
   Clauses (R3b): after each "waits on" (case-insensitive; "*", "_" and an
   optional ":" allowed) or whole word "after", up to the first ".", ";", "|",
   "·" or line end.
@@ -143,6 +144,10 @@ A13 Percentile: nearest-rank (index ceil(pN) - 1); forecast dates agree with
 Settled after §11: B1 (R1b), B2 (R3b), B4 (R5b); B3 and B5 accepted as built
 (whole-word "after"; a title that only mentions an id matches).
 C1-C3 settled by R3c; D1 and D2 kept as ruling R3d.
+E1 A labelled field ends at the next labelled "Waits on:" (with its colon): the
+   What cell of PF-4t reads "*Done when:* ... *Waits on:* PF-4 merged", one
+   segment with no "·"; prose "waits on" without a colon inside "decisions:"
+   stays dropped.
 Earlier notes, now R3d:
 D1 R3c says Done-when is never scanned "(only the row's own clauses in the What
    column)", but the platform and front-office rows keep "waits on" in the
@@ -393,6 +398,25 @@ def is_row_id(tok, backlog_ids=()):
     return tok in backlog_ids and re.search(r"\d", tok) is not None
 
 
+WAITS_LABEL_RE = re.compile(r"(?i)waits[\s*_]*on[\s*_]*:")
+
+
+def drop_labelled_fields(seg):
+    """R3b: text after a labelled field ("decisions:", "Done when", "Source:") is never a
+    dependency. The field runs to the next labelled "Waits on:" field (with its colon, as in
+    `*Done when:* ... *Waits on:* PF-4 merged`) or to the segment end."""
+    out = ""
+    while True:
+        lab = LABEL_CUT_RE.search(seg)
+        if not lab:
+            return out + seg
+        out += seg[:lab.start()]
+        nxt = WAITS_LABEL_RE.search(seg, lab.end())
+        if not nxt:
+            return out
+        seg = seg[nxt.start():]
+
+
 def drop_map_numbers(words):
     """§11 R3d: "map" followed by numbers is filler (after the filler words are gone,
     so "map rows 48 and 49" -> "map 48 49" -> nothing)."""
@@ -418,9 +442,7 @@ def dependencies(row_text, backlog_ids=()):
 
     text = row_text.replace("**", "")
     for seg in re.split(r"[|·]", text):
-        lab = LABEL_CUT_RE.search(seg)
-        if lab:
-            seg = seg[:lab.start()]
+        seg = drop_labelled_fields(seg)
         for kind, rx in (("waits", WAITS_RE), ("after", AFTER_RE)):
             for m in rx.finditer(seg):
                 clause = re.split(r"[.;\n]", seg[m.end():], maxsplit=1)[0]
@@ -912,6 +934,9 @@ def self_test():
     eq("R3c nobody/no", dependencies("waits on nobody, no PR"), ([], []))
     eq("R3c nested + backticks", dependencies("waits on PF-8 (P-558 (5)) and `FilesPort`"), (["PF-8"], []))
     eq("R3c open bracket", dependencies("waits on PF-2 (see v0.1 notes)"), (["PF-2"], []))
+    eq("PF-4t literal", dependencies("*Waits on:* PF-4 merged"), (["PF-4"], []))
+    eq("PF-4t after Done when", dependencies("a. *Done when:* the job passes. *Waits on:* PF-4 merged. *Size:* S."),
+       (["PF-4"], []))
     eq("R3d map numbers", dependencies("waits on:** map rows 48 and 49 (the case side's gate), FO-2"),
        (["FO-2"], []))
     eq("R3d map then words", dependencies("waits on map 62 and the client portal")[1], ["client portal"])
