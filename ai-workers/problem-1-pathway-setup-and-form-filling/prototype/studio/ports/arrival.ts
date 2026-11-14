@@ -55,6 +55,9 @@ export interface ArrivalPort<Tx = unknown> {
   /** The consent sentence the firm's booking form shows now, or null when the firm has none (the public form then takes
    *  no booking: a booking always carries the person's consent). */
   bookingConsentWording(tx: Tx, firmId: string): Promise<ConsentWording | null>;
+  /** The person's contact details for the booking's messages (confirmation, update, reminders), or null when the person
+   *  is not a person of the firm. The booking keeps only the person's id (no names or addresses in fo_booking). */
+  contactOf(tx: Tx, firmId: string, personId: string): Promise<z.output<typeof ArrivalPerson> | null>;
 }
 
 // ------------------------------------------------------------------------------------------------------------- the fake
@@ -70,6 +73,8 @@ export type FakeArrival = ArrivalPort<unknown> & {
   readonly leads: ReadonlyArray<{ firmId: string; personId: string; key: string }>;
   /** Gives a person (by email) an open prospect at `stage` (a test's starting point). */
   addProspect(firmId: string, email: string, stage: string, open?: boolean): FakeProspect;
+  /** Adds a person of the firm (a lead or prospect staff book for). */
+  addPerson(firmId: string, person: ArrivalPerson): string;
   /** Drops what was recorded under `tx` (a rolled-back transaction). */
   discard(tx: unknown): void;
 };
@@ -83,7 +88,7 @@ export const STAGE_ORDER = ["NEW", "ENGAGED", "CONSULT", "RETAINER", "WON"] as c
  *  transaction then rolls back); `wording` is the firm's consent sentence (null = none). */
 export function fakeArrival(opts: { wording?: ConsentWording | null; failOn?: (a: z.output<typeof BookingArrival>) => boolean } = {}): FakeArrival {
   const calls: (FakeArrivalCall & { tx: unknown })[] = [];
-  const people = new Map<string, string>(), prospects: (FakeProspect & { tx?: unknown })[] = [], leads: { firmId: string; personId: string; key: string; tx: unknown }[] = [];
+  const people = new Map<string, string>(), contacts = new Map<string, z.output<typeof ArrivalPerson>>(), prospects: (FakeProspect & { tx?: unknown })[] = [], leads: { firmId: string; personId: string; key: string; tx: unknown }[] = [];
   const wording = opts.wording === undefined ? { wordingId: "00000000-0000-4000-8000-00000000c0de", text: "I agree that the firm may use these details to arrange and hold my consultation (Sample wording)." } : opts.wording;
   const pkey = (firmId: string, email: string) => `${firmId.toLowerCase()}|${email.toLowerCase()}`;
   const fake: FakeArrival = {
@@ -96,6 +101,7 @@ export function fakeArrival(opts: { wording?: ConsentWording | null; failOn?: (a
       const k = pkey(a.firmId, a.person.email);
       let personId = people.get(k), newLead = false;
       if (!personId) { personId = crypto.randomUUID(); people.set(k, personId); }
+      contacts.set(`${a.firmId.toLowerCase()}|${personId}`, a.person);
       const open = prospects.filter((p) => p.personId === personId && p.open);
       let prospectId: string | undefined;
       if (open.length === 1) {
@@ -107,6 +113,7 @@ export function fakeArrival(opts: { wording?: ConsentWording | null; failOn?: (a
       return result;
     },
     async bookingConsentWording() { return wording; },
+    async contactOf(_tx, firmId, personId) { return contacts.get(`${firmId.toLowerCase()}|${personId.toLowerCase()}`) ?? null; },
     get calls() { return calls.map(({ tx: _tx, ...c }) => c); },
     get people() { return new Map(people); },
     get prospects() { return prospects.map(({ tx: _tx, ...p }) => ({ ...p, causes: [...p.causes] })); },
@@ -118,6 +125,13 @@ export function fakeArrival(opts: { wording?: ConsentWording | null; failOn?: (a
       const p = { id: crypto.randomUUID(), personId, firmId: firmId.toLowerCase(), stage, open, causes: [] as string[] };
       prospects.push(p);
       return { ...p };
+    },
+    addPerson(firmId, person) {
+      const p = ArrivalPerson.parse(person), k = pkey(firmId, p.email);
+      const personId = people.get(k) ?? crypto.randomUUID();
+      people.set(k, personId);
+      contacts.set(`${firmId.toLowerCase()}|${personId}`, p);
+      return personId;
     },
     discard(tx) {
       for (let i = calls.length - 1; i >= 0; i--) if (calls[i].tx === tx) calls.splice(i, 1);
