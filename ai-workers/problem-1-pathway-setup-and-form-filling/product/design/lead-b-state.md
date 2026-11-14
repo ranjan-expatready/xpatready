@@ -48,16 +48,18 @@ P-559 (App.tsx line; schema folder rule; P-335/P-357 amended for PF/FO) · P-560
 ## Founder questions
 All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3-5 decided by Lead B under **P-566 (3)** with evidence (register §C2, contracts §7): two-step required for all; build the s. 24(3) checklist; trust (b). The three deviations from the team's requirements (AG-1-40; AG-05 l.539-550; AG-6-70's optional trust card account) were **confirmed by the founder as P-567**. From now on, best-practice questions are decided by Lead B with evidence (P-566 (3)); only real preferences or conflicts with the team's requirements go up.
 
-## Next step for the fresh Lead B
-1. Read this file, then contracts §7, then the rows file's latest sections.
-2. Watch PR #1728 (PF-3) with the release holder; when it merges, ask for FO-1a and FO-1b to start from their briefs, and write the **PF-4** brief (then PF-4b, PF-5) two ahead.
-3. FO-7 shaped (rev 7) and FO-5s approved. Next: the **PF-5s** concept after A46's component picks; briefs two ahead as rows become startable (FO-2 after FO-1a; PF-5 after PF-4 and A46).
-4. Commit and push this file at every change (P-557); times only from `TZ=Asia/Kolkata date`.
+## Next step for the fresh Lead B (refreshed 14 Nov 09:26 IST by Lead B (2))
+1. Read this file, then `RULES.md` on `lead/2026-11-07-lead31` (as of the newest P-), then only what the step needs. The rows file's latest sections (rev 9.1, 10, 10 part 2, 11) and its **"Order of work (P-576)"** are the plan; contracts §7 (binding) and §8 (client money module).
+2. Every row through **rev 11** is shaped; rev 11 (PF-L, PF-14, FO-12a/b/c/s) is with Lead 41 to copy. Briefs ready: PF-3 (in flight), FO-1a, FO-1b, PF-4, PF-4b, PF-5, FO-2. **Write next, two ahead in the P-576 order:** PF-L and PF-14 (unblockers, right after PF-4), then FO-5 and FO-3, then FO-7a.
+3. Watch #1728 (PF-3; head 2cdc2e986, approved, in the queue). When it merges, Lead 41 starts FO-1a, FO-1b, PF-4 at the founder's next typed turn.
+4. Open with Lead 41: the founder's confirm of the payment-plan/autopay deviation (FO-7p) and the 12-16 (+ rev 11) PR size; founder looks due on FO-4, PF-6, FO-5s, PF-5s; the founder's account openings (AWS, BoldSign sandbox key, Stripe platform test account, Meta developer account + test number).
+5. Concepts still to make (skill screen-concept, drafter → fresh Fable challenger → approve): FO-9s, FO-12s, FO-7s (after their APIs).
+6. Push at every change (P-557); times only from `TZ=Asia/Kolkata date`; report row changes to the current Lead (`tools/current-lead.sh`; Lead 41 `local_eb5559e3…`).
 
 ## In flight
 | What | Session | Branch | PR |
 |---|---|---|---|
-| PF-3 platform tables | cloud builder (started by the release holder) | its own | #1728 |
+| PF-3 platform tables | cloud builder (started by the release holder) | its own | #1728 (approved at 2cdc2e986; in the merge queue) |
 
 ## Log
 * 13 Nov 22:25 IST: rows sent to Lead 37 (one line each, with four asks); delivered, not yet answered.
