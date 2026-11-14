@@ -1,4 +1,4 @@
-Verdict: Approve 214767843571d6acbf1d69833781aac5b5a12f28 (round 2; round 1 on 75c40c54c was Changes requested, below)
+Verdict: Approve 519097e5b0e1c4d8d73a3862f490578178077064 (round 2b; round 2 approved 214767843, round 1 on 75c40c54c was Changes requested, below)
 
 # PF-14 review: background jobs (the real JobPort, the pg-boss adapter, the worker)
 
@@ -133,3 +133,11 @@ The builder reports 42 of 43 selected suites green. `check_runtime_r1c.cjs` miss
 No Blocker and no Major remains. m10 is a one-line fix worth taking before the merge; m11 and m12 can go to FO-2 and PF-23.
 
 Verdict: Approve 214767843571d6acbf1d69833781aac5b5a12f28
+
+---
+
+# Round 2b: 519097e5b0e1c4d8d73a3862f490578178077064
+
+Diff only, `git diff 214767843..519097e5b`: pgboss-jobs.ts +2, check_pf14_jobs.ts +14, and this review moved to `product/screens/PF-14/` (unchanged). **m10 fixed:** `recurring()` called while the runner is starting now awaits `#ready` and then applies the schedule. My round-2 probe now gives `schedule in pg-boss = 0 9 * * *` (was `MISSING`). The new case is not vacuous: it fires `recurring()` from start's first `boss.work()`, after the schedule loop, which is exactly where the probe hit. After the fix the order is fixed by `await`s (ready resolves → state `started` → apply → the call returns), so I see no race behind the builder's one unexplained null run. **Per-name keys:** the local `ports/` matches PF-0p c491f25c8 (#1752), where the fake keys `used` by name+key and `cancel` reaches every name. The new case asserts that both adapters queue the same key under another name, which closes m1. Suite: 64 passed, 0 failed, twice in a row. No other change.
+
+Verdict: Approve 519097e5b0e1c4d8d73a3862f490578178077064
