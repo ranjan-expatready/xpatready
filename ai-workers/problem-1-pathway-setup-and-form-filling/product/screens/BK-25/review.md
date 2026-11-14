@@ -73,3 +73,19 @@ Adobe's own Validate (the Mac run, BK-20). IMM 1294's own Validate on our engine
 3. **M3:** check the row's person even when `person` is left out; add a fail test.
 
 m1–m3 are Should. After the fixes, re-run `check_bk24_required_boxes.ts`, `check_bk25_own_statement.ts`, `check_forms_b116_own_unmapped.ts` and BK-13 on a fresh copy.
+
+## Round 2 (diff only, P-277): `git diff 775440da2..e59c6e697`, head `e59c6e697151c2092e0f5e25a9c72cc7f0368f22`
+| Round 1 | Now | Evidence |
+|---|---|---|
+| M1 (F1 open) | **Closed by ruling** | The tech lead answered on #1747 (comment 6875670212, Lead 45): F1 becomes its own row, **BK-26** (on `origin/lead/2026-11-07-lead31` BACKLOG.md, row 247), and F1 stays named in BK-24's check. That amends BK-25's done-when, so the single GAP is now the ruled state. Minor (should): the F1 text at `check_bk24_required_boxes.ts:54` says "its own row"; it could name BK-26. |
+| M2 (cut-off statement) | **Closed** | `printedStatement` (`own-yes-no.ts`) now needs the heading under the 120-character cut, and the saved text must read "<heading> <first printed choice> ". I re-ran my scan of every reading: the Background Q5 fragments on IMM 1294, 1295 and 5257 are gone. Only IMM 5707's two statements and one IMM 5409 statement remain, each followed by its own choice in the saved text. There are two new fail tests (Q5, and a choice the form does not print). |
+| M3 (row person) | **Closed** | `rowPersonRefused` now runs for every unmapped ask. With no person named, the ask is refused when the row names exactly one person other than the form's subject. I evaluated it over all 18 own-question boxes in `own-yes-no.json` against the loaded copy's field map (:4461, read-only): 0 refused. The spouse row names `subject_spouse_or_partner`, and the IMM 5257 consent row names `form_subject` and `none` (a mixed row, so the old behaviour applies). Pass and fail tests cover the spouse row with no person, the child on the spouse row, the spouse on the applicant row, a row that names no one, and a mixed row. The mixed-row default (form's subject, unchecked) is the B116 behaviour from before this row and is documented in the code. |
+| m1 (test that checked nothing) | **Closed** | That line is removed. `check_bk24_required_boxes.ts` now reads the copy's IMM 5707 map: both marriage boxes are mapped to one fact, with persons `form_subject` and `subject_spouse_or_partner`. PASS on :4461. |
+| m2 (pass hides the skipped defect) | **Closed** | `answerOf` passes `knownDefects` through on a pass. Matching by class and member rather than by path remains; that is acceptable while only tests call the engine. |
+| m3 (PR text) | **Closed** | The first line reads "Changed shared contract: `contracts/own-question.ts` (one optional field, `person`)". |
+
+Re-run on the head: `check_bk25_own_statement` 27/27, `check_b170c_xfa_adapter` 44/44 and `check_b164_no_engine_keys` 63/63. I also ran BK-24's check (head's test code) on the builder's loaded copy :4461 (`xr_studio_forms_bk25`, read-only): 28/28, IMM 1295's own Validate completes, and the only GAP is F1. BK-13's 45/45 and the isolated suites (b52, b116, qa318, qa165_taiwan, b83_undo_withdraw, b88_qa263) were reported green by the builder on fresh copies; I did not re-run them in round 2. Round 1 already covered the walk; the journey score stays 7.5/10, because the F1 critical line and the officer seeing the field's meaning instead of the question remain. F1 is BK-26's, and the meaning wording is how main shows every field. Neither is a finding against this row now.
+
+No Blocker or Major is open. Open Minor (should): name BK-26 in F1's text.
+
+**Verdict: Approve** at commit `e59c6e697151c2092e0f5e25a9c72cc7f0368f22`.

@@ -51,7 +51,7 @@ const short = (p: string) => p.replace(/^xfa\[0\]\.form\[0\]\./, "").replace(/^[
 // BK-25 (P-533, P-449): F2 (consent), F3 (the spouse's employment row 1), F5 (background 2c and 6) by data, and F4 (IMM 5707's
 // "physically present at the marriage ceremony") through the own-question door, are written now and no longer allowed open
 // (samples/own-yes-no.json "sp.outside", samples/sample-student-answers.json): any of them open FAILs. Only F1 stays named.
-const F1 = "follow-up F1: the study's city is a list that depends on the province (IMM 1294's own CityList, 4,516 cities); the filler writes no dependent list yet (p5/transforms.ts: code, its own row)";
+const F1 = "follow-up F1: the study's city is a list that depends on the province (IMM 1294's own CityList, 4,516 cities); the filler writes no dependent list yet (p5/transforms.ts: code; its own row BK-26, tech lead on #1747)";
 const OPEN: Record<string, string> = {
   "IMM 1294|principal|Page3[0].DetailsOfStudy[0].PurposeRow1[0].CityTown[0].CityTown[0]": F1,
 };
