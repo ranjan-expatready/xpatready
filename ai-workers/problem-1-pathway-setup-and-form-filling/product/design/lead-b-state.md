@@ -50,7 +50,7 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 
 ## Next step for the fresh Lead B (refreshed 14 Nov 09:26 IST by Lead B (2))
 1. Read this file, then `RULES.md` on `lead/2026-11-07-lead31` (as of the newest P-), then only what the step needs. The rows file's latest sections (rev 9.1, 10, 10 part 2, 11) and its **"Order of work (P-576)"** are the plan; contracts §7 (binding) and §8 (client money module).
-2. Every row through **rev 11** is shaped; rev 11 (PF-L, PF-14, FO-12a/b/c/s) is with Lead 41 to copy. Briefs ready: PF-3 (in flight), FO-1a, FO-1b, PF-4, PF-4b, PF-5, FO-2. **Write next, two ahead in the P-576 order:** PF-L and PF-14 (unblockers, right after PF-4), then FO-5 and FO-3, then FO-7a.
+2. Every row through **rev 11** is shaped; rev 11 (PF-L, PF-14, FO-12a/b/c/s) is with Lead 41 to copy. Briefs ready: PF-3 (in flight), FO-1a, FO-1b, PF-4, PF-4b, PF-5, FO-2. PF-L and PF-14 briefs written too. **Write next, two ahead in the P-576 order:** FO-5 and FO-3, then FO-7a.
 3. Watch #1728 (PF-3; head 2cdc2e986, approved, in the queue). When it merges, Lead 41 starts FO-1a, FO-1b, PF-4 at the founder's next typed turn.
 4. Open with Lead 41: the founder's confirm of the payment-plan/autopay deviation (FO-7p) and the 12-16 (+ rev 11) PR size; founder looks due on FO-4, PF-6, FO-5s, PF-5s; the founder's account openings (AWS, BoldSign sandbox key, Stripe platform test account, Meta developer account + test number).
 5. Concepts still to make (skill screen-concept, drafter → fresh Fable challenger → approve): FO-9s, FO-12s, FO-7s (after their APIs).
@@ -111,3 +111,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 09:21 IST: rows rev 10 (P-574): PF-13, FO-9a, FO-9b, FO-9s, FO-10, FO-11, FO-7p; size 12-16 PRs (Hypothesis). Context ~36% (Lead 41's reading); hand-over at 45% (P-565).
 * 14 Nov 09:23 IST: rev 10 part 2 (P-575 (1), A51 §12): client money its own module (contracts §8; tables `money_*` in `client-money.prisma`, code `api/src/client-money/`); one completion event `signing.completed`; governance file split recommended to the release holder.
 * 14 Nov 09:25 IST: Lead 41 answers: FO-12 (map row 36) is Lead B's; FO-11's sending-layer line OK'd; the case side's client merge is Lead 41's. P-576 order of work → rows rev 11: PF-L (libraries, one lockfile PR), PF-14 (jobs, pg-boss, fake clock), FO-12a/b/c/s, the lane and wave order; Meta test number needs the founder's developer account (P-551).
+* 14 Nov 09:27 IST: PF-L and PF-14 briefs written.
