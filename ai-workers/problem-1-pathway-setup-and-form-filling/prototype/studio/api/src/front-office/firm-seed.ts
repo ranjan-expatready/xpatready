@@ -160,5 +160,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const { PrismaClient } = await import("@prisma/client");
   const url = process.env.DATABASE_URL ?? "postgresql://xr_studio@127.0.0.1:54329/xr_studio_demo";   // as core.ts DATABASE_URL
   const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: url, options: "-c TimeZone=UTC" }) });
-  try { console.log(JSON.stringify({ sample: await seedSampleFirmsFrontOffice(db), created: await seedCreatedFirms(db) })); } finally { await db.$disconnect(); }
+  try {
+    const sample = await seedSampleFirmsFrontOffice(db), created = await seedCreatedFirms(db);
+    // The failures are printed by name (an array's extra property is dropped by JSON.stringify; Devin review on #1742),
+    // and any failure ends the command with exit code 1.
+    const failed = created.failed ?? [];
+    console.log(JSON.stringify({ sample, created: [...created], failed }));
+    if (failed.length) process.exitCode = 1;
+  } finally { await db.$disconnect(); }
 }

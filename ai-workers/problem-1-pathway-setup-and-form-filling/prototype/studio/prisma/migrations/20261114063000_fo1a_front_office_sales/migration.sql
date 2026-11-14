@@ -817,6 +817,11 @@ CREATE CONSTRAINT TRIGGER "fo_prospect_lead_engaged" AFTER INSERT OR UPDATE OF "
 CREATE FUNCTION fo_company_contact_still_linked() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE n text;
 BEGIN
+  -- One removal check at a time per company (Devin review on #1742): a person with two live roles whose two links are
+  -- ended in two transactions at once would otherwise pass both checks, each seeing the other's link as live. The lock
+  -- is held to commit, so the second check reads the first one's committed end. NO KEY UPDATE: inserts that only point
+  -- at the company (a new contact, a new prospect) do not wait for it.
+  PERFORM 1 FROM "fo_company" c WHERE c."firm_id" = OLD."firm_id" AND c."id" = OLD."company_id" FOR NO KEY UPDATE;
   SELECT p."number" INTO n FROM "fo_prospect" p JOIN "fo_stage" s ON s."firm_id" = p."firm_id" AND s."id" = p."stage_id"
     WHERE p."firm_id" = OLD."firm_id" AND p."type" = 'CORPORATE' AND p."subject_company_id" = OLD."company_id"
       AND p."primary_contact_person_id" = OLD."person_id" AND s."kind" NOT IN ('WON', 'LOST')

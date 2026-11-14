@@ -253,6 +253,22 @@ try {
   // the committed prospect and is refused. Without the lock both would commit and leave the prospect with no contact.
   ok("FO-1a fail: of a new prospect and an ending link at once, the ending is refused; no open Corporate prospect is left without its contact (break B2)",
     race[0].status === "fulfilled" && race[1].status === "rejected" && orphans === "0", { race: race.map((r) => r.status === "rejected" ? String(r.reason).slice(-160) : r.status), orphans });
+  // Two removals at once (Devin review on #1742): a contact with two live roles; one transaction ends the PRIMARY link, the
+  // other the SIGNATORY link. The second must be refused, or the open prospect is left with no link.
+  const P5 = u(736), CO4 = u(737), LX = u(738);
+  person(DEMO, SF, P5, "two.roles@example.com"); sql(DEMO, leadSql(SF, LX, P5));
+  sql(DEMO, `insert into fo_company (id, firm_id, operating_name, normalised_name, created_by, updated_at) values ('${CO4}', '${SF}', 'Two Roles Co', 'two roles co', 'test', now());
+    insert into fo_company_contact (id, firm_id, company_id, person_id, role, created_by) values ('${u(739)}', '${SF}', '${CO4}', '${P5}', 'PRIMARY', 'test'), ('${u(745)}', '${SF}', '${CO4}', '${P5}', 'SIGNATORY', 'test');
+    begin; update fo_lead set state = 'ENGAGED', engaged_at = now(), engaged_by = 'test' where id = '${LX}';
+    ${prospectSql(SF, u(746), LX, "CORPORATE", ENG_CO, { subject_company_id: `'${CO4}'`, primary_contact_person_id: `'${P5}'` }).replace(/ returning number$/, "")}; commit;`);
+  const race3 = await Promise.allSettled([
+    db.$transaction(async (tx) => { await tx.$executeRawUnsafe(`set constraints fo_company_contact_still_linked immediate`); await tx.$executeRawUnsafe(`update fo_company_contact set valid_to = now() where id = '${u(739)}'`); await tx.$executeRawUnsafe(`select pg_sleep(0.4)`); }, { timeout: 30_000 }),
+    db.$transaction(async (tx) => { await tx.$executeRawUnsafe(`select pg_sleep(0.1)`); await tx.$executeRawUnsafe(`set constraints fo_company_contact_still_linked immediate`); await tx.$executeRawUnsafe(`update fo_company_contact set valid_to = now() where id = '${u(745)}'`); }, { timeout: 30_000 }),
+  ]);
+  const unlinked = sql(DEMO, `select count(*) from fo_prospect p join fo_stage s on s.id = p.stage_id where p.type = 'CORPORATE' and s.kind not in ('WON', 'LOST')
+    and not exists (select 1 from fo_company_contact c where c.company_id = p.subject_company_id and c.person_id = p.primary_contact_person_id and c.valid_to is null)`);
+  ok("FO-1a fail: of two removals of one contact's two roles at once, the second is refused; the open prospect keeps a link (Devin review)",
+    race3[0].status === "fulfilled" && race3[1].status === "rejected" && unlinked === "0", { race3: race3.map((r) => r.status === "rejected" ? String(r.reason).slice(-160) : r.status), unlinked });
   // Two transactions at once (break R2-2): one adds a prospect on an engaged lead, the other closes that lead.
   const LR = u(734); sql(DEMO, leadSql(SF, LR, P1)); sql(DEMO, `update fo_lead set state = 'ENGAGED', engaged_at = now(), engaged_by = 'test' where id = '${LR}'`);
   const race2 = await Promise.allSettled([
@@ -391,6 +407,19 @@ try {
     sql(DEMO, `select fo_has_word(E'\\u00ad') or fo_has_word(E'\\u2800') or fo_has_word(E'\\u0301') or fo_has_word(E'\\u034f\\ufe0f') or fo_has_word(E'\\u2014\\u2026\\u3002') or fo_has_word(E'\\u3164\\u115f')`) === "f" && sql(DEMO, `select fo_has_word('é') and fo_has_word('7')`) === "t");
   ok("FO-1a fail: an intake key with a soft hyphen or any character outside printable ASCII is refused (break R3-2)", refused(DEMO, `insert into fo_arrival_receipt (firm_id, door, intake_key, payload_hash) values ('${SF}', 'BOOKING', E'booking:b\\u00ad9', 'h')`, /fo_arrival_receipt_key_check/));
   ok("FO-1a pass: an unreadable phone is kept as typed when marked so (AG-2-84 rule 5)", (sql(DEMO, `insert into fo_person (firm_id, phone, phone_readable, created_by, updated_at) values ('${SF}', '416 555', false, 'test', now())`), true));
+
+  // ------------------------------------------------------------------------- the seed command's output (Devin review)
+  const FAILF = u(130); firm(DEMO, FAILF, "failing-firm");
+  sql(DEMO, `insert into module_event (id, firm_id, type, subject_id, payload) values ('${u(131)}', '${FAILF}', 'firm.created', '${FAILF}', '{}');
+    create function fo1a_test_boom() returns trigger language plpgsql as $f$ begin raise exception 'test: this firm''s seed fails'; end $f$;
+    create trigger fo1a_test_boom before insert on fo_stage for each row when (new.firm_id = '${FAILF}') execute function fo1a_test_boom();`);
+  const runSeed = () => spawnSync(join(STUDIO, "node_modules", ".bin", "tsx"), [join(STUDIO, "api/src/front-office/firm-seed.ts")], { cwd: STUDIO, encoding: "utf8", env: { ...process.env, DATABASE_URL: urlOf(DEMO) } });
+  const bad = runSeed();
+  const badOut = (() => { try { return JSON.parse(bad.stdout.trim().split("\n").pop() ?? "{}"); } catch { return {}; } })() as { failed?: { firmId: string; error: string }[] };
+  ok("FO-1a fail: a firm whose seed fails is named in the command's output, and the command exits 1 (Devin review)", bad.status === 1 && badOut.failed?.length === 1 && badOut.failed[0].firmId === FAILF && /this firm's seed fails/.test(badOut.failed[0].error), { status: bad.status, out: bad.stdout.slice(-300), err: bad.stderr.slice(-300) });
+  sql(DEMO, `drop trigger fo1a_test_boom on fo_stage; drop function fo1a_test_boom()`);
+  const good = runSeed();
+  ok("FO-1a pass: run again once the cause is gone, the command seeds that firm and exits 0", good.status === 0 && counts(FAILF) === `16:14:1:${SERVICE}`, { status: good.status, out: good.stdout.slice(-300), err: good.stderr.slice(-300) });
 } finally {
   for (const d of dbs) await d.$disconnect().catch(() => undefined);
   for (const db of [EMPTY, DEMO, BARE]) execFileSync(join(BIN, "dropdb"), [...PG, "--if-exists", "--force", db]);
