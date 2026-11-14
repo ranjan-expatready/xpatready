@@ -43,3 +43,4 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 * 14 Nov 07:08 IST: P-561 (founder: BoldSign on 4 conditions). Rows rev 4: FO-5 (retainers, FilesPort, docxtemplater), FO-5b (Code s.24 checklist, waits on Q4), FO-6 (SigningPort + BoldSign, conditions checked first; Mac sandbox check by Lead B), PF-6 (staff screens, concept next). Contracts §7 updated (P-561; D-6 dropped per AG-5-61).
 * 14 Nov 07:10 IST: PF-6 concept r1 + board pushed (0687eefd); fresh challenger running. Rows rev 4 sent to Lead 39.
 * 14 Nov 07:10 IST: Lead 39: founder wants the vendor re-checked (FO-5r: platform vs per-firm accounts, the team's own signer, paid product). Rows rev 4.1: FO-6 vendor-neutral (fake adapter only); vendor adapter held as FO-6v.
+* 14 Nov 07:11 IST: Lead 39: rev 4 copied; FO-6 waits on FO-5r; the email one-time code is an open founder point (P-561 (3) vs AG-5-61 r13), kept in contracts §7 and FO-6 (built behind a setting).
