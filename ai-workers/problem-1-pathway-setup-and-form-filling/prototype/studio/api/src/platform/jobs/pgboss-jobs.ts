@@ -189,6 +189,8 @@ export class PgBossJobs implements JobPort {
     if (!spec.success) throw new JobRefused(`jobs: ${name}: ${spec.error.issues.map((i) => i.message).join("; ")}`);
     if (this.#state === "stopping" || this.#state === "stopped") this.#mustBeStarted();
     this.#schedules.set(name, { cron, zone });
+    // Landing while start() runs (another provider's onApplicationBootstrap): wait for it, then apply (review m10).
+    if (this.#state === "starting") await this.#ready.promise;
     if (this.#state === "started") await this.#applySchedule(name, cron, zone);
   }
 

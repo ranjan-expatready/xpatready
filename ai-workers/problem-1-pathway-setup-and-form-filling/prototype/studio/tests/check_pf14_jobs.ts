@@ -330,6 +330,18 @@ try {
     for (let i = 0; i < 100 && !early.includes("boot:1"); i++) await realPause(100);
     const sched = await svc.runner.boss.getSchedule("pf14.boot_daily");
     ok("PF-14 pass: a module that calls recurring() in onModuleInit and enqueue() in onApplicationBootstrap starts with the app; the schedule is set and the job runs", early.includes("queued:true") && early.includes("boot:1") && sched?.timezone === "America/Toronto", { early, sched: sched?.cron });
+    // The call lands after start() has applied the schedules it knew, while it registers workers: the first work()
+    // start makes fires recurring() (not awaited there: it waits for the start that is calling work()).
+    const mid = new PgBossJobs({ connectionString: urlOf(MAIN), onError: () => {} });
+    await mid.handle("pf14.mid_worker", async () => {});
+    let late: Promise<void> | undefined;
+    const work = mid.boss.work.bind(mid.boss) as (...a: unknown[]) => Promise<string>;
+    (mid.boss as unknown as { work: (...a: unknown[]) => Promise<string> }).work = (...a: unknown[]) => { late ??= mid.recurring("pf14.mid_start", "30 7 * * 1", "America/Toronto"); return work(...a); };
+    await mid.start();
+    await late;
+    const midSched = await mid.boss.getSchedule("pf14.mid_start");
+    await mid.stop();
+    ok("PF-14 pass: recurring() called while the runner is starting is in pg-boss once the call returns (review m10)", midSched?.cron === "30 7 * * 1" && midSched?.timezone === "America/Toronto", midSched);
     const never = new PgBossJobs({ connectionString: urlOf(MAIN), startWaitMs: 200, onError: () => {} });
     ok("PF-14 fail: an enqueue on a runner that never starts is refused with the reason (never a silent wait without end)", await throwsLike(() => never.enqueue("pf14.boot", {}, { key: "boot:2", firmId: A }), (e) => e instanceof JobRefused && /did not start within 0.2 s/.test(String(e))));
     let ranInApp = false;
@@ -377,6 +389,8 @@ try {
     ok("PF-14 pass: PF-0p's fake and the pg-boss adapter run 09:00 Toronto across 1 Nov at the same instants with the same keys", realRuns.length === 2 && fakeRuns.join() === realRuns.join(), { fakeRuns, realRuns });
     const f1 = await fake.enqueue("pf14.once", {}, { key: "once:1", firmId: A }), f2 = await fake.enqueue("pf14.once", {}, { key: "once:1", firmId: A });
     ok("PF-14 pass: the fake agrees: the same key twice → one job", f1.queued && !f2.queued);
+    const realOther = await jobs.enqueue("pf14.other", {}, { key: "once:1", firmId: A }), fakeOther = await fake.enqueue("pf14.other", {}, { key: "once:1", firmId: A });
+    ok("PF-14 pass: both agree a key is unique per job name: the same key under another name queues", realOther.queued && fakeOther.queued, { realOther, fakeOther });
     ok("PF-14 fail: the fake agrees: a job without a firm is refused", await throwsLike(() => fake.enqueue("pf14.once", {}, { key: "once:9" } as never), () => true));
   }
 
