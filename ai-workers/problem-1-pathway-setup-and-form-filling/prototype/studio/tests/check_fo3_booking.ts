@@ -35,7 +35,7 @@ const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++
 const thrown = async (f: () => unknown): Promise<{ status: number; body: Record<string, unknown> } | null> => {
   try { await f(); return null; } catch (e) {
     const x = e as { getStatus?: () => number; getResponse?: () => unknown; message?: string };
-    return x.getStatus ? { status: x.getStatus(), body: x.getResponse() as Record<string, unknown> } : { status: 0, body: { message: String(x.message ?? e) } };
+    return x.getStatus ? { status: x.getStatus(), body: x.getResponse!() as Record<string, unknown> } : { status: 0, body: { message: String(x.message ?? e) } };
   }
 };
 /** A Toronto wall time as a moment ("2026-10-26 09:00"). */
