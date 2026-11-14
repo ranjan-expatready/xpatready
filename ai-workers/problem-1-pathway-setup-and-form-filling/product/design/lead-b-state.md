@@ -40,6 +40,7 @@
 | PF-12 | database walls (row-level security) on PF/FO tables | **shaped (rows rev 9.1)** | after PF-4, FO-1a, FO-1b |
 | PF-13, FO-9a/9b/9s, FO-10, FO-11, FO-7p | P-574: branding extras, duplicates, assignment rules, WhatsApp, payment plans | **shaped (rows rev 10)** | see each row's waits on; FO-10 needs map row 36 (automation) shaped and owned; FO-11 needs rows 48/49 (case side) |
 | PF-L, PF-14, FO-12a/b/c/s | libraries in one PR, background jobs (pg-boss), automation engine, recipes, message many, screens | **shaped (rows rev 11)**; order of work by P-576 in the rows file | PF-L after PF-4; PF-14 after PF-L |
+| FO-13, FO-13c/k/i/s | P-579: conflict check, complaints record, identity check | **shaped (rows rev 12)** | FO-13 after FO-1a; APIs after FO-9a/FO-5/PF-14 |
 | Shaped next (no rows yet) | FO-3b paid consults (after FO-7) · PF-11 firm data download (before any real firm goes live) · FO-7s money screens (concept first, after FO-7b) · FO-8 `prospect.won` with the case side · PF-8 cloud deploy (founder's Canadian cloud account) · PF-9 firm set-up checklist and settings screen · PF-10 import with a dry run (AG-18) | | shape two ahead |
 
 ## Rulings received (all stand)
@@ -114,3 +115,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 09:27 IST: PF-L and PF-14 briefs written.
 * 14 Nov 09:27 IST: Lead 41 copied rev 10 part 2; client money's owner is Lead B for now (FO-7* ids kept); governance split and `signing.completed` accepted. Contracts §8 updated.
 * 14 Nov 09:28 IST: P-578 (founder: payment plans and saved-card autopay for earned fees kept) cited in FO-7p. Rev 11 copied; order of work accepted; account openings on the founder's list.
+* 14 Nov 09:30 IST: rows rev 12 (P-579): FO-13 schema, FO-13c conflict check (blocks Send/Convert/Signed offline without a check), FO-13k complaints, FO-13i identity check (warns, never blocks), FO-13s screens; duties read at the Code (s. 5, 15, 16, 24, 29, 35, 37; current to 2026-10-19); the College's by-laws not yet read (FO-13k reads them first).
