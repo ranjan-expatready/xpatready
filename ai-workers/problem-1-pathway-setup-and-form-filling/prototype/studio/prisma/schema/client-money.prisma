@@ -136,7 +136,7 @@ model MoneyPaymentSettings {
 /// The firm's own Stripe connected account: its id, status and the two switches Stripe reports (AG-16-14..18). No
 /// secret is stored here or anywhere in this module (AG-16-18): the platform's key lives in the secrets loader.
 model MoneyPaymentAccount {
-  id              String             @id @default(uuid()) @db.Uuid
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId          String             @unique @map("firm_id") @db.Uuid
   stripeAccountId String?            @map("stripe_account_id")
   status          MoneyAccountStatus @default(NOT_CONNECTED)
@@ -168,7 +168,7 @@ model MoneyNumberSeries {
 /// An invoice (AG-6-1): on a person or a company (never a prospect), optionally a case. A draft has no number; issuing
 /// (issued_at set) takes the next INV- number and freezes the lines, tax, party, currency and number. Status is derived.
 model MoneyInvoice {
-  id        String        @id @default(uuid()) @db.Uuid
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId    String        @map("firm_id") @db.Uuid
   personId  String?       @map("person_id") @db.Uuid
   companyId String?       @map("company_id") @db.Uuid
@@ -201,7 +201,7 @@ model MoneyInvoice {
 /// One line of an invoice (AG-6-1 rule 2, AG-6-4): amount = quantity × unit amount; tax in basis points and its
 /// amount, rounded per line by FO-7b; a government fee carries no tax.
 model MoneyInvoiceLine {
-  id              String        @id @default(uuid()) @db.Uuid
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId          String        @map("firm_id") @db.Uuid
   invoiceId       String        @map("invoice_id") @db.Uuid
   position        Int
@@ -224,7 +224,7 @@ model MoneyInvoiceLine {
 /// A credit note on an issued invoice (AG-6-48): part or full, with a reason; its CN- number is the database's. The
 /// credits on one invoice never exceed its total. Insert-only.
 model MoneyCreditNote {
-  id          String        @id @default(uuid()) @db.Uuid
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId      String        @map("firm_id") @db.Uuid
   invoiceId   String        @map("invoice_id") @db.Uuid
   /// Always set, by the database when the row is written (a check refuses null); optional here so callers never pass it.
@@ -248,7 +248,7 @@ model MoneyCreditNote {
 /// idempotency key are each unique in the firm, so a double click or a repeated webhook records one payment. Insert-only
 /// but for the cheque's one "Cleared" tick (AG-6-63 rule 7).
 model MoneyPayment {
-  id                    String             @id @default(uuid()) @db.Uuid
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId                String             @map("firm_id") @db.Uuid
   invoiceId             String?            @map("invoice_id") @db.Uuid
   trustRequestId        String?            @map("trust_request_id") @db.Uuid
@@ -285,7 +285,7 @@ model MoneyPayment {
 /// A refund of a payment (AG-6-23): an amount, a reason, by card or offline, with its own idempotency key. Refunds of
 /// one payment never exceed it. Insert-only.
 model MoneyRefund {
-  id             String           @id @default(uuid()) @db.Uuid
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId         String           @map("firm_id") @db.Uuid
   paymentId      String           @map("payment_id") @db.Uuid
   amountMinor    Int              @map("amount_minor")
@@ -308,7 +308,7 @@ model MoneyRefund {
 /// A receipt (AG-6-63): one R- series for payment receipts (naming a payment) and trust receipts (naming a deposit
 /// entry); at most one receipt per payment and per entry; numbered by the database when written. Never changed.
 model MoneyReceipt {
-  id           String           @id @default(uuid()) @db.Uuid
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId       String           @map("firm_id") @db.Uuid
   /// Always set, by the database when the row is written (a check refuses null); optional here so callers never pass it.
   number       String?
@@ -330,7 +330,7 @@ model MoneyReceipt {
 /// firm's trust bank account, never by card. Its DR- number is taken when it is sent; once sent its party, currency and
 /// number never change; a cancel keeps the number and needs a reason. Status is derived from facts (FO-7t).
 model MoneyTrustRequest {
-  id           String        @id @default(uuid()) @db.Uuid
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId       String        @map("firm_id") @db.Uuid
   number       String?
   personId     String?       @map("person_id") @db.Uuid
@@ -364,7 +364,7 @@ model MoneyTrustRequest {
 /// zero. A withdrawal names an issued invoice of the same party and currency (s. 32(f)); a deposit names the payment
 /// received into trust that brought it; a refund to the client and a correction carry a reason.
 model MoneyTrustEntry {
-  id                String              @id @default(uuid()) @db.Uuid
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId            String              @map("firm_id") @db.Uuid
   personId          String?             @map("person_id") @db.Uuid
   companyId         String?             @map("company_id") @db.Uuid
@@ -404,7 +404,7 @@ model MoneyTrustEntry {
 /// A write-off of an issued invoice's small balance (AG-6-76): amount, reason (1-200 characters), by, at. At most one per
 /// invoice; never on a draft; insert-only.
 model MoneyWriteOff {
-  id          String        @id @default(uuid()) @db.Uuid
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId      String        @map("firm_id") @db.Uuid
   invoiceId   String        @map("invoice_id") @db.Uuid
   amountMinor Int           @map("amount_minor")
@@ -424,7 +424,7 @@ model MoneyWriteOff {
 /// by a reversing batch that names the batch it undoes and a reason (its lines go back to the list); one undo per batch;
 /// an undo is never undone. Insert-only.
 model MoneyMoveBatch {
-  id            String        @id @default(uuid()) @db.Uuid
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId        String        @map("firm_id") @db.Uuid
   currency      MoneyCurrency
   transferDate  DateTime?     @map("transfer_date") @db.Date
@@ -448,7 +448,7 @@ model MoneyMoveBatch {
 /// most one batch that has not been undone: move_ordinal (the database's) counts its moves, and (source, kind, ordinal)
 /// is unique, so two people ticking the same line at once make one batch. Insert-only.
 model MoneyMoveLine {
-  id                 String             @id @default(uuid()) @db.Uuid
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId             String             @map("firm_id") @db.Uuid
   batchId            String             @map("batch_id") @db.Uuid
   kind               MoneyMoveKind

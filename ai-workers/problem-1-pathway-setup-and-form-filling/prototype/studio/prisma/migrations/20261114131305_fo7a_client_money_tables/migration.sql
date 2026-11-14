@@ -78,7 +78,7 @@ CREATE TABLE "money_payment_settings" (
 
 -- CreateTable
 CREATE TABLE "money_payment_account" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "stripe_account_id" TEXT,
     "status" "MoneyAccountStatus" NOT NULL DEFAULT 'NOT_CONNECTED',
@@ -103,7 +103,7 @@ CREATE TABLE "money_number_series" (
 
 -- CreateTable
 CREATE TABLE "money_invoice" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "person_id" UUID,
     "company_id" UUID,
@@ -122,7 +122,7 @@ CREATE TABLE "money_invoice" (
 
 -- CreateTable
 CREATE TABLE "money_invoice_line" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "invoice_id" UUID NOT NULL,
     "position" INTEGER NOT NULL,
@@ -141,7 +141,7 @@ CREATE TABLE "money_invoice_line" (
 
 -- CreateTable
 CREATE TABLE "money_credit_note" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "invoice_id" UUID NOT NULL,
     "number" TEXT,
@@ -157,7 +157,7 @@ CREATE TABLE "money_credit_note" (
 
 -- CreateTable
 CREATE TABLE "money_payment" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "invoice_id" UUID,
     "trust_request_id" UUID,
@@ -180,7 +180,7 @@ CREATE TABLE "money_payment" (
 
 -- CreateTable
 CREATE TABLE "money_refund" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "payment_id" UUID NOT NULL,
     "amount_minor" INTEGER NOT NULL,
@@ -197,7 +197,7 @@ CREATE TABLE "money_refund" (
 
 -- CreateTable
 CREATE TABLE "money_receipt" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "number" TEXT,
     "kind" "MoneyReceiptKind" NOT NULL,
@@ -210,7 +210,7 @@ CREATE TABLE "money_receipt" (
 
 -- CreateTable
 CREATE TABLE "money_trust_request" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "number" TEXT,
     "person_id" UUID,
@@ -233,7 +233,7 @@ CREATE TABLE "money_trust_request" (
 
 -- CreateTable
 CREATE TABLE "money_trust_entry" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "person_id" UUID,
     "company_id" UUID,
@@ -256,7 +256,7 @@ CREATE TABLE "money_trust_entry" (
 
 -- CreateTable
 CREATE TABLE "money_write_off" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "invoice_id" UUID NOT NULL,
     "amount_minor" INTEGER NOT NULL,
@@ -270,7 +270,7 @@ CREATE TABLE "money_write_off" (
 
 -- CreateTable
 CREATE TABLE "money_move_batch" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "currency" "MoneyCurrency" NOT NULL,
     "transfer_date" DATE,
@@ -284,7 +284,7 @@ CREATE TABLE "money_move_batch" (
 
 -- CreateTable
 CREATE TABLE "money_move_line" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "batch_id" UUID NOT NULL,
     "kind" "MoneyMoveKind" NOT NULL,
