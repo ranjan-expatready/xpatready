@@ -202,6 +202,8 @@ ALTER TABLE "fo_identity_check"
   ADD CONSTRAINT "fo_identity_check_checked_at_check" CHECK (isfinite("checked_at"));
 
 -- Never deleted or truncated (both), never changed (an identity check: a correction is a new check).
+-- Erasure (Lead B, #1755): PF-21d will anonymise an identity check's personal fields, keeping the record that a check
+-- happened, only through one function fo_compliance_erase(...) run by the erasure job; never by opening updates generally.
 CREATE FUNCTION fo_compliance_refuse_change() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   RAISE EXCEPTION '%: % is refused; a check is a record (write a new check instead)', TG_TABLE_NAME, lower(TG_OP)
