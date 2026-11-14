@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PF-6 staff screens — board (Sample data)</title>
+<style>
+:root{--blue:#0862c5;--blue-50:#e6f4ff;--text:#1d2733;--muted:#5b6b7b;--border:#d8dee6;--bg:#f4f6f9;--white:#fff;--ok:#16794a;--warn:#a35a00;--danger:#b42318;--r:8px}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 Inter,system-ui,sans-serif;color:var(--text);background:var(--bg)}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}h1{font-size:24px}h2{font-size:18px}h3{font-size:16px}
+.note{max-width:1200px;margin:16px auto;padding:12px 16px;background:#fff8e6;border:1px solid #f0d9a0;border-radius:var(--r);font-size:12px}
+nav.tabs{max-width:1200px;margin:0 auto 8px;display:flex;gap:8px;flex-wrap:wrap}nav.tabs a{padding:6px 12px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--text);text-decoration:none}nav.tabs a:focus,nav.tabs a:hover{border-color:var(--blue);color:var(--blue)}
+section.screen{max-width:1200px;margin:0 auto 32px;background:#fff;border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.cap{padding:8px 16px;background:#eef2f6;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)}
+.shell{display:grid;grid-template-columns:200px 1fr;min-height:520px}.side{background:#f8fafc;border-right:1px solid var(--border);padding:16px 12px}.side b{display:block;font-size:12px;color:var(--muted);margin:12px 0 4px}.side a{display:flex;justify-content:space-between;padding:6px 8px;border-radius:6px;color:var(--text);text-decoration:none}.side a.on{background:var(--blue-50);color:var(--blue);font-weight:600}
+.main{padding:20px 24px}.head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px}.sub{color:var(--muted);margin-top:2px}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--text);font:inherit;cursor:pointer}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.chips{display:flex;gap:8px;margin:8px 0 12px;flex-wrap:wrap}.chip{padding:4px 10px;border-radius:999px;border:1px solid var(--border);font-size:12px;background:#fff}.chip.on{border-color:var(--blue);background:var(--blue-50);color:var(--blue)}
+table{width:100%;border-collapse:collapse}th{font-size:12px;color:var(--muted);text-align:left;font-weight:600;padding:8px;border-bottom:1px solid var(--border)}td{height:44px;padding:0 8px;border-bottom:1px solid var(--border)}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:12px}.dot{width:8px;height:8px;border-radius:2px;background:var(--muted)}.dot.warn{background:var(--warn);border-radius:50%}.dot.ok{background:var(--ok)}
+.match{font-size:12px;color:var(--warn)}
+.board{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:12px;overflow-x:auto}.col{background:#f4f6f9;border-radius:var(--r);padding:8px;min-height:300px}.col h3{font-size:14px;display:flex;justify-content:space-between;margin:4px 4px 8px}.col h3 span{color:var(--muted);font-weight:400}
+.card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:12px}.card b{font-size:14px;display:block}.card .meta{color:var(--muted);display:flex;justify-content:space-between;margin-top:4px}.card:focus{outline:2px solid var(--blue)}
+.won{border-left:3px solid var(--ok)}
+.rec{display:grid;grid-template-columns:260px 1fr 280px;min-height:560px}.rail{padding:16px;border-right:1px solid var(--border)}.rail:last-child{border-right:0;border-left:1px solid var(--border)}.rail dl{margin:0}.rail dt{font-size:12px;color:var(--muted);margin-top:10px}.rail dd{margin:2px 0 0}
+.centre{padding:16px}.composer{display:flex;gap:8px;margin-bottom:12px}.tl{border-left:2px solid var(--border);padding-left:12px}.ev{margin-bottom:12px}.ev small{color:var(--muted);display:block}
+.next{background:var(--blue-50);border:1px solid #cce9ff;border-radius:var(--r);padding:12px;margin-bottom:12px}.actions{display:flex;flex-direction:column;gap:8px}
+.phone{width:375px;margin:16px auto;border:1px solid var(--border);border-radius:16px;padding:20px;background:#fff}.f{margin-bottom:12px}.f label{display:block;font-weight:600;margin-bottom:4px}.f input,.f select,.f textarea{width:100%;height:40px;border:1px solid var(--border);border-radius:6px;padding:0 10px;font:inherit}.f textarea{height:80px;padding:8px}.hint{font-size:12px;color:var(--muted)}.err{color:var(--danger);font-size:12px;margin-top:4px}
+.panel{position:relative;margin:16px 24px 24px auto;width:520px;border:1px solid var(--border);border-radius:var(--r);box-shadow:0 8px 24px rgba(0,0,0,.08);background:#fff}.panel header,.panel footer{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}.panel footer{border-top:1px solid var(--border);border-bottom:0}.panel .body{padding:16px}
+.radio{display:flex;gap:8px;flex-wrap:wrap}.radio label{border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-weight:400}
+.empty{text-align:center;padding:48px 16px;color:var(--muted)}
+</style></head><body>
+<div class="note"><b>PF-6 board r1 (Lead B, 14 Nov).</b> Staff, roles and licences, month one (AG-01, SA-06). Sample data. Not a pixel spec: the builder uses the app's components and tokens. Sign-in, set-password and two-step enrolment are Cognito's own pages, not drawn.</div>
+<nav class="tabs" aria-label="Screens"><a href="#s1">1 Team</a><a href="#s2">2 Invite people</a><a href="#s3">3 Person</a><a href="#s4">4 Licences</a><a href="#s5">5 Security</a></nav>
+<section class="screen" id="s1"><div class="cap">1 · Team (AG-1 §3.2). Owner or Admin.</div><div class="shell"><div class="side"><b>Firm settings</b><a class="on" href="#s1">Team</a><a href="#s4">Licences</a><a href="#s5">Security</a></div><div class="main"><div class="head"><div><h1>Team</h1><div class="sub">Invite people and choose what each can do. <span title="Active people and pending invitations use a seat. Inactive people don't.">6 of 10 seats used ⓘ</span></div></div><button class="btn primary">Invite people</button></div>
+<div class="chips"><span class="chip on">Active · 4</span><span class="chip">Invited · 2</span><span class="chip">Inactive · 1</span></div>
+<table><thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th><th>Two-step</th><th>Last sign-in</th></tr></thead><tbody>
+<tr><td>Owner (you)</td><td>owner@example</td><td><span class="chip">Owner</span></td><td>Active</td><td>On</td><td>Today 08:02</td></tr>
+<tr><td>Representative</td><td>rep@example</td><td><span class="chip">Case Manager</span></td><td>Active</td><td>On</td><td>Yesterday</td></tr>
+<tr><td>Case officer</td><td>officer@example</td><td><span class="chip">Case Officer</span></td><td>Active</td><td>Off</td><td>Today 09:10</td></tr>
+<tr><td>Bookkeeper</td><td>books@example</td><td><span class="chip">Billing / Finance</span></td><td>Invited · expires in 2 days</td><td>—</td><td>—</td></tr>
+</tbody></table></div></div></section>
+<section class="screen" id="s2"><div class="cap">2 · Invite people, right panel (AG-1-13, -69). Seat check before anything is sent.</div><div class="panel" style="margin:16px auto;width:640px"><header><h3>Invite people</h3><span class="hint">8 of 10 seats after these invites</span></header><div class="body">
+<div class="f"><label>Person 1</label><input value="New officer"> <input value="new.officer@example" style="margin-top:6px"><div class="hint">Roles: <span class="chip on">Case Officer</span> — cases, documents, client messages · no billing or settings</div></div>
+<div class="f"><label>Person 2</label><input value="Assistant"> <input value="officer@example" style="margin-top:6px"><div class="err">Already on your team.</div></div>
+<button class="btn sm">+ Add another person</button> <a href="#" class="hint">Compare roles</a></div><footer><button class="btn">Cancel</button><button class="btn primary">Send invites</button></footer></div></section>
+<section class="screen" id="s3"><div class="cap">3 · Person, right panel (AG-1-15, -22, -30, -42, -66; SA-6-29, -44).</div><div class="panel" style="margin:16px auto;width:560px"><header><h3>Case officer</h3><span class="chip">Active</span></header><div class="body">
+<h3>Roles</h3><p><span class="chip">Case Officer</span> <button class="btn sm">Change roles</button></p><p class="hint">Giving or removing Owner asks for a reason and confirms it's you (code or password).</p>
+<h3>Licence</h3><p>No licence recorded · <button class="btn sm">Add</button></p>
+<h3>Access</h3><p><button class="btn">Deactivate</button></p><p class="hint">Asks for a reason. They are signed out now and can't sign in. Their work stays, shown as (Inactive) Case officer.</p></div><footer><button class="btn">Close</button><span></span></footer></div></section>
+<section class="screen" id="s4"><div class="cap">4 · Licences (AG-1 §3.5). Owner/Admin edit anyone's; each person edits their own.</div><div class="main"><h1>Licences</h1><div class="sub">Each licensed person's licence, entered once and printed on retainers and forms. We never verify licences.</div>
+<table><thead><tr><th>Name</th><th>Representative type</th><th>Licensing body</th><th>Licence number</th><th></th></tr></thead><tbody><tr><td>Representative</td><td>RCIC (Sample)</td><td>College (Sample)</td><td>R000000 (Sample)</td><td><button class="btn sm">Edit</button></td></tr></tbody></table></div></section>
+<section class="screen" id="s5"><div class="cap">5 · Security (AG-1-40). One switch.</div><div class="main"><h1>Security</h1><div class="f"><label style="font-weight:600"><input type="checkbox" checked style="width:auto;height:auto"> Require two-step sign-in for all staff</label><div class="hint">People without it set it up at their next sign-in. 2 of 4 active people have it on.</div></div></div></section>
+</body></html>
