@@ -423,3 +423,15 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
 * **PF-0p's interim `AuditPort` adapter** sits in AUD-1's area. It is an OK or a no.
 
 **Every brief now has (Lead 47, 14 Nov):** before asking for the label, run, on `main` merged into the branch, the suites of every CI part that was red on any earlier head, plus every suite in the shard that shares the demo database, and paste the results.
+
+**Rev 16 ruling (Lead 47, P-600, 14 Nov 18:25 IST):**
+* **Schema rows run in parallel, any number at once**, under five conditions:
+  1. each has its own schema file and migration folder;
+  2. it adds only to its own tables; a shared model changes only through its own slot line;
+  3. its functions and triggers carry the area prefix;
+  4. its stamp is later than `main`'s newest; the later PR re-stamps and re-runs CI when an earlier one merges;
+  5. the release holder reads each migration diff before the label.
+
+  Every schema brief now has the re-stamp step.
+* **PF-0p's interim `AuditPort` adapter:** OK. AUD-1 swaps it behind the port later, with no caller change.
+* Cloud lanes for the 12 start at the founder's next typed turn. **PF-0p goes first.**
