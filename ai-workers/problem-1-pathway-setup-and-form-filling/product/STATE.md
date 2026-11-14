@@ -2,7 +2,7 @@
 
 current_lead: local_eb5559e3-bb08-437e-aa1a-e219af784fc4 Lead 41 · 14 Nov 09:0x IST (series 2; took over from Lead 40 (series 2, local_7a6756d1) at ~350k, ~240k beyond its start read of ~107k, P-446); start read: measure with get_usage; hand over 200k beyond it
 
-updated: 2026-11-14 09:0x IST by **Lead 41 (series 2, local_eb5559e3-…)** after take-over from Lead 40 · weekly 40% at 08:5x (resets 20 Nov 04:30 IST) · milestone: **Works on main 93/98 (96 when qa #1730 merges; M2 60/60, M3 27/29, T 6/8)**; Bake (M3.5) walk 2 waits on BK-24 then the BK-20 re-run; full MVP build (P-558, P-570) · rules: **`RULES.md`** (as of P-569; P-570, P-571 newer) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-14 09:0x IST by **Lead 41 (series 2, local_eb5559e3-…)** after take-over from Lead 40 · weekly 40% at 08:5x (resets 20 Nov 04:30 IST) · milestone: **Works on main 93/98 (96 when qa #1730 merges; M2 60/60, M3 27/29, T 6/8)**; Bake (M3.5) walk 2 waits on BK-24 then the BK-20 re-run; full MVP build (P-558, P-570) · rules: **`RULES.md`** (as of P-573) · this branch: `lead/2026-11-07-lead31`
 
 Older pointer lines (Tonight/Next 7 hours/M3 sections, Lead 33→34 block, older founder rules): `history/STATE-2026-11-13-2245-lead37s2-old-pointer-lines.md`.
 
