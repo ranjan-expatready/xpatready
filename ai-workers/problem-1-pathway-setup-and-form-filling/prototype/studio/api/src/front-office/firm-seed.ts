@@ -11,6 +11,7 @@
 import type { FoPipeline, FoReasonKind, FoStageKind, Prisma, PrismaClient } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 import { pathToFileURL } from "node:url";
+import { EVENT } from "../../../ports/events.ts";
 import { firmScope } from "../platform/firm-scope.ts";
 
 export const SEED_ACTOR = "seed:FO-1a";
@@ -124,7 +125,7 @@ export async function seedFirmFrontOffice(tx: Prisma.TransactionClient, firmId: 
 /** The subscriber: a `firm.created` event (module_event's envelope; its firm_id is the new firm) seeds that firm's front
  *  office. Any other event type is ignored. At least once is safe: a repeat changes nothing. */
 export async function onFirmCreated(db: PrismaClient, event: { type: string; firmId: string }): Promise<FirmSeedResult | null> {
-  if (event.type !== "firm.created") return null;
+  if (event.type !== EVENT.FIRM_CREATED) return null;   // the shared events contract (ports/events.ts) names it
   return db.$transaction((tx) => seedFirmFrontOffice(tx, event.firmId));
 }
 
@@ -133,13 +134,13 @@ export async function onFirmCreated(db: PrismaClient, event: { type: string; fir
 export async function seedCreatedFirms(db: PrismaClient): Promise<FirmSeedResult[] & { failed?: { firmId: string; error: string }[] }> {
   const firms = await db.$queryRaw<{ firm_id: string }[]>`select distinct e.firm_id::text as firm_id from module_event e
     join platform_firm f on f.id = e.firm_id
-    where e.type = 'firm.created' and f.status not in ('DELETED', 'ABANDONED')
+    where e.type = ${EVENT.FIRM_CREATED} and f.status not in ('DELETED', 'ABANDONED')
       and not exists (select 1 from fo_sales_setup s where s.firm_id = e.firm_id and s.seeded_at is not null)
     order by 1`;
   const out: FirmSeedResult[] & { failed?: { firmId: string; error: string }[] } = [];
   const failed: { firmId: string; error: string }[] = [];
   for (const f of firms) {
-    try { out.push((await onFirmCreated(db, { type: "firm.created", firmId: f.firm_id }))!); } catch (e) { failed.push({ firmId: f.firm_id, error: String(e).slice(0, 300) }); }
+    try { out.push((await onFirmCreated(db, { type: EVENT.FIRM_CREATED, firmId: f.firm_id }))!); } catch (e) { failed.push({ firmId: f.firm_id, error: String(e).slice(0, 300) }); }
   }
   if (failed.length) out.failed = failed;
   return out;
