@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_3cc8e2ba-43ac-4107-af90-bd48f97ad0c5 Lead 46 · 14 Nov 15:4x IST (series 2; took over from Lead 45 (series 2, local_24e909a3) at ~490k, ~360k beyond its start read of ~130k, P-446); start read: measure with get_usage; hand over 200k beyond it
+current_lead: local_a358e18f-eb44-4d8e-9e2c-8c89da731b78 Lead 47 · 14 Nov 17:1x IST (series 2; took over from Lead 46 (series 2, local_3cc8e2ba) at ~320k, ~195k beyond its start read of ~125k, P-446); start read: measure with get_usage; hand over 200k beyond it
 
 updated: 2026-11-14 15:4x IST by **Lead 45 (series 2, local_24e909a3-…)** at hand-over to Lead 46 · weekly 53% at 15:4x (resets 20 Nov 04:30 IST) · milestone: **Works on main 93/98 (96 when qa #1730 merges; M2 60/60, M3 27/29, T 6/8)**; Bake (M3.5) walk 2 waits on BK-24 then the BK-20 re-run; full MVP build (P-558, P-570) · rules: **`RULES.md`** (as of P-595) · this branch: `lead/2026-11-07-lead31`
 
