@@ -1,11 +1,11 @@
-// platform-web-address.prisma — PF-25: each firm's own web address `<address>.expatready.com` (SA-2-27, SA2-D8, AG-4-16,
-// AG-4-17, AG01-1). Owner: Lead B (platform). Its own file (P-600 (1)); platform_firm gets only its two back-relations,
-// on PF-25's own slot line in platform.prisma. The address is a table of its own rather than a platform_firm column, so
-// platform_firm's columns stay as they are: a client generated with a new platform_firm column could no longer read
-// platform_firm on a copy migrated only up to an earlier row (every check that seeds the Sample firms there). Rules
-// Prisma cannot say (shape and reserved names, a change only with its redirect record, a held address never taken by
-// another firm, never removed, insert-only history, the Sample firms' address from their key) are in the migration
-// 20261114230000_pf25_web_address. Read and written only through api/src/platform/web-address/.
+// platform-web-address.prisma — each firm's own web address and its change history (PF-25). Owner: Lead B (platform).
+// PF-25 (SA-2-27, SA2-D8, AG-4-16, AG-4-17, AG01-1): `<address>.expatready.com`. Its own file (P-600 (1)); platform_firm
+// gets only its two back-relations, on PF-25's own slot line in platform.prisma. The address is a table of its own rather
+// than a platform_firm column, so platform_firm's columns stay as they are: a client generated with a new platform_firm
+// column could no longer read platform_firm on a copy migrated only up to an earlier row (every check that seeds the
+// Sample firms there). Rules Prisma cannot say (shape and reserved names, a change only with its redirect record, a held
+// address never taken by another firm, never removed, insert-only history, the Sample firms' address from their key) are
+// in the migration 20261114230000_pf25_web_address. Read and written only through api/src/platform/web-address/.
 
 /// A firm's web address (SA-2-27): one per firm, unique. Set at sign-up (PF-5) or, for a Sample firm, from its key;
 /// afterwards changed only by ExpatReady staff, each change with its redirect record. Never removed.
