@@ -161,7 +161,7 @@ try {
   const cb = await call(base, "POST", "/api/platform/session/callback", { body: { code } }), cb2 = await call(base, "POST", "/api/platform/session/callback", { body: { code } });
   const newMe = await call(base, "GET", "/api/platform/me/account", { token: cb.body.token });
   ok("PF-4b pass: the hand-off's code → a session for the new person (callback), never cached", cb.status === 200 && newMe.status === 200 && newMe.body.staffId === won!.body.staffId && cb.headers.get("cache-control") === "no-store", [cb.body, newMe.body]);
-  ok("PF-4b fail: the same code twice, or none → 401 SIGN_IN_CODE_REFUSED", cb2.status === 401 && cb2.body.code === "SIGN_IN_CODE_REFUSED" && (await call(base, "POST", "/api/platform/session/callback", { body: {} })).status === 401, cb2.body);
+  ok("PF-4b fail: the same code twice → 401 SIGN_IN_CODE_REFUSED; none → 422 naming code (PF-28 part 2a: the one input rule)", cb2.status === 401 && cb2.body.code === "SIGN_IN_CODE_REFUSED" && (await call(base, "POST", "/api/platform/session/callback", { body: {} })).body?.fields?.code === "This is required.", cb2.body);
 
   // ------------------------------------------------------------------------------------- sign out, everywhere
   const oId = (await db.platformStaff.findFirstOrThrow({ where: { email: "new.person@example.com" } })).id;

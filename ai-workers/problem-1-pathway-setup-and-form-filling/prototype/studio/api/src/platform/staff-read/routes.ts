@@ -1,9 +1,13 @@
 // PF-4b routes: the staff reads. Each declares its access (keys.ts); the platform guard does the rest (concept §6).
 import { Body, Controller, Get, Inject, Param, Put, Req } from "@nestjs/common";
+import { parseInput, strict } from "../http/input.ts";
 import { AnyStaff, PermissionKeys, staffOf, type StaffContext } from "../identity/keys.ts";
+import { IdentityInput } from "../identity/routes.ts";
 import { StaffReads } from "./service.ts";
 
 type R = { platform?: StaffContext };
+/** PF-28 part 2a (R1.10): a person's own licence record, through the one input rule (the same fields as PUT staff/:id/credential). */
+export const AccountInput = strict({ licence: IdentityInput.credential });
 
 @Controller("api/platform")
 export class StaffReadController {
@@ -19,7 +23,7 @@ export class StaffReadController {
   @Get("me/account") @AnyStaff("a person's own account")
   account(@Req() r: R) { return this.s.myAccount(staffOf(r)); }
   @Put("me/account") @AnyStaff("a person's own licence record")
-  saveAccount(@Req() r: R, @Body() b: Record<string, unknown>) { return this.s.saveMyAccount(staffOf(r), b ?? {}); }
+  saveAccount(@Req() r: R, @Body() b: unknown) { return this.s.saveMyAccount(staffOf(r), parseInput(AccountInput, b)); }
   @Get("settings/two-step") @PermissionKeys("agent/security-policy:manage")
   twoStep() { return this.s.twoStepSetting(); }
 }

@@ -39,6 +39,7 @@ const OWNER_WORDS = "Invite an Owner on their own: it needs a reason and Confirm
 const OWNER_ONLY_WORDS = "Only an Owner gives the Owner role. Ask an Owner to invite this person.";
 
 /** Reads the form's rows: 1-20 rows or 422 ROWS_COUNT; every other problem is a flag on its row. */
+const ROW_KEYS = ["name", "email", "roles"];
 export function batchRowsOf(body: { rows?: unknown }, actorIsOwner: boolean): BatchRow[] {
   const rows = body.rows;
   if (!Array.isArray(rows) || rows.length < 1 || rows.length > BATCH_MAX_ROWS)
@@ -47,6 +48,9 @@ export function batchRowsOf(body: { rows?: unknown }, actorIsOwner: boolean): Ba
   return rows.map((raw, i) => {
     const r = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as { name?: unknown; email?: unknown; roles?: unknown };
     const out: BatchRow = { row: i + 1, name: null, email: null, roles: null, flags: [] };
+    // PF-28 part 2a (review m1): a misspelt field on a row ("nmae") is flagged on that row, never silently dropped.
+    const unknown = Object.keys(r).filter((k) => !ROW_KEYS.includes(k)).map((k) => k.slice(0, 64));
+    if (unknown.length) out.flags.push({ code: "UNKNOWN_FIELD", detail: `This row has ${unknown.length === 1 ? "a field" : "fields"} not allowed here: ${unknown.slice(0, 5).join(", ")}. Use name, email and roles.` });
     try { out.name = nameOf(r.name); } catch (e) { out.flags.push(flagOf(e)); }
     try { out.email = emailOf(r.email); } catch (e) { out.flags.push(flagOf(e, "INVALID_EMAIL")); }
     try { out.roles = rolesOf(r.roles); } catch (e) { out.flags.push(flagOf(e, "INVALID_ROLES")); }

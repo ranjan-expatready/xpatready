@@ -11,6 +11,7 @@ import { Db } from "../../core.ts";
 import { EVENT, StaffEventPayload } from "../../../../ports/events.ts";
 import type { MailPort } from "../../../../ports/mail.ts";
 import { asBypass, enterFirm, firmScope, notInFirm } from "../firm-scope.ts";
+import { FIELD_ERROR_STATUS } from "../http/input.ts";
 import { actorWord, auditInvitation, auditStaff } from "./audit.ts";
 import { batchRowsOf, flagOf, seatWords } from "./batch-invite.ts";
 import { readCatalogue } from "./catalogue.ts";
@@ -33,7 +34,7 @@ export const ONLY_OWNER = "This is your firm's only active Owner. Give the Owner
 export const ANOTHER_DEVICE = "You signed in on another device";
 /** An Owner change needs an identity check this recent (AG-1-42). */
 export { STEP_UP_SECONDS } from "./session/step-up.ts";
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The port this server's configuration names (PLATFORM_IDENTITY). Unset: an adapter that refuses every token. */
 export function identityPortFromConfig(clock: PlatformClock): IdentityPort {
@@ -50,44 +51,44 @@ export function identityPortFromConfig(clock: PlatformClock): IdentityPort {
 const wellFormed = (s: string) => { try { encodeURIComponent(s); return true; } catch { return false; } };
 const HIDDEN = /[\s\p{Zs}\p{Zl}\p{Zp}\p{Cc}\p{Cf}\u00ad\u180e\u2000-\u200f\u2028-\u202f\u205f-\u2064\u3000\ufeff]/u;
 export function emailOf(v: unknown): string {
-  if (typeof v !== "string" || !v) return problem(400, "Check the email", "Give the person's email address.", { code: "EMAIL_REQUIRED" });
-  if (HIDDEN.test(v)) return problem(400, "Check the email", "The email contains a space or an invisible character. Type it again without them.", { code: "EMAIL_INVALID" });
-  if (v.length > 254 || !/^[^@]{1,64}@[^@.]+(\.[^@.]+)+$/.test(v) || /[<>()[\]\\,;:"]/.test(v)) return problem(400, "Check the email", "That is not an email address (name@example.com).", { code: "EMAIL_INVALID" });
+  if (typeof v !== "string" || !v) return problem(FIELD_ERROR_STATUS, "Check the email", "Give the person's email address.", { code: "EMAIL_REQUIRED" });
+  if (HIDDEN.test(v)) return problem(FIELD_ERROR_STATUS, "Check the email", "The email contains a space or an invisible character. Type it again without them.", { code: "EMAIL_INVALID" });
+  if (v.length > 254 || !/^[^@]{1,64}@[^@.]+(\.[^@.]+)+$/.test(v) || /[<>()[\]\\,;:"]/.test(v)) return problem(FIELD_ERROR_STATUS, "Check the email", "That is not an email address (name@example.com).", { code: "EMAIL_INVALID" });
   // Break m5: one spelling per address. Letters typed in two ways (an accent as a separate mark) or full-width letters are
   // refused, so two addresses that look the same cannot both be stored.
-  if (!wellFormed(v) || v.normalize("NFKC") !== v) return problem(400, "Check the email", "The email has unusual characters (an accent typed as a separate mark, or full-width letters). Type it again.", { code: "EMAIL_INVALID" });
+  if (!wellFormed(v) || v.normalize("NFKC") !== v) return problem(FIELD_ERROR_STATUS, "Check the email", "The email has unusual characters (an accent typed as a separate mark, or full-width letters). Type it again.", { code: "EMAIL_INVALID" });
   return v.toLowerCase();
 }
 export function rolesOf(v: unknown): PlatformRole[] {
-  if (!Array.isArray(v) || !v.length) return problem(400, "Choose a role", "Give at least one role.", { code: "ROLES_REQUIRED" });
+  if (!Array.isArray(v) || !v.length) return problem(FIELD_ERROR_STATUS, "Choose a role", "Give at least one role.", { code: "ROLES_REQUIRED" });
   const bad = v.filter((r) => !ROLES.includes(r as PlatformRole));
-  if (bad.length) return problem(400, "Choose a role", `Not a role: ${bad.map(String).join(", ").slice(0, 120)}. Roles: ${ROLES.join(", ")}.`, { code: "ROLE_UNKNOWN" });
-  if (new Set(v).size !== v.length) return problem(400, "Choose a role", "Each role once.", { code: "ROLE_TWICE" });
+  if (bad.length) return problem(FIELD_ERROR_STATUS, "Choose a role", `Not a role: ${bad.map(String).join(", ").slice(0, 120)}. Roles: ${ROLES.join(", ")}.`, { code: "ROLE_UNKNOWN" });
+  if (new Set(v).size !== v.length) return problem(FIELD_ERROR_STATUS, "Choose a role", "Each role once.", { code: "ROLE_TWICE" });
   return v as PlatformRole[];
 }
 /** A reason of 1-200 characters (AG-1-15), after trimming; required where the rule says so. Invisible characters alone are
  *  no reason (break m3); control characters and broken text are refused (break m4, m7). */
 const VISIBLE = (s: string) => s.replace(/[\s\p{Z}\p{Cf}]/gu, "").length > 0;
 export function reasonOf(v: unknown, required: boolean, what = "reason"): string | null {
-  if (v === undefined || v === null || (typeof v === "string" && !VISIBLE(v))) return required ? problem(400, "Give a reason", `Give a ${what} (1 to 200 characters).`, { code: "REASON_REQUIRED" }) : null;
-  if (typeof v !== "string") return problem(400, "Give a reason", `The ${what} is text.`, { code: "REASON_REQUIRED" });
-  if (/\p{Cc}/u.test(v) || !wellFormed(v)) return problem(400, "Check the reason", `The ${what} contains a control character. Type it again.`, { code: "REASON_INVALID" });
+  if (v === undefined || v === null || (typeof v === "string" && !VISIBLE(v))) return required ? problem(FIELD_ERROR_STATUS, "Give a reason", `Give a ${what} (1 to 200 characters).`, { code: "REASON_REQUIRED" }) : null;
+  if (typeof v !== "string") return problem(FIELD_ERROR_STATUS, "Give a reason", `The ${what} is text.`, { code: "REASON_REQUIRED" });
+  if (/\p{Cc}/u.test(v) || !wellFormed(v)) return problem(FIELD_ERROR_STATUS, "Check the reason", `The ${what} contains a control character. Type it again.`, { code: "REASON_INVALID" });
   const t = v.trim();
-  if ([...t].length > 200) return problem(400, "Shorten the reason", `The ${what} is at most 200 characters.`, { code: "REASON_TOO_LONG" });
+  if ([...t].length > 200) return problem(FIELD_ERROR_STATUS, "Shorten the reason", `The ${what} is at most 200 characters.`, { code: "REASON_TOO_LONG" });
   return t;
 }
 /** PF-4dn (AG-1-10): the invitee's name, optional. Trimmed; 1-120 characters; no control, format or line-break character.
  *  Empty or spaces only is no name (accept then uses the part of the email before the @). */
 export function displayNameOf(v: unknown): string | null {
   if (v === undefined || v === null || (typeof v === "string" && !v.trim() && !/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(v))) return null;   // a line or paragraph separator alone is refused, not "no name" (Devin)
-  if (typeof v !== "string") return problem(400, "Check the name", "The name is text.", { code: "DISPLAY_NAME_INVALID" });
-  if (/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(v) || !wellFormed(v)) return problem(400, "Check the name", "The name has a line break or an invisible character. Type it again on one line.", { code: "DISPLAY_NAME_INVALID" });
+  if (typeof v !== "string") return problem(FIELD_ERROR_STATUS, "Check the name", "The name is text.", { code: "DISPLAY_NAME_INVALID" });
+  if (/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(v) || !wellFormed(v)) return problem(FIELD_ERROR_STATUS, "Check the name", "The name has a line break or an invisible character. Type it again on one line.", { code: "DISPLAY_NAME_INVALID" });
   const t = v.trim();
-  if ([...t].length > 120) return problem(400, "Shorten the name", "The name is at most 120 characters.", { code: "DISPLAY_NAME_TOO_LONG" });
+  if ([...t].length > 120) return problem(FIELD_ERROR_STATUS, "Shorten the name", "The name is at most 120 characters.", { code: "DISPLAY_NAME_TOO_LONG" });
   return t;
 }
 const textOf = (v: unknown, what: string) => {
-  if (typeof v !== "string" || !v.trim() || [...v.trim()].length > 100 || /[\p{Cc}\p{Cf}]/u.test(v) || !wellFormed(v)) return problem(400, "Check the licence record", `Give the ${what} (1 to 100 characters).`, { code: "CREDENTIAL_INVALID" });
+  if (typeof v !== "string" || !v.trim() || [...v.trim()].length > 100 || /[\p{Cc}\p{Cf}]/u.test(v) || !wellFormed(v)) return problem(FIELD_ERROR_STATUS, "Check the licence record", `Give the ${what} (1 to 100 characters).`, { code: "CREDENTIAL_INVALID" });
   return v.trim();
 };
 
@@ -153,7 +154,7 @@ export class PlatformIdentity implements OnModuleInit {
   /** The local stand-in's sign-in (POST /api/platform/session/local). */
   async localSignIn(body: { firmKey?: unknown; email?: unknown; actorId?: unknown; secondStep?: unknown }) {
     if (!(this.port instanceof LocalIdentity)) return problem(403, "Not available", "The local sign-in stand-in is off on this server (PLATFORM_IDENTITY is not local).", { code: "LOCAL_SIGN_IN_OFF" });
-    if (typeof body.firmKey !== "string" || !body.firmKey) return problem(400, "Choose the firm", "Give the firm key.", { code: "FIRM_REQUIRED" });
+    if (typeof body.firmKey !== "string" || !body.firmKey) return problem(FIELD_ERROR_STATUS, "Choose the firm", "Give the firm key.", { code: "FIRM_REQUIRED" });
     const key = body.firmKey, firm = await asBypass("platform.identity.sign-in", () => this.db.platformFirm.findUnique({ where: { key }, select: { id: true, key: true } }));
     if (firm) enterFirm(firm.id);   // PF-12: the rest of the sign-in runs as this firm
     const who = typeof body.actorId === "string" && body.actorId ? { actorId: body.actorId } : { email: emailOf(body.email) };
@@ -211,7 +212,7 @@ export class PlatformIdentity implements OnModuleInit {
     if (targetId === actor.staffId) forbidden("Nobody changes their own roles. Ask another Owner or Admin.", "OWN_ROLES");
     if (added.includes("OWNER") || removed.includes("OWNER")) {
       if (!actor.roles.includes("OWNER")) forbidden("Only an Owner gives or removes the Owner role.", "OWNER_ONLY");
-      if (!reason) problem(400, "Give a reason", "Giving or removing the Owner role needs a written reason.", { code: "REASON_REQUIRED" });
+      if (!reason) problem(FIELD_ERROR_STATUS, "Give a reason", "Giving or removing the Owner role needs a written reason.", { code: "REASON_REQUIRED" });
       this.stepUp(actor, "giving or removing the Owner role");
     }
     if (added.length) {

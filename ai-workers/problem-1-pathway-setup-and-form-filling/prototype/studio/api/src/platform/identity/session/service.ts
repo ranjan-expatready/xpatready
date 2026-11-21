@@ -153,7 +153,7 @@ export class PlatformSession {
   /** POST /api/platform/session/callback { code }: the sign-in code (in the body, never in a URL or a log line) → a session (the local stand-in through PF-4's sign-in,
    *  which also ends any older session: one session at a time). */
   async callback(code: unknown) {
-    if (typeof code !== "string" || !code) return unauthorized("This sign-in link has been used or has expired. Sign in again.", "SIGN_IN_CODE_REFUSED");
+    if (typeof code !== "string" || !code || code.length > 2000) return unauthorized("This sign-in link has been used or has expired. Sign in again.", "SIGN_IN_CODE_REFUSED");
     const who = await this.admin.redeem(code);
     const session = await this.id.localSignIn({ firmKey: who.firmKey, email: who.email, secondStep: true });
     if (this.admin instanceof LocalIdentityAdmin) this.admin.enrolled(session.staffId);

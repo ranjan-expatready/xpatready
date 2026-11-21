@@ -1,6 +1,6 @@
 // PF-4dn (brief lead-b-briefs/PF-4dn.md; AG-1-10, AG-1-69): the invite carries the person's name. Against the real
 // routes of an isolated copy on the local stand-in: DW1 a named invite → accept → the staff member has that name ·
-// DW2 a 121-character name or one with a control character → 400 in plain words, nothing stored · DW3 no name → accept
+// DW2 a 121-character name or one with a control character → 422 in plain words (PF-28 part 2a), nothing stored · DW3 no name → accept
 // uses the part of the email before the @, as before (and a resend keeps the name) · DW4 the Team screen's Invite people
 // shows a labelled Name field per row (axe clean) whose value reaches the request. Seeds the Sample firms. US$0.
 //   zsh studio/tools/isolated.sh pf4dn 4573 start PLATFORM_IDENTITY=local && tsx studio/tests/check_pf4dn_invite_name.ts 4573 xr_studio_pf4dn
@@ -64,16 +64,16 @@ try {
   // ----------------------------------------------------------------------------------------------------- DW2
   const long = `pf4dn-long-${run}@example.com`, ctrl = `pf4dn-ctrl-${run}@example.com`, nl = `pf4dn-nl-${run}@example.com`;
   const tooLong = await call(tok, "POST", "/platform/staff/invitations", { email: long, roles: ["READ_ONLY"], displayName: "N".repeat(121) });
-  ok("PF-4dn DW2 fail: a 121-character name → 400 DISPLAY_NAME_TOO_LONG in plain words, and no invitation stored",
-    tooLong.status === 400 && tooLong.body.code === "DISPLAY_NAME_TOO_LONG" && tooLong.body.detail === "The name is at most 120 characters." && invitations(long) === 0, tooLong.body);
+  ok("PF-4dn DW2 fail: a 121-character name → 422 DISPLAY_NAME_TOO_LONG in plain words, and no invitation stored",
+    tooLong.status === 422 && tooLong.body.code === "DISPLAY_NAME_TOO_LONG" && tooLong.body.detail === "The name is at most 120 characters." && invitations(long) === 0, tooLong.body);
   const sep = `pf4dn-sep-${run}@example.com`;
   const sepOnly = await call(tok, "POST", "/platform/staff/invitations", { email: sep, roles: ["READ_ONLY"], displayName: "\u2028" });
-  ok("PF-4dn DW2 fail: a name of only a line separator (U+2028) → 400 DISPLAY_NAME_INVALID, never taken as no name", sepOnly.status === 400 && sepOnly.body.code === "DISPLAY_NAME_INVALID" && invitations(sep) === 0, sepOnly.body);
+  ok("PF-4dn DW2 fail: a name of only a line separator (U+2028) → 422 DISPLAY_NAME_INVALID, never taken as no name", sepOnly.status === 422 && sepOnly.body.code === "DISPLAY_NAME_INVALID" && invitations(sep) === 0, sepOnly.body);
   const bad = await Promise.all([[ctrl, "Client\u0007A"], [nl, "Client\nA"]].map(([email, displayName]) => call(tok, "POST", "/platform/staff/invitations", { email, roles: ["READ_ONLY"], displayName })));
-  ok("PF-4dn DW2 fail: a name with a control character (bell) or a line break → 400 DISPLAY_NAME_INVALID, nothing stored",
-    bad.every((b) => b.status === 400 && b.body.code === "DISPLAY_NAME_INVALID") && invitations(ctrl) === 0 && invitations(nl) === 0, bad.map((b) => b.body));
+  ok("PF-4dn DW2 fail: a name with a control character (bell) or a line break → 422 DISPLAY_NAME_INVALID, nothing stored",
+    bad.every((b) => b.status === 422 && b.body.code === "DISPLAY_NAME_INVALID") && invitations(ctrl) === 0 && invitations(nl) === 0, bad.map((b) => b.body));
   const notText = await call(tok, "POST", "/platform/staff/invitations", { email: `pf4dn-num-${run}@example.com`, roles: ["READ_ONLY"], displayName: 42 });
-  ok("PF-4dn DW2 fail: a name that is not text → 400", notText.status === 400 && notText.body.code === "DISPLAY_NAME_INVALID", notText.body);
+  ok("PF-4dn DW2 fail: a name that is not text → 422 naming displayName (PF-28 part 2a: the one input rule)", notText.status === 422 && notText.body.fields?.displayName === "This must be text.", notText.body);
   let dbRefused = false;
   try { sql(`update platform_invitation set display_name = ' padded ' where id = '${inv1.body.id}'`); } catch { dbRefused = true; }
   ok("PF-4dn DW2 fail: the database itself refuses an untrimmed name (the check holds the same rule)", dbRefused);
