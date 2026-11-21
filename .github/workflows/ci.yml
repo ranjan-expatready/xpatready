@@ -270,6 +270,10 @@ jobs:
         run: |
           chmod +x "$P/tools/push-guard.sh"
           "$P/tools/push-guard.sh" "$RANGE"
+      - name: Mergify scopes match the module cards and the files (check-mergify-scopes.sh; every PR and batch, seconds)
+        # P-756 (2) (founder 20 Nov): guards.yml ran it only when tools paths changed, so the PR adding a module folder
+        # passed and main went red after it (#2207, #2317). Reads files only. Notes PRs: job "ci". Test: the script itself.
+        run: bash "$P/tools/check-mergify-scopes.sh"
       - name: every route a pack's set-up calls has a screen (tools/route-has-screen.mjs, under a second)
         # Founder 5 Nov (P-348; QA-234): green packs hid dead ends, because a pack's set-up calls routes and a person has
         # only screens. A mutating route acceptance/lib/ calls needs a caller in web/src or a reasoned line in
@@ -602,6 +606,9 @@ jobs:
           else pin=""; [ "$KATTEMPT" = "$GITHUB_RUN_ATTEMPT" ] && pin="$KBASE"; range=$(bash "$P/tools/pr-base.sh" merge "$HEAD_SHA" $pin); fi || exit 1
           echo "tested: $range"
           bash "$P/tools/push-guard.sh" "$range"
+      - name: Mergify scopes match the module cards and the files (check-mergify-scopes.sh; P-756 (2), as job "fast")
+        if: env.MODE != 'same' && (env.KIND == 'notes')
+        run: bash "$P/tools/check-mergify-scopes.sh"
       # ENF-746c: the two notes checks judge records, so a merge-queue batch skips them (each PR passed them); the push guard stays.
       - name: notes check 1 of 2, rules files (check-docs.sh; pull requests only, ENF-746c)
         if: env.MODE != 'same' && (env.KIND == 'notes') && needs.kind.outputs.queue != 'true' && github.event_name != 'merge_group'
