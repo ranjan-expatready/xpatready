@@ -32,7 +32,7 @@ The firm's front office: public booking and retainer agreements, with their file
 **Do not.**
 - Serve a file without a checked short-lived link, or from another firm's folder.
 - Open a staff route without the platform guard.
-- Let the signing provider email anyone: SigningPort takes no address and no vendor-email option (FO-6, P-563).
+- Let the signing provider email anyone: SigningPort takes no address and no vendor-email option (FO-6, P-563); nor store a signing code, link token or email address in clear in the signing tables (sha256 only).
 - Store a token's verifier unhashed (it is kept as a SHA-256, `hashVerifier` in tokens.ts).
 
 **Booking settings and the consult record (FO-3a parts 1a, 1b-i, 2a).** Kept in a section of its own so the one-line lists above merge by themselves.

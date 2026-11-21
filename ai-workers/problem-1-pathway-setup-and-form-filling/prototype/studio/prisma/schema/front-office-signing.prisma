@@ -1,0 +1,164 @@
+// front-office-signing.prisma — signing requests, their signers, the sealed evidence and the webhook receipts. Owner: Lead B (front office).
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): never edit another area's file without its owner.
+//
+// FO-6 part 1 (BACKLOG row FO-6; contracts platform-and-front-office-contracts-2026-11-14.md §0, §2.4, §7 binding; P-563,
+// P-564, P-600; AG-5-20, -21, -25, -26, -28, -31, -37, -41, -62, -68). This file is the schema step; the API (send, the
+// public signing door, the email code, the webhook, expiry) is the row's next part. Like the other front-office areas these
+// tables carry no workspace_id (the firm is the tenant; the demo reset leaves them) and firm_id is first in every index
+// but the primary key. The firm and the firm signer's staff member key on platform_firm (id) and platform_staff (firm_id,
+// id), RESTRICT (back-relation lines under platform.prisma's "signing (FO-6)" slot). document_id and document_version_id
+// name FO-5's fo_retainer and fo_retainer_version for RETAINER and CONSULTATION (FO-6d adds OTHER for other documents),
+// and a client signer's person_id names FO-1a's fo_person: plain uuids, checked by the API, so this area edits neither
+// file. Rules Prisma cannot say are in the migration (fo_signing_ functions): status moves, one live request per
+// document, one send per version, the firm signs last, no signature without consent, written-once moments, hashes' and
+// keys' shapes, nothing deleted. No email address, code or link is stored in clear: only their sha256. Every value seeded
+// or shown from here is Sample. Legal points (e-signature identity, D-6): Unconfirmed: no counsel.
+
+/// What is signed (rows rev 16.16): a retainer agreement or a consultation agreement (both FO-5's fo_retainer kinds).
+/// A database enum so FO-6d adds OTHER with one value.
+enum FoSigningDocumentKind {
+  RETAINER
+  CONSULTATION
+}
+
+/// Who carries the envelope: our in-memory fake (CI, the demo) or the vendor adapter (FO-6v, P-563).
+enum FoSigningProvider {
+  FAKE
+  BOLDSIGN
+}
+
+/// A request's state. SENT → VIEWED → CLIENT_SIGNED (every client signed) → SIGNED (the firm signed last, sealed);
+/// DECLINED (any signer, ends it for all), EXPIRED (14 days with no client signature: never once a client signed) and
+/// CANCELLED (an edit's new version, a withdraw, a paper signature) are final like SIGNED.
+enum FoSignatureRequestStatus {
+  SENT
+  VIEWED
+  CLIENT_SIGNED
+  SIGNED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+/// Why a request was cancelled (AG-5-65 r2-r4, AG-5-34 r3, BR-11).
+enum FoSigningCancelReason {
+  UPDATED
+  WITHDRAWN
+  SIGNED_OFFLINE
+}
+
+/// A signer's side: the client (any order among clients) or the firm's representative (always last).
+enum FoSignerRole {
+  CLIENT
+  FIRM
+}
+
+/// One signing request: one version of one document sent once (a second send of the version is refused), at most one live
+/// request per document. expires_at is set at send from the firm's setting (Sample 14 days) and is never acted on once a
+/// client has signed.
+model FoSignatureRequest {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  firmId             String                   @map("firm_id") @db.Uuid
+  documentKind       FoSigningDocumentKind    @map("document_kind")
+  documentId         String                   @map("document_id") @db.Uuid
+  documentVersionId  String                   @map("document_version_id") @db.Uuid
+  documentVersion    Int                      @map("document_version")
+  provider           FoSigningProvider
+  providerDocumentId String                   @map("provider_document_id")
+  status             FoSignatureRequestStatus @default(SENT)
+  sentBy             String                   @map("sent_by") @db.Uuid
+  sentAt             DateTime                 @default(now()) @map("sent_at") @db.Timestamptz
+  expiresAt          DateTime                 @map("expires_at") @db.Timestamptz
+  endedAt            DateTime?                @map("ended_at") @db.Timestamptz
+  cancelReason       FoSigningCancelReason?   @map("cancel_reason")
+  updatedAt          DateTime                 @updatedAt @map("updated_at") @db.Timestamptz
+
+  firm     PlatformFirm           @relation(fields: [firmId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  sender   PlatformStaff          @relation("FoSignatureRequestSentBy", fields: [firmId, sentBy], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  signers  FoSigner[]
+  evidence FoSigningEvidence?
+  receipts FoSigningHookReceipt[]
+
+  /// A version is sent once.
+  @@unique([firmId, documentKind, documentVersionId])
+  /// A webhook names the provider's document and no firm: it finds one request across all firms (review M4), so this is
+  /// the one index not led by firm_id.
+  @@unique([provider, providerDocumentId])
+  /// The target of the (firm_id, request_id) keys below.
+  @@unique([firmId, id])
+  @@index([firmId, documentKind, documentId])
+  @@index([firmId, status, expiresAt])
+  @@map("fo_signature_request")
+}
+
+/// One signer of a request: a client (person_id, order 1) or the firm's representative (staff_id, order 2, exactly one per
+/// request). link_token_sha256 is the sha256 of the signer's link token (the link lives until the signer signs or
+/// declines, AG-5-21). The email code (P-564): only its sha256, its expiry, the wrong tries and the lock (the sixth wrong
+/// code locks the link 15 minutes, Sample). Consent ("I agree to sign electronically", its text version) comes before the
+/// signature; the firm signer signs only after every client.
+model FoSigner {
+  id                 String       @id @default(uuid()) @db.Uuid
+  firmId             String       @map("firm_id") @db.Uuid
+  requestId          String       @map("request_id") @db.Uuid
+  role               FoSignerRole
+  signOrder          Int          @map("sign_order")
+  personId           String?      @map("person_id") @db.Uuid
+  staffId            String?      @map("staff_id") @db.Uuid
+  linkTokenSha256    String       @map("link_token_sha256")
+  viewedAt           DateTime?    @map("viewed_at") @db.Timestamptz
+  codeSha256         String?      @map("code_sha256")
+  codeExpiresAt      DateTime?    @map("code_expires_at") @db.Timestamptz
+  codeFailures       Int          @default(0) @map("code_failures")
+  lockedUntil        DateTime?    @map("locked_until") @db.Timestamptz
+  codeVerifiedAt     DateTime?    @map("code_verified_at") @db.Timestamptz
+  consentTextVersion String?      @map("consent_text_version")
+  consentedAt        DateTime?    @map("consented_at") @db.Timestamptz
+  signedAt           DateTime?    @map("signed_at") @db.Timestamptz
+  declinedAt         DateTime?    @map("declined_at") @db.Timestamptz
+
+  request FoSignatureRequest @relation(fields: [firmId, requestId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  staff   PlatformStaff?     @relation("FoSignerStaff", fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, linkTokenSha256])
+  @@index([firmId, requestId])
+  @@index([firmId, personId])
+  @@map("fo_signer")
+}
+
+/// The sealed copy and the vendor's audit file of a completed request, stored through FilesPort and hashed, with the
+/// consent text version the signers agreed to. One per request; insert-only.
+model FoSigningEvidence {
+  id                 String   @id @default(uuid()) @db.Uuid
+  firmId             String   @map("firm_id") @db.Uuid
+  requestId          String   @map("request_id") @db.Uuid
+  sealedFileKey      String   @map("sealed_file_key")
+  sealedSha256       String   @map("sealed_sha256")
+  auditFileKey       String   @map("audit_file_key")
+  auditSha256        String   @map("audit_sha256")
+  consentTextVersion String   @map("consent_text_version")
+  storedAt           DateTime @default(now()) @map("stored_at") @db.Timestamptz
+
+  request FoSignatureRequest @relation(fields: [firmId, requestId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, requestId])
+  @@map("fo_signing_evidence")
+}
+
+/// A verified webhook, stored once by the provider's document id and event id (contracts §0 rule 4): a repeat is answered
+/// and ignored. An unverified call stores nothing. Insert-only.
+model FoSigningHookReceipt {
+  id                 String            @id @default(uuid()) @db.Uuid
+  firmId             String            @map("firm_id") @db.Uuid
+  requestId          String            @map("request_id") @db.Uuid
+  provider           FoSigningProvider
+  providerDocumentId String            @map("provider_document_id")
+  eventId            String            @map("event_id")
+  eventType          String            @map("event_type")
+  receivedAt         DateTime          @default(now()) @map("received_at") @db.Timestamptz
+
+  request FoSignatureRequest @relation(fields: [firmId, requestId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, provider, providerDocumentId, eventId])
+  @@index([firmId, requestId])
+  @@map("fo_signing_hook_receipt")
+}

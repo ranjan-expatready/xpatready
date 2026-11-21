@@ -102,6 +102,9 @@ model PlatformFirm {
   foRetainerTemplates FoRetainerTemplate[] // front-office-retainers.prisma (rows rev 16.6: under the slot line)
   foRetainers         FoRetainer[]
 
+  // back-relation slot: signing (FO-6)
+  foSignatureRequests FoSignatureRequest[] // front-office-signing.prisma (FO-6 part 1, under its own slot line, P-600 (2))
+
   // back-relation slot: web address (PF-25)
   webAddress     PlatformFirmWebAddress?      // platform-web-address.prisma
   addressHistory PlatformFirmAddressHistory[]
@@ -261,6 +264,10 @@ model PlatformStaff {
 
   // back-relation slot: retainers (FO-5)
   foRetainersRepresented FoRetainer[] // front-office-retainers.prisma (rows rev 16.6: under the slot line)
+
+  // back-relation slot: signing (FO-6)
+  foSignatureRequestsSent FoSignatureRequest[] @relation("FoSignatureRequestSentBy") // front-office-signing.prisma (FO-6 part 1)
+  foSignersAsFirm         FoSigner[]           @relation("FoSignerStaff")
 
   // back-relation slot: web address (PF-25)
 
