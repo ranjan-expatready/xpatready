@@ -56,26 +56,28 @@ const plain = (e: unknown) => e instanceof BypassNotRecorded && e.getStatus() ==
 
 /** DW3's reader: the entries whose audit field is missing or says nothing (also run on a broken copy of the list). */
 export function unaudited(list: Readonly<Record<string, object>>): string[] {
-  return Object.entries(list as Record<string, { audit?: unknown }>).filter(([, e]) => !(e.audit === "per-firm" || (typeof e.audit === "string" && /^none: .{40,}$/.test(e.audit)))).map(([k]) => k);
+  return Object.entries(list as Record<string, { audit?: unknown }>).filter(([, e]) => !(e.audit === "per-firm" || e.audit === "platform")).map(([k]) => k);
 }
 
 /** Brief PF-12b1m's run check: a use whose class does not match what running it wrote ("per-firm" with no line, or
  *  "none: …" with a line) is named. `wrote` is the use's platform.bypass lines from one run. */
 export function misclassed(use: string, entry: { audit?: unknown }, wrote: number): string | null {
   if (entry.audit === "per-firm") return wrote > 0 ? null : `${use}: "per-firm" but running it wrote no platform.bypass line (no touchFirm)`;
-  if (typeof entry.audit === "string" && entry.audit.startsWith("none: ")) return wrote === 0 ? null : `${use}: "none" but running it wrote ${wrote} platform.bypass line(s)`;
+  if (entry.audit === "platform") return wrote > 0 ? null : `${use}: "platform" but running it wrote no platform.bypass line (no touchPlatform)`;
   return `${use}: no audit`;
 }
 
 // ---------------------------------------------------------------------------------------------------------- DW3 first
-ok("PF-12b DW3 pass: every BYPASS_USES entry names how it audits (per-firm, or none with its reason)", unaudited(BYPASS_USES).length === 0, unaudited(BYPASS_USES));
+ok("PF-12b DW3 pass: every BYPASS_USES entry names how it audits (per-firm or platform; PF-12b part 3: no none)", unaudited(BYPASS_USES).length === 0, unaudited(BYPASS_USES));
 const broken = { ...BYPASS_USES, "pf12b.new-use": { why: "a use added without its audit field", routes: [] } };
-ok("PF-12b DW3 fail: a use added without `audit`, or with an empty none, is named by the check", JSON.stringify(unaudited(broken)) === '["pf12b.new-use"]' && unaudited({ x: { audit: "none: " } }).length === 1);
+ok("PF-12b DW3 fail: a use added without `audit`, or with any none reason (PF-12b part 3: every use writes a line), is named by the check", JSON.stringify(unaudited(broken)) === '["pf12b.new-use"]' && unaudited({ x: { audit: "none: a long reason that the check accepted before PF-12b part 3, now refused" } }).length === 1);
 const PER_FIRM = ["cases.prospect-won.catch-up", "job:messages.outbox_sweep", "job:platform.entitlements.storage_daily", "platform.demo.inbox", "platform.demo.reset", "platform.entitlements.limit-change", "platform.firms.signup", "platform.web-address.catch-up"];
 const DOORS = ["fo.booking.public-page", "fo.booking.self-service", "fo.sales.web-form", "platform.identity.authenticate", "platform.identity.invitation", "platform.identity.sign-in", "platform.web-address.host"];
 const perFirm = Object.entries(BYPASS_USES).filter(([, e]) => e.audit === "per-firm").map(([k]) => k).sort();
 ok("PF-12b DW3 pass: the eight cross-firm uses audit per firm; the seven own-firm doors are off the list (PF-12b part 2: narrow lookups, tests/check_pf12b_doors.ts)", JSON.stringify(perFirm) === JSON.stringify(PER_FIRM) && DOORS.every((d) => !(d in BYPASS_USES)), perFirm);
-ok("PF-12b DW3 pass: the two uses that touch no firm say why (the purge: our own register; re-encrypt: every job runs as its firm)", /platform_signup_pending/.test(BYPASS_USES["job:platform.signup.purge"].audit) && /runs as that firm/.test(BYPASS_USES["job:platform.secret_box.reencrypt"].audit));
+const PLATFORM = ["job:messages.send", "job:platform.signup.purge", "platform.account.mail"];
+ok("PF-12b3 pass: the registry is the 8 per-firm uses plus 3 platform uses, nothing else; the re-encrypt job left it (it refuses a job with no firm before any read)",
+  JSON.stringify(Object.entries(BYPASS_USES).filter(([, e]) => e.audit === "platform").map(([k]) => k).sort()) === JSON.stringify(PLATFORM) && Object.keys(BYPASS_USES).length === PER_FIRM.length + PLATFORM.length && !("job:platform.secret_box.reencrypt" in BYPASS_USES), Object.keys(BYPASS_USES));
 
 execFileSync(join(BIN, "dropdb"), [...PG, "--if-exists", DB]);
 execFileSync(join(BIN, "createdb"), [...PG, DB]);
@@ -143,10 +145,10 @@ try {
   const notNamed = await errOf(() => asBypass("platform.firms.signup", () => asBypass("job:messages.outbox_sweep", () => 1)));   // PF-12b part 2: a use allowed here alone
   const reversed = await errOf(() => inRequest(signupRoute, () => asBypass("platform.account.mail", () => asBypass("platform.firms.signup", () => 1))));
   const named = Object.entries(BYPASS_USES).filter(([, e]) => e.inside?.length).map(([k, e]) => `${k}<${e.inside!.join("|")}`);
-  ok("PF-12b fail (the exception stays narrow): another use inside sign-up, and sign-up inside platform.account.mail, are both refused; only that one pair is named, on a none use",
-    notNamed instanceof BypassRefused && /may not run inside/.test(String(notNamed)) && reversed instanceof BypassRefused && JSON.stringify(named) === JSON.stringify(["platform.account.mail<platform.firms.signup"]) && BYPASS_USES["platform.account.mail"].audit.startsWith("none: "), { notNamed: String(notNamed), reversed: String(reversed), named });
+  ok("PF-12b fail (the exception stays narrow): another use inside sign-up, and sign-up inside platform.account.mail, are both refused; only that one pair is named, on a platform use",
+    notNamed instanceof BypassRefused && /may not run inside/.test(String(notNamed)) && reversed instanceof BypassRefused && JSON.stringify(named) === JSON.stringify(["platform.account.mail<platform.firms.signup"]) && BYPASS_USES["platform.account.mail"].audit === "platform", { notNamed: String(notNamed), reversed: String(reversed), named });
   const mail = BYPASS_USES["platform.account.mail"];
-  ok("PF-12b fail (review m1): a per-firm use that names an outer use may still not run inside it; nor may a none use inside a use it does not name",
+  ok("PF-12b fail (review m1): a per-firm use that names an outer use may still not run inside it; nor may a platform use inside a use it does not name",
     mayRunInside(mail, "platform.firms.signup") && !mayRunInside({ ...mail, audit: "per-firm" }, "platform.firms.signup") && !mayRunInside(mail, "platform.demo.inbox") && !mayRunInside({ audit: mail.audit }, "platform.firms.signup"));
   const spoof = fakeAudit(), wasS = onBypassAudit(spoof);
   await requestScope.run({ correlationId: "Client.A.passport.lost", firmId: () => undefined }, () => asBypass("platform.demo.reset", async () => { await touchFirm({}, A); }));
@@ -221,12 +223,40 @@ try {
   const s = new FirmSignUp(db, ports);
   const p = await s.plans(); await clock.advance({ seconds: 5 });
   const form = { email: "owner@pf12b.example.com", password: "correct horse battery staple 77", firmName: "PF12b Immigration", countryCode: "CA", acceptedTerms: p.terms.map((t) => t.id), formStamp: p.formStamp, planCode: p.defaultPlan };
+  // Lead 15 on #2814: sign-up's no-firm steps each write one firm-less line, with the pending id and never the email.
+  const stepLines = (step: string) => sql(`select coalesce(string_agg(coalesce(firm_id::text, 'null') || '|' || coalesce(detail->>'key', 'none') || '|' || (position('@' in detail::text || summary) > 0)::text, ',' order by at), '') from audit_event where action = 'platform.bypass' and detail->>'use' = 'platform.firms.signup' and detail->>'step' = '${step}'`);
+  const failAll = { record: async () => { throw new Error("audit store down (Sample)"); } };
+  const wasSN = onBypassAudit(failAll);
+  await s.signUp({ ...form, email: "blocked@pf12b3.example.com" }, "10.12.0.20"); await s.settled();
+  onBypassAudit(wasSN);
+  ok("PF-12b3 fail (sign-up, new email): when the line cannot be written, no pending sign-up is stored (lookup, provider call and pending row are one step)", sql(`select count(*) from platform_signup_pending where email = 'blocked@pf12b3.example.com'`) === "0" && stepLines("signup.new-email") === "");
   await s.signUp(form, "10.12.0.1"); await s.settled();
+  const pendingId = sql(`select id from platform_signup_pending where email = '${form.email}' and used_at is null`);
+  ok("PF-12b3 pass (sign-up, new email): the staff lookup and the pending row write one platform.bypass line with no firm, keyed by the pending id, with no email in it", stepLines("signup.new-email") === `null|${pendingId}|false`, stepLines("signup.new-email"));
+  // Re-review 2 M1 of #2814: the provider call stays outside the transaction, so a burst larger than the pool (10) is stored whole.
+  // A provider that, like the local one sending its email through MessagesMail, needs a pooled connection of its own while
+  // it works: a sign-up transaction held across it would hold the pool (10) while 16 such calls wait for an 11th.
+  const slowIdentity = Object.assign(Object.create(identity), { register: async (r: Parameters<LocalSignUp["register"]>[0]) => { await db.$transaction(async (tx) => { await tx.$queryRaw`select 1 as ok from pg_sleep(0.3)`; }); return identity.register(r); } }) as LocalSignUp;
+  const sSlow = new FirmSignUp(db, { ...ports, identity: slowIdentity });
+  const pBurst = await sSlow.plans(); await clock.advance({ seconds: 5 });
+  const burst = Array.from({ length: 16 }, (_, i) => `burst${i}@pf12b3.example.com`);
+  await Promise.all(burst.map((email, i) => sSlow.signUp({ ...form, email, formStamp: pBurst.formStamp }, `10.13.${i}.1`))); await sSlow.settled();
+  ok("PF-12b3 pass (re-review 2 M1): 16 new-email sign-ups at once, more than the pool, are all stored, each with its one firm-less line",
+    sql(`select count(*) from platform_signup_pending where email like 'burst%@pf12b3.example.com' and used_at is null`) === "16" && stepLines("signup.new-email").split(",").length === 17, { stored: sql(`select count(*) from platform_signup_pending where email like 'burst%@pf12b3.example.com'`) });
   const link = identity.sent.find((m) => m.to === form.email)?.text ?? "";
   const token = /token=([A-Za-z0-9_-]{43})/.exec(link)?.[1] ?? "", code = /code=(\d{6})/.exec(link)?.[1] ?? "";
   const firmsBefore = sql(`select count(*) from platform_firm`), signupBefore = lines("platform.firms.signup");
   const badErr = await errOf(() => s.verify({ token: "x".repeat(43), code }, "10.12.0.2"));
-  ok("PF-12b DW4 fail: a refused verify (an unknown link) makes no firm and writes no line", badErr !== null && sql(`select count(*) from platform_firm`) === firmsBefore && lines("platform.firms.signup") === signupBefore, String(badErr));
+  ok("PF-12b DW4 fail: a refused verify (an unknown link) makes no firm and writes no firm's line", badErr !== null && sql(`select count(*) from platform_firm`) === firmsBefore && lines("platform.firms.signup") === signupBefore, String(badErr));
+  ok("PF-12b3 pass (verify, unknown link): one platform.bypass line with no firm and no key (no pending row), and the answer is the same 404", (badErr as { getStatus?: () => number })?.getStatus?.() === 404 && stepLines("signup.verify-refused") === "null|none|false", stepLines("signup.verify-refused"));
+  const wrong = String((Number(code) + 1) % 1_000_000).padStart(6, "0");
+  const wrongErr = await errOf(() => s.verify({ token, code: wrong }, "10.12.0.21"));
+  ok("PF-12b3 pass (verify, wrong code): 400 CODE_WRONG and one more firm-less line, keyed by the pending id", (wrongErr as { getStatus?: () => number })?.getStatus?.() === 400 && stepLines("signup.verify-refused") === `null|none|false,null|${pendingId}|false`, stepLines("signup.verify-refused"));
+  const wasV = onBypassAudit(failAll);
+  const vUnknown = await errOf(() => s.verify({ token: "y".repeat(43), code }, "10.12.0.22")), vWrong = await errOf(() => s.verify({ token, code: wrong }, "10.12.0.23"));
+  onBypassAudit(wasV);
+  ok("PF-12b3 fail (verify): when the line cannot be written, an unknown link and a wrong code both answer 500 in plain words (BypassNotRecorded), and no line is written",
+    plain(vUnknown) && plain(vWrong) && stepLines("signup.verify-refused").split(",").length === 2, { vUnknown: String(vUnknown), vWrong: String(vWrong) });
   const was4 = onBypassAudit(refusing);
   const rolled = await errOf(() => s.verify({ token, code }, "10.12.0.3"));
   onBypassAudit(was4);
@@ -249,18 +279,25 @@ try {
 
   // ---------------------------------------------------------------------------------------------------------- DW7
   const before7 = total();
-  await asJob("platform.signup.purge", () => s.purgeExpired());   // the own-firm doors left the bypass (PF-12b part 2): their DW7 is in check_pf12b_doors.ts
-  ok("PF-12b DW7 pass: the purge (no firm) adds no line", total() === before7, { before7, after: total() });
-  const expected = { "job:messages.outbox_sweep": 2, "platform.demo.reset": 6, "platform.demo.inbox": 2, "platform.firms.signup": 2, "platform.web-address.catch-up": 2, "job:platform.entitlements.storage_daily": 2, "platform.entitlements.limit-change": 4 };
+  const purged = await asJob("platform.signup.purge", () => s.purgeExpired());   // the own-firm doors left the bypass (PF-12b part 2): their DW7 is in check_pf12b_doors.ts
+  const purgeLine = sql(`select coalesce(firm_id::text, 'null') || '|' || actor || '|' || entity_key || '|' || (detail->>'method') from audit_event where action = 'platform.bypass' and detail->>'use' = 'job:platform.signup.purge' order by at desc limit 1`);
+  ok("PF-12b3 pass (job:platform.signup.purge): the purge writes one platform.bypass line with no firm, naming the use and the actor system:<use>", typeof purged === "number" && total() === before7 + 1 && purgeLine === "null|system:job:platform.signup.purge|job:platform.signup.purge|none", { before7, after: total(), purgeLine });
+  sql(`insert into platform_signup_pending (id, email, firm_name, country_code, plan_code, identity_subject, terms_version_ids, terms_accepted_at, token_hash, created_at, expires_at) values (gen_random_uuid(), 'expired@pf12b3.example.com', 'F', 'CA', 'team', 's', array[(select id from platform_terms_version limit 1)]::uuid[], now(), 'pf12b3-expired', now() - interval '25 hours', now() - interval '1 hour')`);
+  const pendingBefore = sql(`select count(*) from platform_signup_pending`);
+  const failPort = { record: async () => { throw new Error("audit store down (Sample)"); } }, wasF = onBypassAudit(failPort);
+  const purgeErr = await errOf(() => asJob("platform.signup.purge", () => s.purgeExpired()));
+  onBypassAudit(wasF);
+  ok("PF-12b3 fail (job:platform.signup.purge): when the line cannot be written the purge does not happen (BypassNotRecorded, nothing deleted)", plain(purgeErr) && sql(`select count(*) from platform_signup_pending`) === pendingBefore && Number(pendingBefore) > 0 && total() === before7 + 1, { purgeErr: String(purgeErr), pendingBefore });
+  const expected = { "job:messages.outbox_sweep": 2, "platform.demo.reset": 6, "platform.demo.inbox": 2, "platform.firms.signup": 21, "platform.web-address.catch-up": 2, "job:platform.entitlements.storage_daily": 2, "platform.entitlements.limit-change": 4, "job:platform.signup.purge": 1 };
   const byUse = Object.fromEntries(sql(`select detail->>'use' || '=' || count(*) from audit_event where action = 'platform.bypass' group by detail->>'use' order by 1`).split("\n").filter(Boolean).map((l) => l.split("=")).map(([k, v]) => [k, Number(v)]));
-  ok("PF-12b DW7 pass: QA-499's count equals the uses × firms touched (sweep 2, reset 2 × 2 + the demo seed 2, inbox 2, sign-up 2, catch-up 2, storage_daily 2, limit change 2 + its notices 2), no door among them", JSON.stringify(byUse) === JSON.stringify(Object.fromEntries(Object.entries(expected).sort())) && !DOORS.some((d) => d in byUse), byUse);
+  ok("PF-12b DW7 pass: QA-499's count equals the uses × firms touched (sweep 2, reset 2 × 2 + the demo seed 2, inbox 2, sign-up 2 + its no-firm steps 19 (new email 1 + the burst 16, an unknown link, a wrong code), catch-up 2, storage_daily 2, limit change 2 + its notices 2, the purge 1 with no firm: PF-12b part 3), no door among them", JSON.stringify(byUse) === JSON.stringify(Object.fromEntries(Object.entries(expected).sort())) && !DOORS.some((d) => d in byUse), byUse);
 
   // ------------------------------------------------------------------------- brief PF-12b1m: PF-19p's two new uses
-  // Both are classed "none: …" by the row owner (Lead B): they read and write only PLATFORM_ACCOUNT rows (no firm). Run
-  // after DW7 so its count stays the uses × firms of the other uses. Through the walled pool (xr_app), as the API runs.
+  // PF-12b part 3: both are "platform" uses (they read and write only PLATFORM_ACCOUNT rows, no firm) and each writes one
+  // firm-less platform.bypass line. Run after DW7 so its count stays the uses × firms of the other uses. Through the walled pool (xr_app), as the API runs.
   const NEW_USES = ["job:messages.send", "platform.account.mail"] as const;
-  ok("PF-12b1m pass: job:messages.send and platform.account.mail each name audit \"none: …\" (the row owner's words), and the check reads them as audited",
-    NEW_USES.every((u) => BYPASS_USES[u]?.audit.startsWith("none: ") && /PLATFORM_ACCOUNT/.test(BYPASS_USES[u].audit) && /PF-19p/.test(BYPASS_USES[u].audit)) && !NEW_USES.some((u) => unaudited(BYPASS_USES).includes(u)),
+  ok("PF-12b1m pass: job:messages.send and platform.account.mail each name audit \"platform\", and the check reads them as audited",
+    NEW_USES.every((u) => BYPASS_USES[u]?.audit === "platform") && !NEW_USES.some((u) => unaudited(BYPASS_USES).includes(u)),
     NEW_USES.map((u) => BYPASS_USES[u]?.audit));
   const stripped = Object.fromEntries(NEW_USES.map((u) => { const { audit: _gone, ...rest } = BYPASS_USES[u]; return [u, rest]; }));
   ok("PF-12b1m fail: the same two entries with no `audit` are both named by the check", JSON.stringify(unaudited({ ...BYPASS_USES, ...stripped }).filter((u) => (NEW_USES as readonly string[]).includes(u)).sort()) === JSON.stringify([...NEW_USES].sort()), unaudited({ ...BYPASS_USES, ...stripped }));
@@ -269,24 +306,56 @@ try {
   await pm.register();
   const pmail = new MessagesMail({ db, messages: pm, files: pfiles } as never);
   /** Every firm's rows a message use could reach (its outbox and events, and the firm-scoped audit trail), as one hash. */
-  const firmRows = () => sql(`select md5(coalesce((select string_agg(id::text || state::text || coalesce(state_reason, '') || updated_at::text, ',' order by id) from msg_outbox where firm_id is not null), '') || '|' || coalesce((select string_agg(id::text, ',' order by id) from msg_event where firm_id is not null), '') || '|' || (select count(*) from audit_event))`);
+  const firmRows = () => sql(`select md5(coalesce((select string_agg(id::text || state::text || coalesce(state_reason, '') || updated_at::text, ',' order by id) from msg_outbox where firm_id is not null), '') || '|' || coalesce((select string_agg(id::text, ',' order by id) from msg_event where firm_id is not null), '') || '|' || (select count(*) from audit_event where firm_id is not null))`);
   const lines0 = total(), firm0 = firmRows(), platformTo = "new.owner@pf12b1m.example.com";
   const sentP = await inRequest({ method: "POST", path: "/api/public/signup/verify" }, () => pmail.send({ platformAccount: true, to: platformTo, replyTo: "ignored@example.com", subject: "Confirm your email", text: "Your code is 654321.", class: "TRANSACTIONAL", idempotencyKey: "signup:pf12b1m-1" } as never));
   const rowP = await owner.msgOutbox.findUniqueOrThrow({ where: { id: sentP.messageId } });
   const mailWrote = total() - lines0, mailFirm = firmRows();
-  ok("PF-12b1m pass (platform.account.mail): a sign-up verification email writes its PLATFORM_ACCOUNT row (no firm), no platform.bypass line, and touches no firm's row",
-    rowP.audience === "PLATFORM_ACCOUNT" && rowP.firmId === null && rowP.state === "QUEUED" && mailWrote === 0 && lines("platform.account.mail") === "" && mailFirm === firm0 && misclassed("platform.account.mail", BYPASS_USES["platform.account.mail"], mailWrote) === null,
-    { audience: rowP.audience, firmId: rowP.firmId, mailWrote, same: mailFirm === firm0 });
+  const nullLines = (use: string) => sql(`select count(*) || '|' || count(*) filter (where firm_id is null and actor = 'system:${use}') from audit_event where action = 'platform.bypass' and detail->>'use' = '${use}' and at > now() - interval '1 hour'`);
+  const mailLines = nullLines("platform.account.mail");
+  ok("PF-12b3 pass (platform.account.mail): a sign-up verification email writes its PLATFORM_ACCOUNT row (no firm) and exactly one platform.bypass line with no firm, and touches no firm's row",
+    rowP.audience === "PLATFORM_ACCOUNT" && rowP.firmId === null && rowP.state === "QUEUED" && mailWrote === 1 && mailLines.split("|")[0] === mailLines.split("|")[1] && mailFirm === firm0 && misclassed("platform.account.mail", BYPASS_USES["platform.account.mail"], mailWrote) === null,
+    { audience: rowP.audience, firmId: rowP.firmId, mailWrote, mailLines, same: mailFirm === firm0 });
   const sendJob = pjobs.jobs.find((j) => (j.payload as { outboxId?: string }).outboxId === sentP.messageId);
   const delivered = await asJob("messages.send", () => pm.deliver(null, sentP.messageId));
   const sendWrote = total() - lines0 - mailWrote;
-  ok("PF-12b1m pass (job:messages.send): the platform job (no firm) sends that PLATFORM_ACCOUNT row, writes no platform.bypass line, and touches no firm's row",
+  ok("PF-12b3 pass (job:messages.send): the platform job (no firm) sends that PLATFORM_ACCOUNT row, writes one platform.bypass line with no firm, and touches no firm's row",
     sendJob?.name === "messages.send" && sendJob.firmId === null && delivered === "sent" && (await owner.msgOutbox.findUniqueOrThrow({ where: { id: sentP.messageId } })).state === "SENT"
-      && sendWrote === 0 && lines("job:messages.send") === "" && firmRows() === firm0 && misclassed("job:messages.send", BYPASS_USES["job:messages.send"], sendWrote) === null,
+      && sendWrote === 1 && /^(\d+)\|\1$/.test(nullLines("job:messages.send")) && firmRows() === firm0 && misclassed("job:messages.send", BYPASS_USES["job:messages.send"], sendWrote) === null,
     { job: sendJob, delivered, sendWrote, same: firmRows() === firm0 });
   ok("PF-12b1m fail: a stand-in that says \"per-firm\" on either use (which calls no touchFirm) is named by the run check, and so is one with no audit",
     NEW_USES.every((u) => misclassed(u, { ...BYPASS_USES[u], audit: "per-firm" }, 0) !== null) && misclassed("job:messages.send", stripped["job:messages.send"] as { audit?: unknown }, 0) !== null
-      && misclassed("platform.demo.inbox", BYPASS_USES["platform.demo.inbox"], 2) === null && misclassed("x", { audit: "none: a stand-in that writes a line all the same, which the check must catch" }, 1) !== null);
+      && misclassed("platform.demo.inbox", BYPASS_USES["platform.demo.inbox"], 2) === null && misclassed("x", { audit: "platform" }, 0) !== null);
+  // PF-12b3 fail-closed: a line that cannot be written stops each use; nothing it would have written stays.
+  const failPort2 = { record: async () => { throw new Error("audit store down (Sample)"); } }, wasF2 = onBypassAudit(failPort2);
+  const outboxBefore = sql(`select count(*) from msg_outbox where firm_id is null`), linesF = total();
+  const mailErr = await errOf(() => inRequest({ method: "POST", path: "/api/public/signup/verify" }, () => pmail.send({ platformAccount: true, to: "fail.closed@pf12b3.example.com", replyTo: "ignored@example.com", subject: "Confirm your email", text: "Your code is 111111.", class: "TRANSACTIONAL", idempotencyKey: "signup:pf12b3-fail" } as never)));
+  const sentQ = await inRequest({ method: "POST", path: "/api/public/signup/verify" }, async () => { onBypassAudit(wasF2); const r = await pmail.send({ platformAccount: true, to: "queued@pf12b3.example.com", replyTo: "ignored@example.com", subject: "Confirm", text: "Code 222222.", class: "TRANSACTIONAL", idempotencyKey: "signup:pf12b3-q" } as never); onBypassAudit(failPort2); return r; });
+  const sendErr = await errOf(() => asJob("messages.send", () => pm.deliver(null, sentQ.messageId)));
+  onBypassAudit(wasF2);
+  ok("PF-12b3 fail (platform.account.mail, job:messages.send): when the line cannot be written, the email's row is not written and the send does not happen (BypassNotRecorded; the row stays QUEUED with no try counted)",
+    plain(mailErr) && plain(sendErr) && sql(`select count(*) from msg_outbox where firm_id is null`) === String(Number(outboxBefore) + 1)
+      && sql(`select state || '|' || coalesce(state_reason, '') from msg_outbox where id = '${sentQ.messageId}'`) === "QUEUED|" && total() === linesF + 1, { mailErr: String(mailErr), sendErr: String(sendErr), outboxBefore });
+  // Review m2: the send's catch path. A provider refusal counts one try in its own transaction, with one firm-less line;
+  // an audit port that fails only on the first write (the send's own line) counts no try (BypassNotRecorded is rethrown).
+  const sendTo = async (to: string, key: string) => (await inRequest({ method: "POST", path: "/api/public/signup/verify" }, () => pmail.send({ platformAccount: true, to, replyTo: "ignored@example.com", subject: "Confirm", text: "Code 333333.", class: "TRANSACTIONAL", idempotencyKey: key } as never))).messageId;
+  const refusedId = await sendTo("refused@example.com", "signup:pf12b3-refused"), linesR = total();
+  const refusedErr = await errOf(() => asJob("messages.send", () => pm.deliver(null, refusedId)));
+  ok("PF-12b3 pass (job:messages.send, provider refusal): the try is counted with exactly one firm-less line, and the job is retried",
+    !!refusedErr && !(refusedErr instanceof BypassNotRecorded) && sql(`select state || '|' || coalesce(state_reason, '') from msg_outbox where id = '${refusedId}'`) === "QUEUED|send failed: try 1 of 5"
+      && total() === linesR + 1 && sql(`select count(*) from audit_event where action = 'platform.bypass' and firm_id is null and detail->>'use' = 'job:messages.send' and at > now() - interval '1 minute'`) !== "0", { refusedErr: String(refusedErr), linesR, total: total() });
+  const onceId = await sendTo("once@pf12b3.example.com", "signup:pf12b3-once"), linesO = total();
+  let calls = 0;
+  const failOnce = { record: async (tx: unknown, e: never) => { if (calls++ === 0) throw new Error("audit store down once (Sample)"); await auditEvent.record(tx as never, e); } }, wasO = onBypassAudit(failOnce);
+  const onceErr = await errOf(() => asJob("messages.send", () => pm.deliver(null, onceId)));
+  onBypassAudit(wasO);
+  ok("PF-12b3 fail (job:messages.send, review m2): when the send's own line fails, no try is counted and nothing is written (BypassNotRecorded rethrown before the catch path)",
+    plain(onceErr) && calls === 1 && sql(`select state || '|' || coalesce(state_reason, '') from msg_outbox where id = '${onceId}'`) === "QUEUED|" && total() === linesO, { onceErr: String(onceErr), calls });
+  // Break m3: a "platform" use in a firm's scope is refused, never written to that firm's trail.
+  const linesS = total();
+  const scopedErr = await errOf(() => requestScope.run({ correlationId: randomUUID(), firmId: () => A }, () => asJob("platform.signup.purge", () => s.purgeExpired())));
+  ok("PF-12b3 fail (break m3): the purge run in a scope that names firm A is refused (BypassNotRecorded) and writes no line on A's trail",
+    plain(scopedErr) && total() === linesS, { scopedErr: String(scopedErr), linesS, total: total() });
 
   // The sweep, both behaviours together: firm B's line fails, firm A's row and one PLATFORM_ACCOUNT row are due.
   await clock.advance({ hours: 1 });   // a new hour: no job key from an earlier sweep is reused

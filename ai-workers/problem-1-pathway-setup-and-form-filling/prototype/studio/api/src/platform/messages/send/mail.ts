@@ -16,7 +16,7 @@ import type { FilesPort } from "../../../../../ports/files.ts";
 import { normaliseAddress } from "../../../../../ports/consent.ts";
 import { MailMessage, type MailPort } from "../../../../../ports/mail.ts";
 import { MessageRefused, MessageSend, PlatformAccountSend, type MessagePort, type SendResult } from "../../../../../ports/messages.ts";
-import { asBypass, firmScope } from "../../firm-scope.ts";
+import { asBypass, firmScope, touchPlatform } from "../../firm-scope.ts";
 import { ensureMessagesFirm } from "../consent/messages-firm.ts";
 import { Messages } from "./messages.ts";
 
@@ -36,7 +36,8 @@ export class MessagesMail implements MailPort {
     // PF-12: a platform account email's row has no firm, so its own transaction runs as the system role
     // (BYPASS_USES "platform.account.mail"); a firm's runs as the caller.
     const platform = (message as { platformAccount?: unknown }).platformAccount === true;
-    const sent = await this.write(message, (put) => (platform ? asBypass("platform.account.mail", () => this.d.db.$transaction(put)) : this.d.db.$transaction(put)));
+    // PF-12b part 3: the use's one platform.bypass line goes in the same transaction as the row (fail-closed).
+    const sent = await this.write(message, (put) => (platform ? asBypass("platform.account.mail", () => this.d.db.$transaction(async (tx) => { await touchPlatform(tx); return put(tx); })) : this.d.db.$transaction(put)));
     await sent.dispatch();
     return { messageId: sent.messageId, held: sent.held };
   }

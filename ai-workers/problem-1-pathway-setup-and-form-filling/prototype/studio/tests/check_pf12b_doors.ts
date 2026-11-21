@@ -33,7 +33,7 @@ const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++
 const sql = (q: string, user = "xr_studio") => execFileSync(join(BIN, "psql"), [urlOf(user), "-X", "-v", "ON_ERROR_STOP=1", "-q", "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const refused = (f: () => unknown, re: RegExp) => { try { f(); return false; } catch (e) { return re.test(String((e as { stderr?: string }).stderr ?? e)); } };
 
-const DOORS = ["platform.identity.authenticate", "platform.identity.sign-in", "platform.identity.invitation", "fo.sales.web-form", "fo.booking.public-page", "fo.booking.self-service", "platform.web-address.host"];
+const DOORS = ["platform.identity.authenticate", "platform.identity.sign-in", "platform.identity.invitation", "fo.sales.web-form", "fo.booking.public-page", "fo.booking.self-service", "platform.web-address.host", "platform.branding.public"];   // the eighth: PF-13 part 1b's, moved in PF-12b part 3
 /** The seven functions, what each returns, and the door it serves. */
 const FNS: [string, string][] = [["platform_firm_of_key(text)", "uuid"], ["platform_staff_firm(uuid, text)", "uuid"], ["platform_invitation_firm(text)", "uuid"], ["platform_staff_email_taken(text)", "boolean"],
   ["fo_sales_web_form_firm(text)", "uuid"], ["fo_booking_token_firm(uuid, text)", "uuid"], ["platform_web_address_firm(text, timestamp with time zone)", "uuid"]];
@@ -148,6 +148,8 @@ try {
       seen.formOff = await http(`/api/public/forms/${sql(`select public_token from fo_web_form where firm_id = '${B}' limit 1`)}`);
       seen.page = await http(`/api/public/firms/${keyOf(B)}/book`);
       seen.pageBad = await http(`/api/public/firms/no-such-firm/book`);
+      seen.brand = await http(`/api/public/firms/${keyOf(B)}/branding`);
+      seen.brandBad = await http(`/api/public/firms/no-such-firm/branding`);
       seen.self = await http(`/api/public/bookings/${link}`);
       seen.selfBad = await http(`/api/public/bookings/${badVerifier}`);
       seen.selfUnknown = await http(`/api/public/bookings/${unknownId}`);
@@ -172,6 +174,8 @@ try {
   ok("PF-12b DW5 fail (fo.sales.web-form): an unknown token, and a firm's form that is off, answer the same 404 as before; another firm's form on firm A's own address is 404", st("formBad") === 404 && st("formOff") === 404 && JSON.stringify(seen.formBad.body) === JSON.stringify(seen.formOff.body) && st("formOnA") === 404, { formBad: seen.formBad, formOff: seen.formOff, formOnA: seen.formOnA });
   ok("PF-12b DW5 pass (fo.booking.public-page): the firm's booking page answers by its key", st("page") === 200, seen.page);
   ok("PF-12b DW5 fail (fo.booking.public-page): an unknown firm key is 404", st("pageBad") === 404, seen.pageBad);
+  ok("PF-12b DW5 pass (platform.branding.public, PF-12b part 3): the firm's public branding answers by its key, with its name", st("brand") === 200 && typeof seen.brand.body?.name === "string" && seen.brand.body.name.length > 0, seen.brand);
+  ok("PF-12b DW5 fail (platform.branding.public): an unknown firm key is 404", st("brandBad") === 404, seen.brandBad);
   ok("PF-12b DW5 pass (fo.booking.self-service): the booker's own link opens the booking", st("self") === 200 && seen.self.body?.status === "SCHEDULED", seen.self);
   ok("PF-12b DW5 fail (fo.booking.self-service): a wrong secret part and an unknown link both answer the same 404", st("selfBad") === 404 && st("selfUnknown") === 404 && JSON.stringify(seen.selfBad.body) === JSON.stringify(seen.selfUnknown.body), { selfBad: seen.selfBad, selfUnknown: seen.selfUnknown });
   ok("PF-12b DW5 pass (platform.web-address.host): a firm's own web address serves its public site", st("host") === 200 && seen.host.body?.webAddress === "pf12b2-a", seen.host);

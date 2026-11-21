@@ -1,7 +1,7 @@
 // PF-13 routes (AG-16-2: Owner and Admin edit, `agent/settings:edit`; reading with `agent/settings:list`). PF-4's guard
 // does the rest; the firm is the session's. Part 1b: the images (one multipart `file`; the upload layer stops one byte
 // past the largest limit and the service names each kind's own) and the public reads under /api/public (open doors:
-// the firm by its key through the named bypass use `platform.branding.public`, firm-scope.ts).
+// the firm by its key through the narrow lookup platform_firm_of_key, no bypass use, PF-12b part 3).
 import { Body, Controller, Delete, Get, HttpException, Inject, Injectable, Param, Put, Query, Req, Res, UploadedFile, UseInterceptors, type CallHandler, type ExecutionContext, type NestInterceptor } from "@nestjs/common";
 import { catchError, throwError } from "rxjs";
 import { FileInterceptor } from "@nestjs/platform-express";
