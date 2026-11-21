@@ -210,8 +210,9 @@ class ProblemErrors implements ExceptionFilter {
     // PF-0bp (STANDARDS §6): a body the JSON parser cannot read is refused before any route, as a problem answer (it was a
     // 500). The parser's own message quotes the bad text, so neither the answer nor the log repeats it.
     if (e?.type === "entity.parse.failed" || (e?.status === 400 && e?.expose === true && typeof e?.type === "string" && e.type.startsWith("entity."))) return send(400, "Request refused", "The request body is not valid JSON. Nothing was saved or started.", { code: "BODY_NOT_JSON" });
-    // P-179 break m6: a JSON body over the 5 MB limit is refused by the body parser before any route: say so (it was a 500).
-    if (e?.type === "entity.too.large" || e?.status === 413) return send(413, "Too large", "This request is larger than the 5 MB the server takes. Nothing was saved or started.", { code: "BODY_TOO_LARGE" });
+    // P-179 break m6: a JSON body over its limit is refused by the body parser before any route: say so (it was a 500).
+    // PF-28: the words name no size, as the limit depends on the address (256 KB on the platform doors, 5 MB elsewhere).
+    if (e?.type === "entity.too.large" || e?.status === 413) return send(413, "Too large", "This request is larger than this address takes. Nothing was saved or started.", { code: "BODY_TOO_LARGE" });
     // C4.2 (QA-125, QA-13): plain words, never "the database": a duplicate is someone else's save at the same moment, or the thing exists already.
     if (e?.code === "P2002") return send(409, "Already exists", "This already exists, or someone else saved the same thing at the same moment. Reload to see the current state.");
     // A malformed id (not a UUID, or with a NUL byte) is simply not found (review #4, break m5); so is a stored file that
@@ -239,6 +240,7 @@ async function main() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ["error", "warn"] });
   (await import("./platform/observability/hook.ts")).observe(app); // PF-23: one JSON logger with redaction, request lines and metrics (NFR5-14, BR-16)
   (await import("./front-office/sales/public.ts")).publicFormBodyLimit(app);   // FO-2 (AG-2-49 rule 2): the web form's 32 KB, before the app-wide parser (Lead B's OK on #1813; the release holder's asked)
+  (await import("./platform/http/input.ts")).inputBodyLimit(app);   // PF-28 (R1.10): the platform and front-office doors' JSON limit (Sample 256 KB), after FO-2's 32 KB and before the app-wide 5 MB; /api/hooks keeps its raw body
   app.useBodyParser("json", { limit: "5mb" });
   // PF-0bp: Nest turns the parser's SyntaxError into a 400 that quotes the bad text (routes-resolver mapExternalException);
   // pass on only its type, so ProblemErrors answers BODY_NOT_JSON and nothing of the body is repeated.

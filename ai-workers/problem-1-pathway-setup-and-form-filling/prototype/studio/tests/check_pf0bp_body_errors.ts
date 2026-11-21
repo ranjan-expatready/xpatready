@@ -69,7 +69,7 @@ try {
   // ---------------------------------------------------------------------------------------------------------- DW2
   const big = Buffer.from(JSON.stringify({ note: "x".repeat(6 * 1024 * 1024) }));
   const tooBig = await post("/api/front-office/leads", big, token);
-  ok("PF-0bp DW2 pass: a 6 MB JSON body on a staff route → 413 BODY_TOO_LARGE, its words unchanged", tooBig.status === 413 && tooBig.body?.code === "BODY_TOO_LARGE" && tooBig.body?.detail === "This request is larger than the 5 MB the server takes. Nothing was saved or started.", tooBig.body);
+  ok("PF-0bp DW2 pass: a 6 MB JSON body on a staff route → 413 BODY_TOO_LARGE, in size-neutral words (PF-28: the limit depends on the address)", tooBig.status === 413 && tooBig.body?.code === "BODY_TOO_LARGE" && tooBig.body?.detail === "This request is larger than this address takes. Nothing was saved or started.", tooBig.body);
   const formBig = await post("/api/public/forms/pf0bp-token/submissions", Buffer.from(JSON.stringify({ message: "x".repeat(33 * 1024) })));
   ok("PF-0bp DW2 fail→pass: the web-form door's 33 KB body still answers FO-2's own 413 (TOO_LARGE), not the 5 MB words", formBig.status === 413 && formBig.body?.code === "TOO_LARGE" && formBig.body?.detail === "This form is too long. Please shorten your message and try again.", formBig.body);
 

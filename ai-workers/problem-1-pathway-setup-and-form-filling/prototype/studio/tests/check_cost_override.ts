@@ -235,7 +235,7 @@ const msg = (r: Res) => String(r.body?.message ?? r.body?.detail ?? "");
   expire(r.body?.override_id);
   const big = await fetch(`http://localhost:${PORT}/api/ai/overrides`, { method: "POST", headers: { "x-actor": "user-A", "content-type": "application/json" }, body: JSON.stringify({ run_key: pm.run_key, pad: "x".repeat(6 * 1024 * 1024) }) });
   const bigBody = await big.json().catch(() => ({})) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  ok("C11.8 break m6 fail: a 6 MB body is refused as too large (413) in words, not a server error", big.status === 413 && /5 MB/.test(String(bigBody.detail)), { status: big.status, b: bigBody });
+  ok("C11.8 break m6 fail: a 6 MB body is refused as too large (413) in words, not a server error", big.status === 413 && bigBody.code === "BODY_TOO_LARGE" && /larger than this address takes/.test(String(bigBody.detail)), { status: big.status, b: bigBody });
   await cancelOpen();
 
   // ──────────────────────────────────────────── N6 review N2: a person's own unused Continue no longer blocks their retry

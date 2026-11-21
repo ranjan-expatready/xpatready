@@ -85,7 +85,7 @@ function reads(n: ts.Node, name: string, prop: string): boolean {
  *  expression is returned. */
 function parsedArg(c: ts.CallExpression): ts.Expression | null {
   const e = c.expression;
-  if (ts.isIdentifier(e) && (e.text === "parse" || e.text === "parsed") && c.arguments.length >= 2) return c.arguments[1];
+  if (ts.isIdentifier(e) && (e.text === "parse" || e.text === "parsed" || e.text === "parseInput") && c.arguments.length >= 2) return c.arguments[1];
   if (ts.isPropertyAccessExpression(e) && /^(safeP|p)arse(Async)?$/.test(e.name.text)) {
     const s = e.expression;
     const schema = ts.isIdentifier(s) ? /^[A-Z]/.test(s.text) && !/^(JSON|Date|Number)$/.test(s.text) : ts.isCallExpression(s) || ts.isPropertyAccessExpression(s);
