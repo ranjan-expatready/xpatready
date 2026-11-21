@@ -7,9 +7,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Stack, aws_route53 as route53 } from "aws-cdk-lib";
 import { allStacks, buildApp } from "../lib/app.ts";
-import { REGION_ALLOW, bypassFindings, regionFindings, resourcePolicyFindings, type Template } from "../lib/checks.ts";
-import { DEFAULT_DOMAIN } from "../lib/service.ts";
-import { addressSuffixFindings, exposureFindings, imageFindings, listenerFindings, loaderSettings, logFindings, mailFindings, poolFindings, roleFindings, secretReadFindings, spreadFindings, taskDefinitions, taskSettingFindings, wildcardFindings } from "../lib/service-checks.ts";
+import { REGION_ALLOW, bypassFindings, regionFindings, resourcePolicyFindings, typeFindings, type Template } from "../lib/checks.ts";
+import { AppService, DEFAULT_DOMAIN, MIN_TASKS, NO_DOMAIN } from "../lib/service.ts";
+import { addressSuffixFindings, exposureFindings, noDomainFindings, imageFindings, listenerFindings, loaderSettings, logFindings, mailFindings, poolFindings, roleFindings, secretReadFindings, spreadFindings, taskDefinitions, taskSettingFindings, wildcardFindings } from "../lib/service-checks.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SETTINGS = loaderSettings(readFileSync(join(HERE, "..", "..", "..", "api", "src", "platform", "config", "settings.ts"), "utf8"));
@@ -313,4 +313,85 @@ test("PF-8b F2b fail: the suffix missing, the production domain on staging, or a
   assert.equal(addressSuffixFindings(t2, d).length, 3);
   const t3 = clone(st); for (const [, z] of of(t3, "AWS::Route53::HostedZone")) z.Properties!.Name = "other.example.";
   assert.deepEqual(addressSuffixFindings(t3, d), ['PLATFORM_ADDRESS_SUFFIX "staging.expatready.com" is no hosted zone of this stack']);
+});
+
+// --- PF-8b F3: no-domain mode (-c xr:domain=none -c xr:certArn=<arn>): staging with no zone, DNS certificate or SES;
+// production unchanged. The ARN is context written into the template, never a deploy parameter.
+const ARN = "arn:aws:acm:ca-central-1:123456789012:certificate/0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b";
+const ndApp = (extra: Record<string, unknown> = {}) => allStacks(buildApp({ context: { "xr:domain": NO_DOMAIN, "xr:certArn": ARN, ...extra } }).app);
+const nd = ndApp();
+const ndStaging = nd.find((x) => x.name === "xr-staging")!.template, ndProduction = nd.find((x) => x.name === "xr-production")!.template;
+const count = (t: Template, type: string) => of(t, type).length;
+const desired = (t: Template) => of(t, "AWS::ECS::Service")[0][1].Properties!.DesiredCount;
+const params = (t: Template) => Object.keys(t.Parameters ?? {}).filter((k) => k !== "BootstrapVersion").map((k) => k.replace(/[0-9A-F]{8}$/, "")).sort();
+
+test("PF-8b F3 domain set (as today): a hosted zone, a DNS-validated wildcard certificate and the SES identity; the same two deploy parameters", () => {
+  for (const s of real) {
+    assert.ok(count(s.template, "AWS::Route53::HostedZone") === 1 && count(s.template, "AWS::SES::EmailIdentity") === 1, s.name);
+    assert.ok(of(s.template, "AWS::CertificateManager::Certificate").some(([, c]) => c.Properties?.ValidationMethod === "DNS"), s.name);
+    assert.deepEqual(params(s.template), ["AppImageDigest", "OnCallEmail"], s.name);
+    assert.equal(of(s.template, "AWS::ElasticLoadBalancingV2::LoadBalancer")[0][1].Properties!.Name, undefined, s.name); // CDK's generated name, as before (a fixed name would replace it)
+    assert.ok(noDomainFindings(s.template).length >= 4, s.name); // the no-domain check fails a domain stack
+  }
+});
+
+test("PF-8b F3 no domain: staging has no zone, DNS record, issued certificate or SES; HTTPS serves the imported certificate; no new parameter; the app's host is the load balancer's", () => {
+  assert.deepEqual(noDomainFindings(ndStaging), []);
+  for (const type of ["AWS::Route53::HostedZone", "AWS::Route53::RecordSet", "AWS::CertificateManager::Certificate", "AWS::SES::EmailIdentity"]) assert.equal(count(ndStaging, type), 0, type);
+  assert.deepEqual(params(ndStaging), ["AppImageDigest", "OnCallEmail"]);
+  assert.ok(JSON.stringify(ndStaging).includes(`"CertificateArn":"${ARN}"`));
+});
+
+test("PF-8b F3 no domain: production keeps its domain byte for byte, and the service refuses no-domain mode for production", () => {
+  assert.equal(JSON.stringify(ndProduction), JSON.stringify(t0));
+  assert.throws(() => new AppService(new Stack(), "X", { stage: "production", domain: NO_DOMAIN, certArn: ARN } as never), /xr:domain=none is for staging only/);
+});
+
+test("PF-8b F3 xr:certArn: required in no-domain mode, an ACM ARN in ca-central-1 only, refused with a domain", () => {
+  for (const bad of [undefined, "", "arn:aws:acm:us-east-1:123456789012:certificate/0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b", "arn:aws:iam::123456789012:server-certificate/x", `${ARN} `, "*"])
+    assert.throws(() => ndApp({ "xr:certArn": bad }), /xr:domain=none needs -c xr:certArn/, String(bad));
+  assert.throws(() => buildApp({ context: { "xr:certArn": ARN } }), /xr:certArn is for xr:domain=none only/);
+});
+
+test("PF-8b F3 no domain: every estate guard still passes (region, bypass, resource policies, types, and the service's own checks)", () => {
+  assert.deepEqual([...regionFindings(nd, REGION_ALLOW), ...bypassFindings(nd), ...resourcePolicyFindings(nd), ...typeFindings(nd)], []);
+  assert.deepEqual([...taskSettingFindings(ndStaging, SETTINGS, "staging"), ...secretReadFindings(ndStaging), ...spreadFindings(ndStaging), ...exposureFindings(ndStaging), ...listenerFindings(ndStaging),
+    ...roleFindings(ndStaging, "staging"), ...poolFindings(ndStaging, "staging"), ...imageFindings(ndStaging), ...logFindings(ndStaging, "staging")], []);
+});
+
+test("PF-8b F3 fail: a zone left in, a listener on another or a non-ACM certificate, the suffix not the load balancer's, a capitalised name, an SES grant, are caught", () => {
+  const t = clone(ndStaging);
+  t.Resources!.StrayZone = { Type: "AWS::Route53::HostedZone", Properties: { Name: "x.example." } };
+  const [, https] = of(t, "AWS::ElasticLoadBalancingV2::Listener").find(([, l]) => l.Properties?.Protocol === "HTTPS")!;
+  https.Properties!.Certificates = [{ CertificateArn: "arn:aws:iam::123456789012:server-certificate/x" }];
+  svcContainer(t).Environment.find((e) => e.Name === "PLATFORM_ADDRESS_SUFFIX")!.Value = "staging.expatready.com";
+  of(t, "AWS::ElasticLoadBalancingV2::LoadBalancer")[0][1].Properties!.Name = "XR-Staging-App";
+  t.Resources!.StrayGrant = { Type: "AWS::IAM::Policy", Properties: { PolicyDocument: { Statement: [{ Effect: "Allow", Action: "ses:SendEmail", Resource: "*" }] } } };
+  for (const [id, l] of of(t, "AWS::ElasticLoadBalancingV2::Listener")) if (l.Properties?.Port === 80) delete t.Resources![id];
+  const f = noDomainFindings(t);
+  assert.equal(f.length, 6, f.join("\n"));
+  for (const w of ["StrayZone: AWS::Route53::HostedZone", "not one imported ACM certificate", "not the load balancer's AWS name", "is not fixed lower case", "StrayGrant: an SES grant", "port 80 does not redirect"]) assert.ok(f.some((l) => l.includes(w)), w);
+  const t3 = clone(ndStaging); // an ARN with something before it (break 6: the pattern is anchored)
+  of(t3, "AWS::ElasticLoadBalancingV2::Listener").find(([, l]) => l.Properties?.Protocol === "HTTPS")![1].Properties!.Certificates = [{ CertificateArn: `x${ARN}` }];
+  assert.deepEqual(noDomainFindings(t3).filter((l) => l.includes("not one imported ACM certificate")).length, 1);
+});
+
+test("PF-8b F3 xr:serviceTasks: default 2; 0 for staging's first deploy (either mode), production always 2; anything else refused", () => {
+  assert.equal(desired(t0), MIN_TASKS); assert.equal(desired(ndStaging), MIN_TASKS);
+  for (const zero of ["0", 0]) {
+    const st = ndApp({ "xr:serviceTasks": zero }).find((x) => x.name === "xr-staging")!.template;
+    assert.equal(desired(st), 0, String(zero));
+    assert.ok(spreadFindings(st).length > 0); // the two-task rule says so: 0 is a deliberate first-deploy setting, never the default
+  }
+  assert.equal(desired(allStacks(buildApp({ context: { "xr:serviceTasks": "2" } }).app).find((x) => x.name === "xr-production")!.template), 2);
+  const zeroApp = allStacks(buildApp({ context: { "xr:serviceTasks": "0" } }).app);
+  assert.equal(desired(zeroApp.find((x) => x.name === "xr-production")!.template), 2); // break 2: never 0 on production
+  assert.equal(desired(zeroApp.find((x) => x.name === "xr-staging")!.template), 0);
+  assert.throws(() => new AppService(new Stack(), "X", { stage: "production", serviceTasks: 0 } as never), /xr:serviceTasks=0 is for staging only/);
+  for (const bad of ["1", "3", "-1", "two", "", " 0", "2.0", "02", [0], [2], true]) assert.throws(() => buildApp({ context: { "xr:serviceTasks": bad } }), /xr:serviceTasks must be 0 or 2/, JSON.stringify(bad));
+});
+
+test("PF-8b F3 xr:domain: a lower-case domain or exactly none; a near miss is refused, never built as a zone that cannot validate", () => {
+  for (const bad of ["None", "NONE", "none.", " none", "", "example", "Example.org", "example.org."]) assert.throws(() => buildApp({ context: { "xr:domain": bad } }), /xr:domain must be a lower-case domain/, bad);
+  assert.doesNotThrow(() => buildApp({ context: { "xr:domain": "example-test.com" } }));
 });

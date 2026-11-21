@@ -1,6 +1,7 @@
 // PF-8b's checks over a synthesized template: pure functions returning plain-words findings (empty = pass), run on the
 // real stacks (must pass) and on broken copies (must fail) by test/service.test.ts, as PF-8a's checks.ts does.
 import type { Template } from "./checks.ts";
+import { CERT_ARN_PATTERN } from "./service.ts";
 
 type Res = { Type: string; Properties?: Record<string, unknown> };
 /** A nested template value by path (unknown when any step is missing). */
@@ -291,5 +292,30 @@ export function addressSuffixFindings(t: Template, domain: string): string[] {
   if (v !== domain) out.push(`PLATFORM_ADDRESS_SUFFIX is ${json(v)}, not this stack's domain "${domain}"`);
   if (!all(t, "AWS::Route53::HostedZone").some(([, z]) => z.Properties?.Name === `${v}.`)) out.push(`PLATFORM_ADDRESS_SUFFIX ${json(v)} is no hosted zone of this stack`);
   if (!all(t, "AWS::CertificateManager::Certificate").some(([, c]) => c.Properties?.DomainName === `*.${v}`)) out.push(`PLATFORM_ADDRESS_SUFFIX ${json(v)} has no wildcard certificate in this stack`);
+  return out;
+}
+
+/** PF-8b F3, no-domain mode (`-c xr:domain=none`, staging only): no hosted zone, DNS record, ACM-issued certificate or SES
+ *  identity, and no SES grant; every HTTPS listener serves the one imported certificate (xr:certArn, an ACM ARN in
+ *  ca-central-1, written into the template; no parameter); the app's PLATFORM_ADDRESS_SUFFIX is the load balancer's AWS name, and the load
+ *  balancer's fixed name is lower case (the loader refuses capitals). */
+export function noDomainFindings(t: Template): string[] {
+  const out: string[] = [];
+  for (const type of ["AWS::Route53::HostedZone", "AWS::Route53::RecordSet", "AWS::CertificateManager::Certificate", "AWS::SES::EmailIdentity"])
+    for (const [id] of all(t, type)) out.push(`${id}: ${type} in no-domain mode`);
+  for (const [id, r] of all(t, "AWS::IAM::Policy")) if (json(g(r, "Properties", "PolicyDocument")).includes('"ses:')) out.push(`${id}: an SES grant in no-domain mode`);
+  const https = all(t, "AWS::ElasticLoadBalancingV2::Listener").filter(([, l]) => l.Properties?.Protocol === "HTTPS");
+  if (!https.length) out.push("no HTTPS listener");
+  for (const [id, l] of https) {
+    const certs = arr(l.Properties?.Certificates), arn = g(certs[0], "CertificateArn");
+    if (certs.length !== 1 || typeof arn !== "string" || !CERT_ARN_PATTERN.test(arn)) out.push(`${id}: serves ${json(l.Properties?.Certificates)}, not one imported ACM certificate in ca-central-1`);
+  }
+  // port 80 still answers only with the HTTPS redirect (break 5: the listener sits beside the early return)
+  const http = all(t, "AWS::ElasticLoadBalancingV2::Listener").filter(([, l]) => l.Properties?.Port === 80);
+  if (http.length !== 1 || g(arr(http[0][1].Properties?.DefaultActions)[0], "RedirectConfig", "Protocol") !== "HTTPS") out.push("port 80 does not redirect to HTTPS");
+  const lbs = all(t, "AWS::ElasticLoadBalancingV2::LoadBalancer"), { service } = taskDefinitions(t);
+  const v = service ? env(containers(service[1])[0]).get("PLATFORM_ADDRESS_SUFFIX") : undefined;
+  if (lbs.length !== 1 || json(v) !== json({ "Fn::GetAtt": [lbs[0][0], "DNSName"] })) out.push(`PLATFORM_ADDRESS_SUFFIX is ${json(v)}, not the load balancer's AWS name`);
+  for (const [id, lb] of lbs) if (typeof lb.Properties?.Name !== "string" || !/^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$/.test(lb.Properties.Name as string)) out.push(`${id}: name ${json(lb.Properties?.Name)} is not fixed lower case`);
   return out;
 }

@@ -11,6 +11,21 @@ export type Stage = "staging" | "production";
 export const DEFAULT_DOMAIN = "expatready.com";
 export const CONTAINER_PORT = 8080; // deploy/container-entry.mjs (PF-7)
 export const MIN_TASKS = 2;
+/** PF-8b F3: `-c xr:domain=none` builds staging with no domain (the staging domain is blocked, Lead 15, 21 Nov): no hosted
+ *  zone, no DNS-validated certificate, no SES domain identity; HTTPS on a self-signed certificate the deploy imports into
+ *  ACM (bin/self-signed-cert.sh) and names with `-c xr:certArn=<arn>` (context, not a template parameter: the region
+ *  guard admits only the image digest and the on-call address); the app's host is the load balancer's AWS name. Never
+ *  production (a synth error). */
+export const NO_DOMAIN = "none";
+/** An ACM certificate ARN in ca-central-1, nothing else (xr:certArn). */
+export const CERT_ARN_PATTERN = /^arn:aws:acm:ca-central-1:[0-9]{12}:certificate\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** PF-8b F3: the service's task count, `-c xr:serviceTasks=0|2` (default 2). 0 for a first deploy, before the secrets hold
+ *  values: tasks started on placeholder secrets crash, trip the circuit breaker, and the rollback leaves retained names. */
+export const SERVICE_TASK_CHOICES = [0, MIN_TASKS] as const;
+/** A domain (`xr:domain`): lower-case DNS labels, two or more, a letters-only last one; or exactly NO_DOMAIN. A near miss
+ *  (`None`, `none.`) is refused rather than built as a zone that can never validate (break 3). */
+export const DOMAIN_PATTERN = /^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+
 
 /** The values PF-24's loader requires in production that are unknown at synth: each one a Secrets Manager secret named
  *  `xr/<stage>/<NAME>`, supplied at deploy (deploy/RUNBOOK-secrets.md). The Cognito ids and the SES region are known
@@ -29,8 +44,12 @@ export interface AppServiceProps {
   vpc: ec2.IVpc;
   key: kms.IKey;
   database: rds.DatabaseInstance;
-  /** Overrides the domain (default `expatready.com`; staging uses `staging.<domain>`). */
+  /** Overrides the domain (default `expatready.com`; staging uses `staging.<domain>`); `none` (staging only): no domain. */
   domain?: string;
+  /** No-domain mode: the imported certificate's ARN (xr:certArn), required there and refused otherwise. */
+  certArn?: string;
+  /** The service's task count (xr:serviceTasks): 0 or 2, default 2. */
+  serviceTasks?: string | number;
   /** PF-23c's app log group (`/xr/<stage>/app`): both containers send stdout and stderr here (PF-8b F1). Required, so a
    *  service can never be built that logs nowhere. */
   appLogs: logs.ILogGroup;
@@ -45,6 +64,14 @@ export class AppService extends Construct {
     super(scope, id);
     const { stage, vpc, key } = props;
     const region = Stack.of(this).region;
+    const noDomain = props.domain === NO_DOMAIN;
+    if (props.domain !== undefined && !noDomain && !(typeof props.domain === "string" && DOMAIN_PATTERN.test(props.domain))) throw new Error(`xr:domain must be a lower-case domain such as example.com, or ${NO_DOMAIN}`);
+    if (noDomain && stage === "production") throw new Error("xr:domain=none is for staging only: production needs its domain (a self-signed certificate never serves real clients)");
+    if (noDomain ? !(typeof props.certArn === "string" && CERT_ARN_PATTERN.test(props.certArn)) : props.certArn !== undefined)
+      throw new Error(noDomain ? "xr:domain=none needs -c xr:certArn=<the imported certificate's ACM ARN in ca-central-1> (bin/self-signed-cert.sh prints it)" : "xr:certArn is for xr:domain=none only (a domain stack issues its own certificate)");
+    const rawTasks = props.serviceTasks ?? MIN_TASKS, tasks = Number(rawTasks);
+    if (!(typeof rawTasks === "number" || (typeof rawTasks === "string" && /^[0-9]$/.test(rawTasks))) || !(SERVICE_TASK_CHOICES as readonly number[]).includes(tasks)) throw new Error(`xr:serviceTasks must be ${SERVICE_TASK_CHOICES.join(" or ")} (default ${MIN_TASKS})`);
+    if (tasks === 0 && stage === "production") throw new Error("xr:serviceTasks=0 is for staging only: production always runs two tasks");
     const base = props.domain ?? DEFAULT_DOMAIN;
     const domain = stage === "production" ? base : `staging.${base}`;
     // Lead 13 ruling (3): staging runs as `test`, which PF-24's loader holds to test-mode Stripe keys (a live key refused)
@@ -108,7 +135,7 @@ export class AppService extends Construct {
         PLATFORM_COGNITO_USER_POOL_ID: pools.staff.userPoolId,
         PLATFORM_COGNITO_CLIENT_ID: staffClient.userPoolClientId,
         PLATFORM_SES_REGION: region,
-        PLATFORM_ADDRESS_SUFFIX: domain, // PF-8b F2b: firm addresses under this stack's zone (staging.<domain> on staging)
+        ...(noDomain ? {} : { PLATFORM_ADDRESS_SUFFIX: domain }), // PF-8b F2b: firm addresses under this stack's zone (F3: no-domain mode sets the load balancer's name below)
       },
       secrets: Object.fromEntries(Object.entries(appSecrets).map(([n, s]) => [n, ecs.Secret.fromSecretsManager(s)])),
       readonlyRootFilesystem: false, // the image writes var/ (PF-7)
@@ -127,15 +154,17 @@ export class AppService extends Construct {
     });
     repository.grantPull(this.migration.obtainExecutionRole());
 
-    // --- mail: SES with DKIM, SPF on a MAIL FROM subdomain, DMARC (Sample policy)
-    const zone = new route53.PublicHostedZone(this, "Zone", { zoneName: domain, comment: `Expat Ready ${stage}: firm addresses <firm>.${domain} (PF-25)` });
-    const identity = new ses.EmailIdentity(this, "Mail", {
-      identity: ses.Identity.publicHostedZone(zone),
-      dkimSigning: true,
-      mailFromDomain: `mail.${domain}`,
-    });
-    new route53.TxtRecord(this, "Dmarc", { zone: zone, recordName: `_dmarc.${domain}`, values: ["v=DMARC1; p=none; adkim=s; aspf=r"] }); // Sample: monitor first; SPF relaxed (MAIL FROM is mail.<domain>), DKIM strict
-    identity.grantSendEmail(this.task.taskRole);
+    // --- mail: SES with DKIM, SPF on a MAIL FROM subdomain, DMARC (Sample policy). No-domain mode: none (no mail sent)
+    const zone = noDomain ? undefined : new route53.PublicHostedZone(this, "Zone", { zoneName: domain, comment: `Expat Ready ${stage}: firm addresses <firm>.${domain} (PF-25)` });
+    if (zone) {
+      const identity = new ses.EmailIdentity(this, "Mail", {
+        identity: ses.Identity.publicHostedZone(zone),
+        dkimSigning: true,
+        mailFromDomain: `mail.${domain}`,
+      });
+      new route53.TxtRecord(this, "Dmarc", { zone: zone, recordName: `_dmarc.${domain}`, values: ["v=DMARC1; p=none; adkim=s; aspf=r"] }); // Sample: monitor first; SPF relaxed (MAIL FROM is mail.<domain>), DKIM strict
+      identity.grantSendEmail(this.task.taskRole);
+    }
 
     // --- network: load balancer in the public subnets, tasks in the app subnets, the database reachable from both tasks
     const albSg = new ec2.SecurityGroup(this, "LbSg", { vpc, allowAllOutbound: false, description: "load balancer: 443 and 80 (redirect) in" });
@@ -153,7 +182,7 @@ export class AppService extends Construct {
     this.service = new ecs.FargateService(this, "Service", {
       cluster: new ecs.Cluster(this, "Cluster", { vpc, containerInsightsV2: ecs.ContainerInsights.ENABLED }),
       taskDefinition: this.task,
-      desiredCount: MIN_TASKS,
+      desiredCount: tasks, // F3: 0 for a first deploy before the secrets hold values, else 2
       minHealthyPercent: 100, // Sample: never below two serving tasks during a deploy
       maxHealthyPercent: 200,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
@@ -162,9 +191,14 @@ export class AppService extends Construct {
       circuitBreaker: { enable: true, rollback: true }, // PF-8c proves the rollback in the account
     });
 
-    const certificate = new acm.Certificate(this, "Wildcard", { domainName: `*.${domain}`, validation: acm.CertificateValidation.fromDns(zone) });
+    // PF-8b F3: no domain → the self-signed certificate the deploy imported (xr:certArn, checked above)
+    const certificate = zone
+      ? new acm.Certificate(this, "Wildcard", { domainName: `*.${domain}`, validation: acm.CertificateValidation.fromDns(zone) })
+      : acm.Certificate.fromCertificateArn(this, "Imported", props.certArn!);
     const loadBalancer = new elbv2.ApplicationLoadBalancer(this, "Lb", {
       vpc, internetFacing: true, securityGroup: albSg, vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC }, dropInvalidHeaderFields: true,
+      // F3: a fixed lower-case name, so the AWS host name is lower case, as PLATFORM_ADDRESS_SUFFIX requires (the loader refuses capitals)
+      ...(noDomain ? { loadBalancerName: `xr-${stage}-app` } : {}),
     });
     const https = loadBalancer.addListener("Https", { port: 443, protocol: elbv2.ApplicationProtocol.HTTPS, certificates: [certificate], sslPolicy: elbv2.SslPolicy.RECOMMENDED_TLS, open: false });
     https.addTargets("Studio", {
@@ -174,6 +208,12 @@ export class AppService extends Construct {
     });
     loadBalancer.addListener("Http", { port: 80, open: false, defaultAction: elbv2.ListenerAction.redirect({ protocol: "HTTPS", port: "443", permanent: true }) });
 
+    if (!zone) {
+      // F3: the app's host is the load balancer's AWS name (one setting, as F2b); firm addresses wait for the real domain (R1.24)
+      this.task.defaultContainer!.addEnvironment("PLATFORM_ADDRESS_SUFFIX", loadBalancer.loadBalancerDnsName);
+      new CfnOutput(this, "LoadBalancerHost", { value: loadBalancer.loadBalancerDnsName, description: "No-domain mode: the app at https://<this> (self-signed certificate)" });
+      return;
+    }
     new route53.ARecord(this, "Firms", { zone: zone, recordName: `*.${domain}`, target: route53.RecordTarget.fromAlias(new targets.LoadBalancerTarget(loadBalancer)) });
     // Delegation: these name servers go at the parent (the registrar for production, `base`'s zone for staging; README).
     new CfnOutput(this, "NameServers", { value: Fn.join(",", zone.hostedZoneNameServers!), description: `NS records for ${domain} at its parent` });

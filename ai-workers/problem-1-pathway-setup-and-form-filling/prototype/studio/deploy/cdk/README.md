@@ -81,6 +81,23 @@ Never run `npx cdk synth`: the CLI looks up the account through STS when it find
 * **PF-8rc's guards, widened for PF-8b only (`lib/checks.ts`):** an ECS execution role may allow only `ECS_EXEC_ACTIONS` (image pull, its secrets) and a task role only `ECS_TASK_ACTIONS` (SES send); a Backup role keeps `kms:Decrypt`; every role a resource names is one this stack defines; no repository policy or Cognito trigger; `"*"` only for `ecr:GetAuthorizationToken`; a secret's `Ref` or an ARN joined from this stack's resources counts as its own resource; the one parameter allowed is a sha256-only digest; the key may let an ECS execution role decrypt through Secrets Manager only; PF-8b's resource types join `ESTATE_TYPES`.
 * **Not here:** log groups and alarms (PF-23c), the deploy and smoke test (PF-8c), the task role's Cognito admin and bucket permissions (the adapter rows that use them).
 
+### No-domain mode (PF-8b F3: staging while its domain is blocked)
+For the R1.13 and R1.15 proofs while no staging domain can be registered. R1.24 (firm addresses) waits for the real domain. With a domain set (or no context at all), nothing changes: all four templates hashed identical to before this row (checked by hand), and a test holds that a domain stack has no imported certificate, a CDK-named load balancer and the same two parameters.
+* **What `-c xr:domain=none` builds (staging only):**
+  * **Left out:** no hosted zone, DNS record, DNS-validated certificate, SES identity or SES grant, so no mail is sent.
+  * **HTTPS:** the HTTPS listener serves a **self-signed** certificate imported into ACM. Its ARN is given as `-c xr:certArn=<arn>`: context, not a template parameter (the region guard admits only the image digest and the on-call address).
+  * **App host:** the app's `PLATFORM_ADDRESS_SUFFIX` is the load balancer's AWS name. Its fixed lower-case name is `xr-staging-app`, so the AWS name is lower case, as the loader requires.
+  * **Output:** `LoadBalancerHost`.
+  * **Production keeps its domain:** `none` never applies to it, and the service refuses it for production.
+* **Task count (staging):** `-c xr:serviceTasks=0|2`, default 2; production always runs 2. Use 0 for the first deploy, before the secrets hold values: tasks started on the placeholder secrets crash, trip the circuit breaker, and the rollback leaves retained names. Fill the secrets, then redeploy with 2.
+* **Order (the AWS session, in the founder's account):**
+  1. `bash bin/self-signed-cert.sh` (openssl plus the AWS CLI; `--dry-run` imports nothing) prints the ARN. The key is made in a temporary folder that is then deleted, so it lives only in ACM.
+  2. `cdk deploy xr-staging -c xr:domain=none -c xr:certArn=<arn> -c xr:serviceTasks=0`.
+  3. Supply the secrets (`../RUNBOOK-secrets.md`).
+  4. The same deploy with `-c xr:serviceTasks=2`.
+  5. `curl -k https://<LoadBalancerHost>/api/health/live`.
+* **Checks:** `noDomainFindings`; every estate guard runs on the no-domain app too (`test/service.test.ts`, "PF-8b F3").
+
 ## Feature flags (not set yet)
 `cdk.json` sets four flags only. Two findings for the later row PF-8c-flags (Lead 13): synth reports the others as unset, and `npm run synth` and the tests build the App without reading `cdk.json`, so its flags reach only the CLI. Turning on the recommended set changes PF-8rc's template (the copy target's ARN form; a Lambda for the default security group), so that row reconciles PF-8rc's guards too.
 

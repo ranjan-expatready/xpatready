@@ -10,7 +10,7 @@ import type { Construct } from "constructs";
 import { backupPlan } from "./backup.ts";
 import { Observability } from "./observability.ts";
 
-import { AppService } from "./service.ts"; // PF-8b
+import { AppService, NO_DOMAIN } from "./service.ts"; // PF-8b
 export const HOME_REGION = "ca-central-1";
 export const BACKUP_DAYS = 35; // the RDS maximum; SA-2-21's and SA-11-32's "backups 35 days"
 export type Stage = "staging" | "production";
@@ -77,8 +77,17 @@ export class EstateStack extends Stack {
     // before the app service, whose containers log to its group (PF-8b F1).
     this.observability = new Observability(this, "Observability", { stage: props.stage });
 
-    // PF-8b: the app service, its secrets, mail, firm addresses and sign-in pools (lib/service.ts)
-    this.service = new AppService(this, "App", { stage: props.stage, vpc: this.vpc, key: this.key, database: this.database, domain: this.node.tryGetContext("xr:domain"), appLogs: this.observability.appLogs });
+    // PF-8b: the app service, its secrets, mail, firm addresses and sign-in pools (lib/service.ts). PF-8b F3: `-c
+    // xr:domain=none` means staging has no domain while production keeps its default (the app synthesizes both stacks).
+    // xr:certArn names the imported certificate (no-domain staging only); xr:serviceTasks=0|2 (default 2) sets staging's task
+    // count (production always runs 2: a 0 there would be an outage, break 2).
+    const domain = this.node.tryGetContext("xr:domain") as string | undefined, noDomainHere = domain === NO_DOMAIN && props.stage !== "production";
+    this.service = new AppService(this, "App", {
+      stage: props.stage, vpc: this.vpc, key: this.key, database: this.database, appLogs: this.observability.appLogs,
+      domain: domain === NO_DOMAIN && !noDomainHere ? undefined : domain,
+      certArn: domain === NO_DOMAIN && !noDomainHere ? undefined : this.node.tryGetContext("xr:certArn"),
+      serviceTasks: props.stage === "production" ? undefined : this.node.tryGetContext("xr:serviceTasks"),
+    });
 
     const bucket = (name: (typeof BUCKETS)[number]) => new s3.Bucket(this, `${name[0].toUpperCase()}${name.slice(1)}Bucket`, {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
