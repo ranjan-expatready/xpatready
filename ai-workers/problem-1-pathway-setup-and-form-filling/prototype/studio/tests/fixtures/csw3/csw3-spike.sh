@@ -85,9 +85,9 @@ suites)
 census)
   # Case-side files under api/src (platform/ and front-office/ are PF-12's, already walled) that use a firm's case table
   # through Prisma or raw SQL, by area, and whether they set a firm anywhere (withFirm / enterFirm / setRequestFirm /
-  # asBypass): none does today. The models are the 7 walled tables' and their CS-W2 children's.
+  # asBypass): none does today. The models are the 7 walled tables' and their CS-W2 children's, and caseClient (CS-K1; CS-W3 part 1).
   cd "$S"
-  MODELS='\.(case|caseStage|firmCaseCounter|caseDecision|caseParty[A-Za-z]*|filing[A-Za-z]*|party[A-Za-z]*|caseParticipant|caseTeamMember|submissionGroup|checklistLine|reviewFinding|reviewRound[A-Za-z]*|signStep|signedScan|personLink[A-Za-z]*|caseTask|filingChange|feeReceiptFile|documentReview|readValue|answerCheck|formInstance|answerSnapshot|clientCanonicalAnswer|answerSubject|enteredSection|assessment|caseDocument[A-Za-z]*|packWorkPin)\.'
+  MODELS='\.(case|caseStage|firmCaseCounter|caseDecision|caseParty[A-Za-z]*|filing[A-Za-z]*|party[A-Za-z]*|caseParticipant|caseTeamMember|submissionGroup|checklistLine|reviewFinding|reviewRound[A-Za-z]*|signStep|signedScan|personLink[A-Za-z]*|caseTask|filingChange|feeReceiptFile|documentReview|readValue|answerCheck|formInstance|answerSnapshot|clientCanonicalAnswer|answerSubject|enteredSection|assessment|caseDocument[A-Za-z]*|caseClient[A-Za-z]*|packWorkPin)\.'
   # Raw SQL: a file that sends raw SQL (any line) and names a case table after from / join / into / update / delete from
   # anywhere in it, so a query written over several lines is found too (review M1, case-count.ts).
   TABLES='(runtime_case|case_stage|firm_case_counter|case_decision|case_party_index|filing[a-z_]*|party[a-z_]*|case_participant|client_canonical_answer|answer_subject|person_link[a-z_]*|case_[a-z_]+)'

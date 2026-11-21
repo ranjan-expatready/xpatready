@@ -259,8 +259,10 @@ const routeOf = (req: ScopedReq) => {
 };
 /** PF-4's guard, first thing in every request, before any await: a fresh scope (its route, and no firm unless the host
  *  routing found the firm whose address this is) for the rest of the
- *  request. PF-4's guard is reached synchronously from Nest's router (core.ts's ConfigReadGuard returns a boolean), so
- *  the handler, its pipes and every query it makes continue in this scope; nothing of an earlier request survives. */
+ *  request. Since CS-W3 part 1, the case side's door (features/case-firm-door.ts) runs before PF-4's guard and awaits a
+ *  lookup, so this guard is no longer reached synchronously: nothing may rely on the scope entered here. The handler's
+ *  scope is FirmWallsInterceptor's (inRequest, from the request's tag), opened after every guard; nothing of an earlier
+ *  request survives, because each request's own tag decides it. */
 export function enterRequest(req: object) {
   const firmId = (req as ScopedReq)[REQ_FIRM];   // a firm's own web address: the firm the host routing found (setRequestFirm)
   scope.enterWith({ route: routeOf(req as ScopedReq), firmId: typeof firmId === "string" ? firmId : undefined });

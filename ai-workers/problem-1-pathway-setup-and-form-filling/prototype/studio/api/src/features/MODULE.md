@@ -19,6 +19,7 @@ The registration seam: one file per feature, and the step folders of growing run
 - The firm's own facts are the case officer's, never the client's (P-486, QA-403).
 - A refused line is named in `refused`, never dropped silently (P-444).
 - `platform-firm-walls.ts` (PF-12) runs every handler in its request's firm scope, and stops the start-up when the API's database role could pass the firm walls.
+- `case-firm-door.ts` (CS-W3) is a guard that only tags a case-side request with its firm (`setRequestFirm`); it loads before PF-4's guard and must stay correct in either order.
 
 **Tables.** through the services it registers: sectionQuestion, canonicalField, formEdition, libraryChange, proposalItem, combinationForm, sourceAttachment, formFieldMap.
 **Tests.** `tests/check_features_registry.ts`, `tests/check_pf12_walls.ts`, `tests/check_b104_checkpoint.ts`, `tests/check_checkpoint_review_order.ts`, `tests/check_checkpoint_sheet_stable.ts`, `tests/check_c73_parts_checkpoint.ts`.
