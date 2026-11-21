@@ -176,6 +176,12 @@ queue_rules:
       - -draft
       - "label = review: approved"
       - check-success = ci
+      # E6 (P-772, enforcement plan 21 Nov; P-606, P-526, P-610): the PR-body and size rules (pr-rules.yml: a testable
+      # "Done when", a "Duplicate check:" line, a readable "Completes:" line, under 800 changed lines or a recorded
+      # exception, reviewer agents on Opus) hold a product PR out of the queue when red. pr-rules has run on every PR
+      # since 15 Nov (P-717 (b)'s 24 h report-only start long passed). pr-rules skips records PRs and Mergify's own
+      # batch PRs, and neither enters this queue. Undo: delete this line and the four comment lines above it.
+      - check-success = pr-rules
       - -label=records
       # P-717 (a): a PR whose every file is pipeline work goes to the queue "pipeline" below, never a product batch.
       - files ~= ^(?!(\.github/|\.githooks/|\.mergify\.yml$|\.claude/|AGENTS\.md$|CLAUDE\.md$|ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/))

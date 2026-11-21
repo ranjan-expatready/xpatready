@@ -1,11 +1,12 @@
 # PR body and size rules (P-611, row G-4 (2), (3), (6); P-526, P-606, P-608, P-610): the body has a "Done when" that
 # names its test and a "Duplicate check:" line; the PR is under 800 changed lines, tests included, unless the body names
 # a recorded exception ("Size exception: P-NNN"); reviewer and breaker agents are pinned to Opus high. Re-runs when the
-# body is edited. Merge-queue PRs (mergify/*) carry a generated body and records PRs (label "records", their own queue)
-# are skipped. No "labeled": a label must never re-run the check the queue waits on (as ci.yml, review 6 Nov).
+# body is edited. Merge-queue PRs (mergify/*) carry a generated body and are skipped; a records-only PR (by its file
+# list, records-only.sh; their own queue) passes with the rule steps skipped. No "labeled": a label must never re-run
+# the check the queue waits on (as ci.yml, review 6 Nov).
 # An item's last PR says "Completes: R1.77" on a line of its own (several: "Completes: R1.77, R1.78"); at its merge
 # item-proof.yml runs the item's pack and journey and posts the verdict (P-728 (3)); an unreadable line fails here.
-# The product queue does not wait for this check yet (Lead 58, 15 Nov: gate in a later small PR after a day). Reads only, US$0.
+# The product queue waits for this check (E6, P-772; .mergify.yml). Reads only, US$0.
 # B204 (P-745): job outside-wave labels a PR naming an R1 item outside the open waves (design/waves.tsv) "outside-wave",
 # with a warning, never a failure (fixes still merge, P-214). It holds the only write token here, so it runs main's
 # waves.py from the base commit in a folder of its own, reads the PR's title and body as data only, and keeps no
@@ -23,7 +24,12 @@ concurrency:
   cancel-in-progress: true
 jobs:
   pr-rules:
-    if: "${{ !startsWith(github.event.pull_request.head.ref, 'mergify/') && !contains(github.event.pull_request.labels.*.name, 'records') }}"
+    # E6 (P-772, review of #2595): the product queue waits for this check, so the job always runs on a PR and never reads
+    # the "records" label from the event: records-label.yml drops that label on the same push that adds code, after
+    # this job read it, and a label change by GITHUB_TOKEN starts no run, so a skipped run could hold an approved
+    # product PR out of the queue for good. The first step asks records-only.sh about the PR's own file list instead; a
+    # records-only PR passes with every rule step skipped (its own queue does not wait for pr-rules).
+    if: "${{ !startsWith(github.event.pull_request.head.ref, 'mergify/') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 3
     env:
@@ -33,13 +39,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2   # the merge commit and its first parent (main), for cleanup-pr-check.sh
+      - name: records only? (records-only.sh on the PR's file list; then the rule steps are skipped and the check passes)
+        id: rec
+        env:
+          GH_TOKEN: "${{ github.token }}"
+        run: |
+          set -o pipefail   # an unreadable file list is "not records": the rules run, never a silent pass
+          REC=$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)' | bash "$T/records-only.sh" is-records --files) || REC=no
+          echo "records=$REC" >> "$GITHUB_OUTPUT"; echo "records only: $REC"
       - name: body has a testable Done when and a Duplicate check line
+        if: "${{ steps.rec.outputs.records != 'yes' }}"
         run: printf '%s\n' "$BODY" | bash "$T/brief-check.sh"
       - name: a "Completes:" line, if any, names R1 items only (P-728 (3); item-proof.yml proves them at the merge)
-        if: "${{ !cancelled() }}"
+        if: "${{ !cancelled() && steps.rec.outputs.records != 'yes' }}"
         run: printf '%s\n' "$BODY" | node ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/item-proof.mjs detect
       - name: under 800 changed lines of code and tests, or a recorded exception
-        if: "${{ !cancelled() }}"
+        if: "${{ !cancelled() && steps.rec.outputs.records != 'yes' }}"
         env:
           GH_TOKEN: "${{ github.token }}"
         # P-610 reading (Lead 58, 15 Nov, on #1824): generated review, break and journey records under product/screens/
@@ -53,7 +69,7 @@ jobs:
             --jq '.[] | .filename, (.previous_filename // empty)' | bash "$T/records-only.sh" is-records --files) || REC=no
           printf '%s\n' "$BODY" | bash "$T/pr-size.sh" "$CODE" 0 "$REC"
       - name: reviewer and breaker agents on Opus high
-        if: "${{ !cancelled() }}"
+        if: "${{ !cancelled() && steps.rec.outputs.records != 'yes' }}"
         run: bash "$T/agent-model-guard.sh"
       - name: every R1 item of CAPABILITIES.md has one wave in design/waves.tsv (B204; a warning, never a failure)
         if: "${{ !cancelled() }}"

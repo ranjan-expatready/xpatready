@@ -2,7 +2,7 @@
 # Mergify scopes (P-715, design/mergify-parallel-scopes-2026-11-19.md): .mergify.yml's file scopes and barrier files
 # stay true to the code. Each fenced module's scope holds its module card's own `paths:` (the cards are the one map of
 # the modules, P-615), every scope and barrier pattern matches a tracked file, and the product and pipeline queues use
-# one and the same "pipeline paths" pattern (P-717 (a)). Run by check-guards.sh. US$0, no network.
+# one and the same "pipeline paths" pattern (P-717 (a)); the product queue waits for pr-rules (E6, P-772). Run by check-guards.sh. US$0, no network.
 #   bash product/tools/check-mergify-scopes.sh
 set -u
 TOOLS="$(cd "$(dirname "$0")" && pwd)"; ROOTD="$(cd "$TOOLS/../../../.." && pwd)"
@@ -56,6 +56,18 @@ else:
         n += 1
         if not any(p.match(f) for p in pinc): bad.append(f"pipeline scope: {f} is pipeline work by the queue pattern, not by the scope")
         if r.search(f) is not None: bad.append(f"pipeline pattern: {f} is in the pipeline scope, not pipeline work by the pattern")
+# E6 (P-772): the product queue waits for a green pr-rules (body and size rules), as a plain top-level condition (inside an
+# "or" another branch could satisfy it), next to ci. Undo with the .mergify.yml line, then this check.
+n += 1
+pc = [c.replace(" ", "") for c in conds.get("product", [])]
+if "check-success=pr-rules" not in pc or "check-success=ci" not in pc:
+    bad.append("the product queue does not wait for both check-success = pr-rules (E6, P-772) and check-success = ci")
+# ... and pr-rules must then run on every PR that can reach that queue: its job never skips on a label read from the event
+# (records-label.yml drops "records" on the same push that adds code; no run follows a GITHUB_TOKEN label change).
+n += 1
+pr = yaml.safe_load(open(os.path.join(root, ".github/workflows/pr-rules.yml"), encoding="utf-8"))
+jif = str(((pr.get("jobs") or {}).get("pr-rules") or {}).get("if", ""))
+if "label" in jif: bad.append(f"pr-rules.yml: the job skips on a label ({jif}), so a product PR can wait for a check that never runs")
 for b in bad: print(f"FAIL  {b}")
 print(f"{'PASS' if not bad else 'FAIL'}  mergify scopes: {n} checks")
 sys.exit(1 if bad else 0)
