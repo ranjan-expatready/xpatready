@@ -17,6 +17,7 @@ import { StripeBilling } from "../billing/stripe.ts";
 import { platformConfig, type PlatformConfig } from "../config/settings.ts";
 import { identityConfig, type IdentityConfig } from "../identity/port.ts";
 import { LocalSignUp } from "./signup-identity.ts";
+import type { BillingPorts } from "../billing/webhook.ts";
 import type { MailPort } from "../../../../ports/mail.ts";
 import type { SignUpPorts } from "./signup.ts";
 
@@ -28,6 +29,18 @@ export function runtimeSignUpPorts(config: Pick<PlatformConfig, "environment" | 
   return {
     audit: auditEvent, clock: systemClock, mail, identity: new LocalSignUp(() => systemClock.now(), mail),
     billing: key ? StripeBilling.fromKey(key) : fakeBilling(), notReady,
+    appUrl: env.STUDIO_PUBLIC_URL ?? `http://localhost:${env.STUDIO_PORT ?? 4400}`,
+  };
+}
+
+/** PF-5 part 2: the billing routes' and the webhook's ports. Stripe needs both its key and its webhook secret; a local
+ *  server with neither runs the fake (no network); anything else shuts the webhook door with a reason (503). */
+export function runtimeBillingPorts(config: Pick<PlatformConfig, "environment" | "stripe"> = platformConfig(), env: NodeJS.ProcessEnv = process.env): BillingPorts {
+  const key = config.stripe.secretKey?.reveal() ?? null, hook = config.stripe.webhookSecret?.reveal() ?? null;
+  const notReady = key && !hook ? "Stripe's webhook secret is not set on this server (PLATFORM_STRIPE_WEBHOOK_SECRET)"
+    : !key && config.environment !== "local" ? "Stripe is not set up on this server (PLATFORM_STRIPE_SECRET_KEY)" : null;
+  return {
+    audit: auditEvent, clock: systemClock, billing: key ? StripeBilling.fromKey(key, undefined, hook) : fakeBilling(), notReady,
     appUrl: env.STUDIO_PUBLIC_URL ?? `http://localhost:${env.STUDIO_PORT ?? 4400}`,
   };
 }

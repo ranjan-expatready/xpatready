@@ -204,8 +204,11 @@ export class FirmSignUp {
       await this.ports.audit.record(tx, { firmId: firm.id, actor: ACTOR, action: "platform.staff.owner_created", entity: "platform_staff", entityKey: owner.id, summary: "The person who signed up is the firm's Owner", detail: { staffId: owner.id }, before: null, after: { email: owner.email, displayName: owner.displayName, roles: ["OWNER"] } });
       for (const versionId of pending.termsVersionIds) await tx.platformTermsAcceptance.create({ data: { firmId: firm.id, staffId: owner.id, versionId, acceptedAt: pending.termsAcceptedAt } });
       await this.ports.audit.record(tx, { firmId: firm.id, actor: ACTOR, action: "platform.terms.accepted", entity: "platform_terms_acceptance", entityKey: owner.id, summary: "The Owner's acceptance of the current terms recorded", detail: { staffId: owner.id, versions: pending.termsVersionIds.length }, before: null, after: { versionIds: pending.termsVersionIds, acceptedAt: pending.termsAcceptedAt.toISOString() } });
-      const sub = await tx.platformSubscription.create({ data: { firmId: firm.id, planId: plan.id, status: "TRIAL" } });
-      await this.ports.audit.record(tx, { firmId: firm.id, actor: ACTOR, action: "platform.subscription.created", entity: "platform_subscription", entityKey: sub.id, summary: `Trial subscription on ${plan.name}, ${pending.period.toLowerCase()}`, detail: { plan: plan.code, period: pending.period }, before: null, after: { plan: plan.code, period: pending.period, status: sub.status } });
+      // The trial's end is stored from the start (QA-481): the plan's days from now; Stripe's own end replaces it when the
+      // trial's Checkout completes (billing/webhook.ts).
+      const trialEndsAt = new Date(now.getTime() + plan.trialDays * 86_400_000);
+      const sub = await tx.platformSubscription.create({ data: { firmId: firm.id, planId: plan.id, status: "TRIAL", trialEndsAt } });
+      await this.ports.audit.record(tx, { firmId: firm.id, actor: ACTOR, action: "platform.subscription.created", entity: "platform_subscription", entityKey: sub.id, summary: `Trial subscription on ${plan.name}, ${pending.period.toLowerCase()}`, detail: { plan: plan.code, period: pending.period, trialEndsAt: trialEndsAt.toISOString() }, before: null, after: { plan: plan.code, period: pending.period, status: sub.status, trialEndsAt: trialEndsAt.toISOString() } });
       await tx.moduleEvent.create({ data: { firmId: firm.id, type: EVENT.FIRM_CREATED, subjectId: firm.id, payload: { firmId: firm.id } } });   // last (m8)
       return { firm, owner, sub };
     });

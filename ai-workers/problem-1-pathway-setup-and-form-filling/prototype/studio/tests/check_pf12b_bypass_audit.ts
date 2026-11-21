@@ -71,10 +71,10 @@ export function misclassed(use: string, entry: { audit?: unknown }, wrote: numbe
 ok("PF-12b DW3 pass: every BYPASS_USES entry names how it audits (per-firm, or none with its reason)", unaudited(BYPASS_USES).length === 0, unaudited(BYPASS_USES));
 const broken = { ...BYPASS_USES, "pf12b.new-use": { why: "a use added without its audit field", routes: [] } };
 ok("PF-12b DW3 fail: a use added without `audit`, or with an empty none, is named by the check", JSON.stringify(unaudited(broken)) === '["pf12b.new-use"]' && unaudited({ x: { audit: "none: " } }).length === 1);
-const PER_FIRM = ["cases.prospect-won.catch-up", "job:messages.outbox_sweep", "job:platform.entitlements.storage_daily", "platform.demo.inbox", "platform.demo.reset", "platform.entitlements.limit-change", "platform.firms.signup", "platform.web-address.catch-up"];
+const PER_FIRM = ["cases.prospect-won.catch-up", "job:messages.outbox_sweep", "job:platform.billing.webhook_sweep", "job:platform.entitlements.storage_daily", "platform.billing.stripe-webhook", "platform.demo.inbox", "platform.demo.reset", "platform.entitlements.limit-change", "platform.firms.signup", "platform.web-address.catch-up"];
 const DOORS = ["fo.booking.public-page", "fo.booking.self-service", "fo.sales.web-form", "platform.identity.authenticate", "platform.identity.invitation", "platform.identity.sign-in", "platform.web-address.host"];
 const perFirm = Object.entries(BYPASS_USES).filter(([, e]) => e.audit === "per-firm").map(([k]) => k).sort();
-ok("PF-12b DW3 pass: the eight cross-firm uses audit per firm; the seven own-firm doors are off the list (PF-12b part 2: narrow lookups, tests/check_pf12b_doors.ts)", JSON.stringify(perFirm) === JSON.stringify(PER_FIRM) && DOORS.every((d) => !(d in BYPASS_USES)), perFirm);
+ok("PF-12b DW3 pass: the ten cross-firm uses audit per firm; the seven own-firm doors are off the list (PF-12b part 2: narrow lookups, tests/check_pf12b_doors.ts)", JSON.stringify(perFirm) === JSON.stringify(PER_FIRM) && DOORS.every((d) => !(d in BYPASS_USES)), perFirm);
 ok("PF-12b DW3 pass: the two uses that touch no firm say why (the purge: our own register; re-encrypt: every job runs as its firm)", /platform_signup_pending/.test(BYPASS_USES["job:platform.signup.purge"].audit) && /runs as that firm/.test(BYPASS_USES["job:platform.secret_box.reencrypt"].audit));
 
 execFileSync(join(BIN, "dropdb"), [...PG, "--if-exists", DB]);
