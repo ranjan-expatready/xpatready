@@ -28,7 +28,7 @@ import { sha256Hex, type FilesPort } from "../../../../../ports/files.ts";
 import type { JobPort } from "../../../../../ports/jobs.ts";
 import { DAILY_CAP, HELD_DAILY_LIMIT, AnyMessageSend, MessageRefused, MessageRepeated, fillFields, gateReason, isPlatformAccount, PLATFORM_ACCOUNT_NAME, render, type MessageSend, type MessagePort, type PlatformAccountSend, type PlatformAccountSendInput, type Rendered, type SendResult } from "../../../../../ports/messages.ts";
 import type { z } from "zod";
-import { firmScope, touchEachFirm } from "../../firm-scope.ts";
+import { BypassNotRecorded, firmScope, touchEachFirm, touchPlatform } from "../../firm-scope.ts";
 import { ACCOUNT_MAIL_FROM, readSetting, TIME_ZONE } from "../../settings.ts";
 import { ensureMessagesFirm } from "../consent/messages-firm.ts";
 import { logPort } from "../../observability/log.ts";
@@ -238,10 +238,18 @@ export class Messages implements MessagePort<Tx> {
    *  (break F1), then throws on, so the job runner retries it; at PLATFORM_SEND_TRIES the row is FAILED "send failed". */
   async deliverPlatform(outboxId: string): Promise<"sent" | "skipped" | "failed"> {
     try { return await this.sendPlatformRow(outboxId); } catch (e) {
-      const row = await this.d.db.msgOutbox.findFirst({ where: { id: outboxId, audience: "PLATFORM_ACCOUNT", firmId: null, state: "QUEUED" }, select: { stateReason: true } });
-      if (!row) throw e;
-      const tries = triesOf(row.stateReason) + 1, last = tries >= PLATFORM_SEND_TRIES;
-      await this.d.db.msgOutbox.updateMany({ where: { id: outboxId, state: "QUEUED", stateReason: row.stateReason }, data: last ? { state: "FAILED", stateReason: "send failed", updatedAt: this.clock.now() } : { stateReason: `send failed: try ${tries} of ${PLATFORM_SEND_TRIES}`, updatedAt: this.clock.now() } });
+      if (e instanceof BypassNotRecorded) throw e;   // PF-12b part 3: nothing was sent and no try is counted; the job is retried
+      // PF-12b part 3: the try is counted in its own transaction with the use's platform.bypass line (fail-closed).
+      const counted = await this.d.db.$transaction(async (tx) => {
+        await touchPlatform(tx);   // first, as sendPlatformRow: every read on the use is lined (review m1, break m1)
+        const row = await tx.msgOutbox.findFirst({ where: { id: outboxId, audience: "PLATFORM_ACCOUNT", firmId: null, state: "QUEUED" }, select: { stateReason: true } });
+        if (!row) return null;
+        const tries = triesOf(row.stateReason) + 1, last = tries >= PLATFORM_SEND_TRIES;
+        await tx.msgOutbox.updateMany({ where: { id: outboxId, state: "QUEUED", stateReason: row.stateReason }, data: last ? { state: "FAILED", stateReason: "send failed", updatedAt: this.clock.now() } : { stateReason: `send failed: try ${tries} of ${PLATFORM_SEND_TRIES}`, updatedAt: this.clock.now() } });
+        return { tries, last };
+      });
+      if (!counted) throw e;
+      const { tries, last } = counted;
       this.d.log?.(`messages: platform account outbox ${outboxId} send failed (${e instanceof Error ? e.name : "error"}), try ${tries} of ${PLATFORM_SEND_TRIES}${last ? ": FAILED" : ""}`);
       if (!last) throw e;
       return "failed";
@@ -250,6 +258,7 @@ export class Messages implements MessagePort<Tx> {
 
   private async sendPlatformRow(outboxId: string): Promise<"sent" | "skipped" | "failed"> {
     return this.d.db.$transaction(async (tx) => {
+      await touchPlatform(tx);   // PF-12b part 3: the send's one platform.bypass line, in its transaction (fail-closed)
       const [row] = await tx.$queryRaw<{ state: string; channel: Channel; address: string; rendered_hash: string }[]>`
         SELECT "state"::text AS state, "channel"::text AS channel, "address", "rendered_hash" FROM "msg_outbox"
         WHERE "firm_id" IS NULL AND "audience" = 'PLATFORM_ACCOUNT' AND "id" = ${outboxId}::uuid FOR UPDATE`;

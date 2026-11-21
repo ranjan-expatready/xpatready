@@ -55,7 +55,8 @@ export function inFirm<T extends { firmId: string | null }>(firmId: string, row:
 import { AsyncLocalStorage } from "node:async_hooks";
 import pg from "pg";
 import { logPort, requestScope } from "./observability/log.ts";
-import { auditEvent } from "./audit/audit-event.ts";
+import { currentJobFirm } from "./jobs/pgboss-jobs.ts";
+import { auditEvent, platformAuditWorkspaceId } from "./audit/audit-event.ts";
 import type { AuditPort } from "../../../ports/audit.ts";
 import type { PrismaClient } from "@prisma/client";
 
@@ -97,24 +98,23 @@ export function enterFirm(firmId: string) {
  *  query runs.
  *  PF-12b part 1 (QA-499; R1.4 "every use writes an audit line"; P-607, P-571 (1), AG-1-45): `audit` says how each use
  *  is audited. "per-firm": the use calls touchFirm(tx, firmId) for each firm whose rows it reads or writes, in that
- *  firm's transaction, and touchFirm writes one `platform.bypass` line to that firm's trail (fail-closed). "none: …":
- *  why the use writes no line (it touches no firm's rows). The seven own-firm doors left the list in PF-12b part 2: each
+ *  firm's transaction, and touchFirm writes one `platform.bypass` line to that firm's trail (fail-closed). "platform"
+ *  (PF-12b part 3, Lead 15's ruling on #2752, Lead 70's on #1999: every use writes a line): the use touches no firm's rows
+ *  and calls touchPlatform(tx) in its own transaction, which writes one firm-less `platform.bypass` line (fail-closed). The seven own-firm doors left the list in PF-12b part 2: each
  *  finds its firm through a narrow definer lookup and runs as it (tests/check_pf12b_doors.ts). A use added without `audit` does not compile, and tests/check_pf12b_bypass_audit.ts reads the list. */
-export type BypassAudit = "per-firm" | `none: ${string}`;
+export type BypassAudit = "per-firm" | "platform";
 /** `inside`: the only outer uses this use may run within (one bypass use at a time otherwise, break M1). Only a use that
- *  touches no firm's rows ("none: …") may name one: it then crosses under its own name, and the outer use's lines stand. */
+ *  touches no firm's rows ("platform") may name one: it then crosses under its own name, and the outer use's lines stand. */
 export const BYPASS_USES: Readonly<Record<string, { why: string; routes: readonly RegExp[]; outside?: boolean; direct?: boolean; audit: BypassAudit; inside?: readonly string[] }>> = Object.freeze({
   "platform.web-address.catch-up": { why: "at start, every firm with no web address yet gets one (PF-25)", routes: [], outside: true, audit: "per-firm" },
   "platform.demo.inbox": { why: "the demo inbox lists every demo firm's mail by address; demo workspace only (PF-19b)", routes: [/^GET \/api\/demo\/platform-inbox$/i], direct: true, audit: "per-firm" },
-  "platform.branding.public": { why: "a client page's header and the firm's images find the firm by its key, then run as it (PF-13 part 1b)", routes: [/^GET \/api\/public\/firms\/[^/]+\/branding(\/[^/]+)?$/i], direct: true, audit: "none: an own-firm door: it reads only its key's row to choose one firm, then runs as that firm" },
   "platform.firms.signup": { why: "the sign-up door makes a firm that does not exist yet, checking the email across every firm (PF-5)", routes: [/^POST \/api\/public\/signup(\/verify)?$/i], direct: true, audit: "per-firm" },
-  "job:platform.signup.purge": { why: "pending sign-ups past their 24 hours are deleted (PF-5; no firm yet)", routes: [], outside: true, audit: "none: it deletes expired pending sign-ups only, our own register with no firm_id (platform_signup_pending, forced with no policy); it reads no firm table" },
+  "job:platform.signup.purge": { why: "pending sign-ups past their 24 hours are deleted (PF-5; no firm yet)", routes: [], outside: true, audit: "platform" },
   "platform.entitlements.limit-change": { why: "our team lowers a plan's limit for every firm on the plan, and each firm's Owners are told (PF-15 part 2, SA-3-43); PF-4s's system routes once on main, and the service on a direct call", routes: [/^(POST|PATCH) \/api\/system\/plans\//i], direct: true, audit: "per-firm" },
   "job:platform.entitlements.storage_daily": { why: "the daily storage measure lists every firm, then measures each in its own firm scope (PF-15, SA-3-40)", routes: [], outside: true, audit: "per-firm" },
   "job:messages.outbox_sweep": { why: "the outbox sweep picks up every firm's stuck rows, each firm its own share (PF-19b)", routes: [], outside: true, audit: "per-firm" },
-  "job:messages.send": { why: "a platform job (JobPort platform: true, no firm) sends one platform account message, a PLATFORM_ACCOUNT row with no firm; a firm's send job runs as its firm (PF-19p)", routes: [], outside: true, audit: "none: a platform job sends one PLATFORM_ACCOUNT message, a row with no firm; it reads and writes no firm's rows (PF-19p). A firm's send job runs as its firm, not on this use." },
-  "platform.account.mail": { why: "a platform account email (sign-up's verification, before any firm exists) writes its PLATFORM_ACCOUNT outbox row, no firm's row (PF-19p)", routes: [/^POST \/api\/public\/signup(\/verify)?$/i], outside: true, direct: true, audit: "none: a platform account email (sign-up's verification, before any firm exists) writes its PLATFORM_ACCOUNT outbox row; no firm's rows (PF-19p).", inside: ["platform.firms.signup"] },
-  "job:platform.secret_box.reencrypt": { why: "the secret store re-encrypts every firm's secrets under the new key (PF-24)", routes: [], outside: true, audit: "none: every re-encrypt job is queued with its firm and runs as that firm (withFirm, not this use); a job of this queue with no firm is refused before any read (reencrypt.ts)" },
+  "job:messages.send": { why: "a platform job (JobPort platform: true, no firm) sends one platform account message, a PLATFORM_ACCOUNT row with no firm; a firm's send job runs as its firm (PF-19p)", routes: [], outside: true, audit: "platform" },
+  "platform.account.mail": { why: "a platform account email (sign-up's verification, before any firm exists) writes its PLATFORM_ACCOUNT outbox row, no firm's row (PF-19p)", routes: [/^POST \/api\/public\/signup(\/verify)?$/i], outside: true, direct: true, audit: "platform", inside: ["platform.firms.signup"] },
   "cases.prospect-won.catch-up": { why: "at start and every few seconds, every firm's won prospects with no client yet are listed (each is then made a client as its own firm, never on this use; the link jobs are queued after it) (FO-8, CS-K1 part 2)", routes: [], outside: true, audit: "per-firm" },
   "platform.demo.reset": { why: "the demo reset puts every Sample firm's settings back (P-571 (1)); demo routes, and the reset tools outside a request", routes: [/^POST \/api\/demo\//i], outside: true, audit: "per-firm" },
 });
@@ -147,9 +147,9 @@ let bypassLine: (use: string, route: string | undefined) => void = (use, route) 
 export function onBypassLine(f: (use: string, route: string | undefined) => void) { const was = bypassLine; bypassLine = f; return was; }
 
 /** The one nesting rule (PF-12b, merge of PF-19p): a use runs inside an outer use only when it touches no firm's rows
- *  ("none: …") and names that outer use in `inside`. Exported for the suite's per-firm stand-in (review m1, 20 Nov). */
+ *  ("platform") and names that outer use in `inside`. Exported for the suite's per-firm stand-in (review m1, 20 Nov). */
 export function mayRunInside(entry: { audit: BypassAudit; inside?: readonly string[] }, outer: string): boolean {
-  return entry.audit.startsWith("none: ") && (entry.inside ?? []).includes(outer);
+  return entry.audit === "platform" && (entry.inside ?? []).includes(outer);
 }
 /** Runs fn as our own staff's bypass role: every walled table is readable and writable. Only for a use on BYPASS_USES and
  *  a route on that use's list; every use writes its operations line, and a "per-firm" use one platform.bypass audit line
@@ -216,6 +216,33 @@ export async function touchFirm(tx: unknown, firmId: string): Promise<void> {
     await recorder().record(tx, { firmId: id, actor: `system:${use}`, action: "platform.bypass", entity: "platform_firm", entityKey: id,
       summary: `Our platform read or changed this firm's records across the firm walls (${use}).`, detail: { use, method, correlationId } });
   } catch (e) { seen.delete(id); throw new BypassNotRecorded(use, e); }
+}
+/** PF-12b part 3: inside a "platform" bypass use, one firm-less platform.bypass line in `tx` (once per transaction), on
+ *  the platform's own audit workspace (never reset, P-571 (1)): the use, the method (never the path) and the correlation
+ *  id. A failed write throws BypassNotRecorded, so `tx` rolls back (P-607). Outside a "platform" use it does nothing.
+ *  A recorded departure (review m3): AuditPort's AuditEntry requires a firm, so the line goes through the case/configuration
+ *  entry shape (it names the platform workspace, no case, no firm) rather than a port change (P-423; a firm-less platform
+ *  entry is the tech lead's later row). That shape takes the request's or job's firm when one is in scope, so a "platform"
+ *  use in a firm's scope is refused here (fail-closed) rather than land its line on that firm's trail (break m3). */
+/** `step` (Lead 15's ruling on #2814): a per-firm use's step that touches no firm (sign-up's new-email lookup and pending
+ *  row; a refused verify) names itself and writes the same firm-less line; `key` is a pending id, never a secret, code
+ *  or email. Without a step, only a "platform" use writes. */
+export async function touchPlatform(tx: unknown, at?: { step: string; key?: string | null }): Promise<void> {
+  const s = scope.getStore(), use = s?.bypass;
+  if (!use || (BYPASS_USES[use]?.audit !== "platform" && !at?.step)) return;
+  if (typeof tx !== "object" || tx === null || typeof (tx as { $disconnect?: unknown }).$disconnect === "function") throw new FirmScopeError("touchPlatform: give the caller's transaction, not the client");
+  if (requestScope.getStore()?.firmId?.() || currentJobFirm()) throw new BypassNotRecorded(use, new FirmScopeError("touchPlatform: a platform use's line names no firm, but this request or job acts for one"));
+  const seen = touched.get(tx) ?? new Set<string>();
+  touched.set(tx, seen);
+  if (seen.has("")) return;
+  seen.add("");
+  const method = s.route ? s.route.slice(0, s.route.indexOf(" ")) : "none";
+  const given = requestScope.getStore()?.correlationId, correlationId = given && CORRELATION.test(given) ? given : null;
+  try {
+    const workspaceId = await platformAuditWorkspaceId(tx as Parameters<typeof platformAuditWorkspaceId>[0]);
+    await recorder().record(tx, { workspaceId, actor: `system:${use}`, action: "platform.bypass", entity: "bypass use", entityKey: use,
+      summary: `Our platform used the bypass role for its own records, no firm's (${use}${at ? `, ${at.step}` : ""}).`, detail: { use, method, correlationId, ...(at ? { step: at.step, key: at.key ?? null } : {}) } });
+  } catch (e) { seen.delete(""); throw new BypassNotRecorded(use, e); }
 }
 /** For a use that only reads firms' rows (a sweep's read, a lookup): each firm's line in a transaction of its own. Returns
  *  the firms whose line could not be written (their work must not go ahead) and the first such error; never throws. */
