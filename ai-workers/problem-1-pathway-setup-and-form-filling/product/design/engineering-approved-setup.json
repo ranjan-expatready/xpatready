@@ -1,7 +1,7 @@
 {
  "_about": "The approved engineering set-up (CK-1, founder asks A151 and A154, 17 Nov 2026). Owned by the tech lead: a change to the set-up is approved first, then this file gets a new version and a change_log row in the same PR as the change. tools/conformance-check.py compares origin/main with it (lists compare as sets: extra lines allowed, a missing one fails) and prints enforced: yes | no. The ruleset item is read only by the heartbeat workflow (the agents' deny list blocks ruleset reads in sessions); 'required': false tolerates no ruleset until the tech lead sets it true after the move (18 Nov).",
- "version": "1.4.0",
- "date": "2026-11-19",
+ "version": "1.5.0",
+ "date": "2026-11-21",
  "owner": "the tech lead",
  "change_log": [
   {
@@ -33,6 +33,12 @@
    "date": "2026-11-19",
    "change": "Mergify parallel mode (P-715): batches with no shared scope test and merge at the same time; scopes per fenced module, plus migrations (capacity 1) and pipeline (capacity 1); a fourth queue pipeline, after product, for PRs whose every file is pipeline work (P-717 (a)); batch_size 6 to 2 and batch_max_failure_resolution_attempts 2; mode, capacities and barrier files pinned here and checked by check_mergify. A new or changed blocking check starts report-only for 24 h or 10 PR runs (P-717 (b)).",
    "approval": "the founder, P-717 (19 Nov ~07:3x IST: pipeline work takes effect through its own lane; P-715 the one exception to P-716), relayed by the tech lead (Lead 85)"
+  },
+  {
+   "version": "1.5.0",
+   "date": "2026-11-21",
+   "change": "CI-SPEED-1: max_parallel_checks 6 to 12 (6 since P-739, 19 Nov, recorded here only now), so the queue never holds a ready batch for want of a slot; 74 Actions jobs ran at once at 12:10 IST with no machine shortage.",
+   "approval": "the founder, A253 (21 Nov 12:1x IST: never wait for machine, use it as much as possible), row CI-SPEED-1"
   }
  ],
  "settings": {
@@ -167,7 +173,7 @@
  },
  "mergify": {
   "path": ".mergify.yml",
-  "max_parallel_checks": 6,
+  "max_parallel_checks": 12,
   "mode": "parallel",
   "capacities_required": {"money": 1, "migrations": 1, "pipeline": 1},
   "barrier_files_required": ["**/package.json", "**/package-lock.json", ".nvmrc", "tsconfig.base.json", "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/api/tsconfig.json", "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/web/tsconfig.json", "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/prisma/schema/base.prisma", "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/prisma/schema/links.prisma", "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/prisma/schema/extension.prisma", "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/prisma/schema/audit.prisma", "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/prisma/migrations/migration_lock.toml", "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/api/src/main.ts", "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/api/src/core.ts", "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/api/src/studio.ts"],

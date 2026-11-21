@@ -9,7 +9,7 @@
 # Founder 1 Nov night (reverses P-210's limit of one): the repository is public, so batches run free on GitHub's
 # machines, not the one Mac; up to 6 batches are checked at once, each assuming the ones ahead of it pass.
 merge_queue:
-  max_parallel_checks: 6   # P-728 (2), held by P-730 until scopes (#2207, on main) and the batch-failure alert; Lead 94 19 Nov: 19 PRs waited, job wait 0.1 min
+  max_parallel_checks: 12   # CI-SPEED-1 (founder A253, 21 Nov 12:1x IST: never wait for machine): 6 (P-739) to 12; 74 Actions jobs ran at once at 12:10 IST, no machine shortage; batch_size stays 2
   # P-715 (Lead 84; founder P-717, 19 Nov ~07:3x IST, the one exception to the P-716 freeze): batches that share no
   # scope test and merge at the same time, and one failure no longer resets the others. Undo: mode: serial (one line).
   # Design and evidence: product/design/mergify-parallel-scopes-2026-11-19.md (40% of 118 batches failed in 72 h).
