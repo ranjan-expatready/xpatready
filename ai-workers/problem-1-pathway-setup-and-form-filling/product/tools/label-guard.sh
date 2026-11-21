@@ -19,7 +19,7 @@
 # records files the PR also changes still counts as pure, so qa's proof records keep their Approve across main's merges.
 # Env: GH_TOKEN, REPO (owner/name), PR, AFTER (the push's head, or the PR's head when the label was added; the PR's
 # current head wins), BEFORE (for the comment; empty when the label was added); LABELED (the label just added, if any);
-# FULL_FROM (queue-gate.sh); QUEUE_GATE (the test's stand-in);
+# REVIEWERS (queue-gate.sh); QUEUE_GATE (the test's stand-in);
 # API (default https://api.github.com); MAIN_REF (default origin/main). Runs in a git copy holding main and the PR's
 # commits. Exit 0 when nothing was wrong or the label came off; 2 when the label could not be read or removed.
 # Test: check-label-guard.sh.

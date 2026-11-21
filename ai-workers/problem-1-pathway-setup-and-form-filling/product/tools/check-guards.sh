@@ -93,7 +93,6 @@ MUT='1|product/tools/check-docs.sh|/CURRENT LEAD: STATE.md has/d|check-current-l
 15 comment|../../.github/workflows/queue-gate.yml|/comment.author_association/d|check-queue-gate.sh
 15 dispatch|product/tools/queue-gate.sh|s/schedule.workflow_dispatch)/schedule)/|check-queue-gate.sh
 15 gatewd|../../.github/workflows/queue-gate.yml|s/ .. github.event_name == .workflow_dispatch.$//|check-queue-gate.sh
-15 full|product/tools/queue-gate.sh|s/^  fullproof "\$head" .. return 1/  true/|check-queue-gate.sh
 15 full head|product/tools/queue-gate.sh|s/select(.title == \$t)/select(true)/|check-queue-gate.sh
 15 full green|product/tools/queue-gate.sh|s/if \[ "\$st \$co" = "completed success" \]; then/if true; then/|check-queue-gate.sh
 15 full main|product/tools/queue-gate.sh|s/^      grep -qx "\$sha" "\$H.m" .. continue/      true/|check-queue-gate.sh
@@ -107,13 +106,11 @@ MUT='1|product/tools/check-docs.sh|/CURRENT LEAD: STATE.md has/d|check-current-l
 15 full recfiles|product/tools/queue-gate.sh|s/^records() { has records \&\& .*/records() { has records; }/|check-queue-gate.sh
 15 full unread|product/tools/queue-gate.sh|s/ \[ "\${full_state:-}" = unread \] \&\& exit 3; exit 1;;/ exit 1;;/|check-queue-gate.sh
 15 full sweep3|product/tools/label-sweep.sh|s/^    if \[ "\$g" = 3 \]; then/    if false; then/|check-label-sweep.sh
-15 full fromwho|product/tools/queue-gate.sh|s/\(.\[.\[\] . \)select(.user.login as \$l . \$who . index(\$l)) . \(select(.author_association == "OWNER"\)/\1\2/|check-queue-gate.sh
 15 full nottested|../../.github/workflows/ci.yml|s/, FULL_PR: "\${{ inputs.pr }}", GATE_B_NOT_TESTED: "[^"]*" }/, FULL_PR: "${{ inputs.pr }}" }/|check-queue-gate.sh
 15 batch only|product/tools/queue-gate.sh|s/(map(select(. != "ci")) . if length > 0 then . else empty end) \/\/ ./map(select(. != "ci"))/|check-queue-gate.sh
 15 batch unread|product/tools/queue-gate.sh|s/names=\$(failing "\$rid" all . sort -u); \[ -n "\$names" \] .. {[^}]*}/names=$(failing "$rid" all)/|check-queue-gate.sh
 15 batch body|product/tools/queue-gate.sh|s/ + \[(.body \/\/ "") . scan(.*tonumber\]\() . index(\$n))\)/\1/|check-queue-gate.sh
 15 batch pages|product/tools/queue-gate.sh|s/length < 100 or any(.\[\]; .number <= \$n)/true/|check-queue-gate.sh
-15 full from|product/tools/queue-gate.sh|s/ \&\& \[\[ "\$at" < "\$FULL_FROM" \]\] \&\& return 0/ \&\& return 0/|check-queue-gate.sh
 15 full names|product/tools/queue-gate.sh|s/ 2>\/dev\/null . san . cut -c1-120 . grep \.; true; }/ 2>\/dev\/null; true; }/|check-queue-gate.sh
 15 batch|product/tools/queue-gate.sh|s/^  if ! { judge \&\& covered; }; then/  if ! judge; then/|check-queue-gate.sh
 15 batch part|product/tools/queue-gate.sh|s/ <<< "\$lines" .. miss=/ <<< "$lines" .. true .. miss=/|check-queue-gate.sh
@@ -134,6 +131,13 @@ MUT='1|product/tools/check-docs.sh|/CURRENT LEAD: STATE.md has/d|check-current-l
 15 full wake|../../.github/workflows/queue-gate.yml|s/startsWith(github.event.workflow_run.display_title, .full-run PR #.)/true/|check-queue-gate.sh
 15 full depth|../../.github/workflows/label-guard.yml|/^          fetch-depth: 0$/d|check-queue-gate.sh
 15 full name|../../.github/workflows/ci.yml|s/format(.full-run PR #{0} {1}., inputs.pr, inputs.head)/inputs.head/|check-queue-gate.sh
+15 start rid|product/tools/queue-gate.sh|s/ \&\& held \&\& \[ "\$held_state" = failed \]; then start/ \&\& held; then start/|check-queue-gate.sh
+15 deq unlabel|product/tools/queue-gate.sh|s/^          api -X DELETE "\$API\/repos\/\$REPO\/issues\/\$PR\/labels\/review%3A%20approved"/          true/|check-queue-gate.sh
+15 proof deq|product/tools/queue-gate.sh|s/ \] .. has dequeued; then/ ]; then/|check-queue-gate.sh
+15 start red|product/tools/queue-gate.sh|s/\[ "\$ci_state" = failure \] \&\& { echo "#\$PR: ci is red/false \&\& { echo "#$PR: ci is red/|check-queue-gate.sh
+15 start|product/tools/queue-gate.sh|s/^  api -X POST "\$API\/repos\/\$REPO\/actions\/workflows\/ci.yml\/dispatches"/  true/|check-queue-gate.sh
+15 start who|product/tools/queue-gate.sh|s/^  approved \(..\) { echo "#\$PR: no full run: \$why";/  true \1 { echo "x";/|check-queue-gate.sh
+15 start wake|../../.github/workflows/queue-gate.yml|s/ .. (github.event.action == .labeled. \&\& github.event.label.name == .dequeued.)//|check-queue-gate.sh
 16 source|product/tools/cockpit-data.py|s/                elif st != "open":/                elif False:/|check-lead-watch-board.sh
 16 count|product/tools/lead-watch.sh|s/; echo "\$bw"; act=\$((act + \$(grep -c .^ACT. <<<"\$bw")))/; echo "$bw"/|check-lead-watch-board.sh
 17 wall|product/tools/known-failures.py|s/(1 if b > int(row\["threshold"\]) else 0)/0/|check-known-failures.sh

@@ -61,8 +61,7 @@ jobs:
           # A labeled event carries no push, so no "after": the PR's head then (the script re-reads it from GitHub anyway).
           AFTER: ${{ github.event.after || github.event.pull_request.head.sha }}
           LABELED: ${{ github.event.action == 'labeled' && github.event.label.name || '' }}
-          FULL_FROM: ${{ vars.FULL_RUN_FROM }}
-          # As the sweep below: FULL_FROM's exemption counts an Approve by the owner's account or a login in REVIEWERS, and
+          # As the sweep below: queue-gate.sh counts an Approve by the owner's account or a login in REVIEWERS, and
           # since the org move the owner is the organisation, so without REVIEWERS nobody's Approve would count here.
           REVIEWERS: ${{ vars.REVIEWERS }}
         run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/label-guard.sh
@@ -101,5 +100,4 @@ jobs:
           # org move (18 Nov) the owner is the organisation, so without REVIEWERS no Approve counted here and the sweep
           # took off every label queue-gate.yml had put on (#2197, #2199, 19 Nov). Same value as queue-gate.yml's.
           REVIEWERS: ${{ vars.REVIEWERS }}
-          FULL_FROM: ${{ vars.FULL_RUN_FROM }}
         run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/label-sweep.sh
