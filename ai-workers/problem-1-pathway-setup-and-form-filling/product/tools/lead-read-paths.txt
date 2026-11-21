@@ -1,4 +1,6 @@
-# Paths that keep the Lead's read (P-423): queue-gate.sh never puts `review: approved` on a PR touching one of them.
+# Paths that keep the Lead's read (P-423): queue-gate.sh never puts `review: approved` on a PR touching one of them
+# (money, permissions, schema, migrations, .github/, product/tools/ and the other guards; records and screenshots are
+# exempt from the money and permissions lines only, B206 part 3).
 # One extended regex per line, matched against each changed path, case-insensitive; # starts a comment.
 # Workflows and the merge queue (P-214, P-423)
 ^\.github/
@@ -16,6 +18,12 @@
 # The schema and its migrations (P-423)
 /prisma/migrations/
 /prisma/schema/
+# --- records-exempt: the lines below (money and permissions) are not set off by a screenshot (*.png under screens/), an
+# image or .txt under product/, or any file of a records-only PR (records-only.sh and the "records" label): B206 part 3, P-751.
+# Every line above holds for any file. queue-gate.sh leadread() reads this marker line.
+# Permissions: roles and identity (as lead-read-guard.sh)
+permission
+platform/identity/
 # Money paths: fees, prices, client money, invoices, paid model runs and their ledger (P-277, P-295)
 money
 (^|[^a-z])fees?([^a-z]|$)

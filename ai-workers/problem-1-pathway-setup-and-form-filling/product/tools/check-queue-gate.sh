@@ -96,6 +96,30 @@ for f in ".github/workflows/x.yml" ".mergify.yml" "ai-workers/x/product/tools/qu
   files 7 "$S/api/src/form.ts" "$f"; run label 7
   ok "label refused: $f keeps the Lead's read (P-423)" "$(! grep -q '^LABEL' <<< "$log" && grep -q "Lead's read" <<< "$out" && echo 1)" "$out / $log"
 done
+# B206 part 3 (P-751): money and permissions keep the Lead's read; a screenshot (*.png under screens/), an image or .txt
+# under product/, or a records-only PR (records-only.sh and the "records" label) sets off only the guard lines, never money.
+PR3=ai-workers/problem-1-pathway-setup-and-form-filling/product
+for f in "$S/api/src/permissions.ts" "$S/api/src/platform/identity/roles.ts" "ai-workers/x/product/tools/fees.md" "ai-workers/x/product/tools/screens/fee.png" ".github/screens/fee.png" "$PR3/tools/fees-shot.png" "$PR3/screens/R1.58/fees.json" "$PR3/qa/walks/payment/walk.cjs" "$S/prisma/migrations/9_fee/README.md" "$PR3/screens/B119/fee-notes.md" "$PR3/screens/B119/shot.png" "$PR3/qa/reports/2026-11-19-fees/README.md" "$PR3/screens/R1.58/payment-rules.md" "$PR3/screens/R1.58/payment-board.html"; do
+  files 7 "$S/api/src/form.ts" "$f"; run label 7
+  ok "label refused: $f keeps the Lead's read (B206 part 3: money, permissions, the guard lines, and a .md or .html beside code: a suite may read it)" "$(! grep -q '^LABEL' <<< "$log" && grep -q "Lead's read" <<< "$out" && echo 1)" "$out / $log"
+done
+for f in "$PR3/screens/R1.58/payment-shot.png" "$PR3/qa/reports/2026-11-19-fees/invoice-run.txt" "$PR3/qa/reports/2026-11-19-fees/ledger.jpg" "$S/web/screens/fee-form.png"; do
+  files 7 "$S/api/src/form.ts" "$f"; run label 7
+  ok "label: $f is a screenshot, or an image or .txt under product/: no Lead read for it (B206 part 3)" "$(grep -qx 'LABEL 7' <<< "$log" && echo 1)" "$out / $log"
+done
+nofull; prj 7 $HEAD1 false records; files 7 "$PR3/qa/reports/2026-11-19-fees/README.md" "$PR3/qa/BUGS.md"; run label 7
+ok "label: a records-only PR (records label and records-only.sh) with a fees-named report: no Lead read (B206 part 3)" "$(grep -qx 'LABEL 7' <<< "$log" && echo 1)" "$out / $log"
+prj 7 $HEAD1; run label 7
+ok "label refused: the same files without the records label (set from a full checkout; this job's checkout cannot see a suite reading a .md)" "$(! grep -q '^LABEL' <<< "$log" && grep -q "Lead's read" <<< "$out" && echo 1)" "$out / $log"
+prj 7 $HEAD1 false records; RECORDS_ONLY=/nonexistent; export RECORDS_ONLY; run label 7; unset RECORDS_ONLY
+ok "label refused: records-only.sh cannot answer, so the records label alone exempts nothing (fails closed)" "$(! grep -q '^LABEL' <<< "$log" && grep -q "Lead's read" <<< "$out" && echo 1)" "$out / $log"
+prj 7 $HEAD1 false records; files 7 "$PR3/screens/B119/notes.md"; run label 7
+ok "label refused: a records-only PR touching a guard line (screens/B119/) still keeps the Lead's read" "$(! grep -q '^LABEL' <<< "$log" && echo 1)" "$out / $log"
+prj 7 $HEAD1; full 41 7 $HEAD1 completed success
+grep -v '^# --- records-exempt' "$TOOLS/lead-read-paths.txt" > "$T/lrp.txt"; files 7 "$S/api/src/form.ts" "$PR3/screens/R1.58/payment-shot.png"; LEAD_READ_PATHS="$T/lrp.txt"; export LEAD_READ_PATHS; run label 7
+ok "label refused: no records-exempt marker in the list: nothing is labelled (fails closed)" "$(! grep -q '^LABEL' <<< "$log" && echo 1)" "$out / $log"
+LEAD_READ_PATHS="$T/no-such-file"; run label 7; unset LEAD_READ_PATHS
+ok "label refused: the list cannot be read: nothing is labelled (fails closed; it used to match nothing)" "$(! grep -q '^LABEL' <<< "$log" && grep -q 'unreadable' <<< "$out" && echo 1)" "$out / $log"
 files 7 "$S/api/src/form.ts"
 cmt 7 o OWNER "> Reviewer: Approve $HEAD1"; run label 7
 ok "label refused: a quoted Approve line (> ...) is not the reviewer's own" "$(! grep -q '^LABEL' <<< "$log" && echo 1)" "$out / $log"
