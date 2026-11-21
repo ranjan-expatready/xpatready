@@ -74,3 +74,29 @@ model PlatformLimitChangeFirm {
   @@index([firmId])
   @@map("platform_limit_change_firm")
 }
+
+/// A firm's booked move to another plan (PF-15 part 1b; SA-3-58..61). Stamped by the database at insert (time,
+/// subscription, from plan, effective date; a trial's move applied at once); afterwards only withdrawn_at or applied_at,
+/// once. One open per firm (partial unique index); while open every limit is the lower of the two plans' (SA-3-59).
+/// Rules: migration 20261121130000_pf15b_plan_booking. Behind PF-12's wall.
+model PlatformSubscriptionChange {
+  id             String    @id @default(uuid()) @db.Uuid
+  firmId         String    @map("firm_id") @db.Uuid
+  subscriptionId String    @map("subscription_id") @db.Uuid
+  fromPlanId     String    @map("from_plan_id") @db.Uuid
+  toPlanId       String    @map("to_plan_id") @db.Uuid
+  bookedBy       String    @map("booked_by")
+  bookedAt       DateTime  @map("booked_at") @db.Timestamptz
+  effectiveAt    DateTime  @map("effective_at") @db.Timestamptz
+  withdrawnAt    DateTime? @map("withdrawn_at") @db.Timestamptz
+  appliedAt      DateTime? @map("applied_at") @db.Timestamptz
+
+  firm         PlatformFirm         @relation(fields: [firmId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  subscription PlatformSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  fromPlan     PlatformPlan         @relation("changeFrom", fields: [fromPlanId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  toPlan       PlatformPlan         @relation("changeTo", fields: [toPlanId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([firmId])
+  @@index([effectiveAt])
+  @@map("platform_subscription_change")
+}

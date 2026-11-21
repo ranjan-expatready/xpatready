@@ -112,6 +112,7 @@ model PlatformFirm {
   // back-relation slot: entitlements (PF-15)
   storageOver PlatformStorageOver? // platform-entitlements.prisma
   limitChanges PlatformLimitChangeFirm[] // platform-entitlements.prisma (PF-15 part 2)
+  subscriptionChanges PlatformSubscriptionChange[] // platform-entitlements.prisma (PF-15 part 1b)
 
   // back-relation slot: offices (PF-18a)
   offices PlatformOffice[] // platform-offices.prisma
@@ -175,6 +176,8 @@ model PlatformPlan {
   // back-relation slot: entitlements (PF-15)
   limits PlatformPlanLimit[] // platform-entitlements.prisma
   limitChanges PlatformLimitChange[] // platform-entitlements.prisma (PF-15 part 2)
+  changesFrom PlatformSubscriptionChange[] @relation("changeFrom") // platform-entitlements.prisma (PF-15 part 1b)
+  changesTo   PlatformSubscriptionChange[] @relation("changeTo")
 
   @@map("platform_plan")
 }
@@ -195,6 +198,7 @@ model PlatformSubscription {
 
   firm PlatformFirm @relation(fields: [firmId], references: [id], onDelete: Restrict)
   plan PlatformPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  changes PlatformSubscriptionChange[] // platform-entitlements.prisma (PF-15 part 1b)
 
   @@index([firmId, status])
   @@map("platform_subscription")
