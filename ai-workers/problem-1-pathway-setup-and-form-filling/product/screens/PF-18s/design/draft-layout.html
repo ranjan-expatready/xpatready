@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings and help layout</title>
+<!-- PF-18s DRAFT layout (concept-draft.md §4). Self-contained; team tokens copied from web/src/styles/tokens.css, as in
+     screens/pf-21-complaints/design/layout.html. Boards A-E, each at desktop width and at 375 px, then the states.
+     All names and data are Sample. Not a build file. -->
+<style>
+:root{
+  --primary:#0862c5;--primary-hover:#054e9c;--surface:#f7f7f7;--raised:#ffffff;--text:#2d2d2d;--muted:#737373;
+  --link:#054e9c;--border:#d9d9d9;--border-strong:#bfbfbf;--warn:#ff8500;--warn-t:#663200;--warn-bg:#fff3e0;
+  --danger:#dc2626;--danger-t:#991b1b;--ok:#16a34a;--ok-t:#0f5c2e;--ring:#0862c580;--info-bg:#e6f4ff;--info-b:#99d2ff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text);font:14px/1.45 "Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1,h2,h3{font-family:"Proxima Nova","Inter",ui-sans-serif,sans-serif;margin:0}
+h1{font-size:24px}h2{font-size:18px}h3{font-size:16px}
+a{color:var(--link)}
+:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+.intro{max-width:1200px;margin:24px auto 0;padding:0 16px;color:var(--muted)}
+.board-title{max-width:1200px;margin:32px auto 8px;padding:0 16px;font-size:12px;color:var(--muted);letter-spacing:.02em}
+.frame{max-width:1200px;margin:0 auto 24px;background:var(--raised);border:1px solid var(--border);border-radius:8px;overflow:hidden;position:relative}
+.frame.phone{max-width:375px}
+.hdr{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border)}
+.logo{font-weight:700;color:var(--primary)}
+.grow{flex:1;min-width:0}
+.help{width:32px;height:32px;border-radius:50%;border:1px solid var(--border-strong);background:var(--raised);font:600 14px/1 inherit;cursor:pointer}
+.where{padding:6px 16px;font-size:14px;color:var(--muted);border-bottom:1px solid var(--border)}
+.shell{display:flex}
+.menu{width:208px;flex-shrink:0;border-right:1px solid var(--border);padding:12px}
+.menu p{font-size:12px;color:var(--muted);margin:0 0 8px 12px}
+.menu a{display:flex;min-height:36px;align-items:center;padding:0 12px;border-radius:8px;color:var(--text);text-decoration:none}
+.menu a.on{background:#0862c51a;color:var(--link);font-weight:500}
+.menu a.new::after{content:"new";margin-left:auto;font-size:11px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
+.chips a{padding:4px 10px;border-radius:8px;font-size:13px;color:var(--text);text-decoration:none}
+.chips a.on{background:#0862c51a;color:var(--link);font-weight:500}
+.page{flex:1;min-width:0;padding:20px 16px;background:var(--surface)}
+.head{display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px;justify-content:space-between;margin-bottom:16px}
+.sub{color:var(--muted);margin-top:4px}
+.btn{font:inherit;border-radius:6px;padding:8px 14px;border:1px solid var(--border-strong);background:var(--raised);color:var(--text);cursor:pointer;min-height:36px}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.btn.link{border:0;background:none;color:var(--link);padding:8px 4px;text-decoration:underline}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px}
+.tablewrap{background:var(--raised);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;background:#fafafa}
+tr:last-child td{border-bottom:0}
+.what{display:block;color:var(--muted);font-size:12px;margin-top:2px;max-width:560px}
+.def{font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:0 6px;margin-left:6px}
+.sw{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.sw input{appearance:none;width:36px;height:20px;border-radius:999px;background:var(--border-strong);position:relative;margin:0;cursor:pointer}
+.sw input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
+.sw input:checked{background:var(--primary)}.sw input:checked::after{left:18px}
+.sw span{font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.sw input::after{transition:none}}
+.lock{color:var(--muted)}.lock::before{content:"🔒 ";}
+.savebar{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:12px}
+.status{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);border-radius:999px;padding:2px 10px;font-size:12px;white-space:nowrap}
+.status.open::before{content:"";width:8px;height:8px;border-radius:50%;border:2px solid var(--primary)}
+.status.sup::before{content:"…";font-weight:700;color:var(--muted)}
+.status.firm{border-color:var(--warn);background:var(--warn-bg);color:var(--warn-t)}.status.firm::before{content:"!";font-weight:700}
+.status.closed::before{content:"✓";color:var(--ok-t);font-weight:700}
+.banner{padding:10px 12px;border-radius:6px;margin-bottom:12px;border:1px solid var(--border)}
+.banner.warn{border-color:var(--warn);background:var(--warn-bg);color:var(--warn-t)}
+.banner.info{background:var(--info-bg);border-color:var(--info-b)}
+.banner.danger{border-color:var(--danger);color:var(--danger-t);background:#fff}
+.drawer-host{position:relative;min-height:600px;background:rgba(45,45,45,.25)}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--raised);display:flex;flex-direction:column;border-left:1px solid var(--border)}
+.drawer header,.drawer footer{padding:14px 16px;border-bottom:1px solid var(--border)}
+.drawer footer{border-top:1px solid var(--border);border-bottom:0;display:flex;justify-content:space-between;gap:8px}
+.drawer .body{padding:16px;overflow:auto;flex:1}
+.field{margin-bottom:14px}
+.field label,.field legend{display:block;font-weight:600;margin-bottom:4px}
+.field .hint{font-size:12px;color:var(--muted);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;font:inherit;padding:8px;border:1px solid var(--border-strong);border-radius:6px;background:var(--raised)}
+.field .err{color:var(--danger-t);font-size:12px;margin-top:4px}
+.field.bad input,.field.bad select{border-color:var(--danger)}
+.noted{font-size:12px;background:#fafafa;border:1px dashed var(--border-strong);border-radius:6px;padding:8px;word-break:break-all}
+.msgs{list-style:none;margin:0;padding:0}
+.msgs li{border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;background:var(--raised)}
+.msgs li.us{border-left:3px solid var(--primary)}
+.msgs .when{font-size:12px;color:var(--muted)}
+.states{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;padding:16px;background:var(--surface)}
+.skel{height:14px;border-radius:4px;background:#eeeeee;margin:10px 0}
+.note{font-size:12px;color:var(--muted);padding:8px 16px;border-top:1px dashed var(--border)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.cut{max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+/* phone: tables become stacked rows */
+.phone .menu{display:none}
+.phone .stack thead{display:none}
+.phone .stack tr{display:block;border-bottom:1px solid var(--border);padding:8px 0}
+.phone .stack td{display:flex;justify-content:space-between;gap:12px;border:0;padding:4px 12px}
+.phone .stack td[data-l]::before{content:attr(data-l);color:var(--muted);font-size:12px}
+.phone .stack td.full{display:block}
+</style>
+</head>
+<body>
+<p class="intro">PF-18s draft boards. Desktop frames are drawn at up to 1200 px (the 1440 px page centres them); phone frames at 375 px. The menu lines marked "new" are the three this row adds to <code>ACCOUNT_SECTIONS</code> (Q1). Sample people: Owner A, Case Officer B, Billing C.</p>
+
+<!-- ============ A. NOTIFICATIONS ============ -->
+<h2 class="board-title">Board A1 · My account → Notifications · Case Officer (groups 1-5 only) · desktop</h2>
+<section class="frame" aria-label="Board A1: notifications, desktop">
+  <div class="hdr"><span class="logo">Sample Firm</span><span class="grow"></span><button class="help" aria-label="Get help with this page" title="Get help with this page">?</button><span>Case Officer B</span><button class="btn link">Sign out</button></div>
+  <div class="where">My account › Notifications</div>
+  <div class="shell">
+    <nav class="menu" aria-label="My account"><p>My account</p><a href="#">Profile</a><a href="#">Licence</a><a href="#">Availability</a><a class="on new" href="#">Notifications</a><a class="new" href="#">Offices</a><a href="#">Terms</a><a class="new" href="#">Help &amp; support</a></nav>
+    <main class="page">
+      <div class="head"><div><h1>Notifications</h1><p class="sub">Choose how you hear about your work. You only see the groups that can reach you.</p></div></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th scope="col">Group</th><th scope="col">In app</th><th scope="col">Email</th></tr></thead>
+        <tbody>
+          <tr><td><b>Work handed to me</b><span class="def">Default</span><span class="what">A case, task or lead assigned to me (including a new lead and a handover); a review requested from me; my review sent back; a client booked a consultation with me.</span></td><td><label class="sw"><input type="checkbox" role="switch" checked aria-label="In app for Work handed to me"><span>On</span></label></td><td><label class="sw"><input type="checkbox" role="switch" checked aria-label="Email for Work handed to me"><span>On</span></label></td></tr>
+          <tr><td><b>Needs you</b><span class="def">Default</span><span class="what">An item waiting for me in Needs you.</span></td><td><label class="sw"><input type="checkbox" role="switch" checked aria-label="In app for Needs you"><span>On</span></label></td><td><label class="sw"><input type="checkbox" role="switch" checked aria-label="Email for Needs you"><span>On</span></label></td></tr>
+          <tr><td><b>My deadlines and reminders</b><span class="def">Default</span><span class="what">Government deadlines on my cases; the target filing date; the expiry watch; my overdue tasks; reminders I set for myself.</span></td><td><label class="sw"><input type="checkbox" role="switch" checked aria-label="In app for My deadlines and reminders"><span>On</span></label></td><td><label class="sw"><input type="checkbox" role="switch" checked aria-label="Email for My deadlines and reminders"><span>On</span></label></td></tr>
+          <tr><td><b>A client or lead messaged me</b><span class="def">Default</span><span class="what">A client or lead messaged me, including one alert when a WhatsApp chat starts.</span></td><td><label class="sw"><input type="checkbox" role="switch" checked aria-label="In app for A client or lead messaged me"><span>On</span></label></td><td><label class="sw"><input type="checkbox" role="switch" checked aria-label="Email for A client or lead messaged me"><span>On</span></label></td></tr>
+          <tr><td><b>Mentions</b><span class="what">@mentions.</span></td><td><label class="sw"><input type="checkbox" role="switch" checked aria-label="In app for Mentions"><span>On</span></label></td><td><label class="sw"><input type="checkbox" role="switch" aria-label="Email for Mentions"><span>Off</span></label></td></tr>
+          <tr><td><b>Security emails (new sign-in, password change)</b><span class="what">Always sent, so you know if someone else uses your account.</span></td><td><span class="lock">Not in app</span></td><td><span class="lock">Always on</span></td></tr>
+        </tbody></table></div>
+      <div class="savebar"><span class="sub">1 change not saved</span><button class="btn primary">Save</button></div>
+    </main>
+  </div>
+  <p class="note">One Save for the page; only changed groups are sent with the view's version. Save is disabled until something changes. The security row has no control (switchable:false). Team watch, Payments and Firm and connections are absent: they cannot reach a Case Officer.</p>
+</section>
+
+<h2 class="board-title">Board A2 · Notifications · Billing C (Payments shown) and the 409 conflict · phone 375</h2>
+<section class="frame phone" aria-label="Board A2: notifications, phone">
+  <div class="hdr"><span class="logo">Sample Firm</span><span class="grow"></span><button class="help" aria-label="Get help with this page">?</button></div>
+  <div class="where">My account › Notifications</div>
+  <main class="page">
+    <nav class="chips" aria-label="My account sections"><a href="#">Profile</a><a class="on" href="#">Notifications</a><a href="#">Offices</a><a href="#">Help &amp; support</a></nav>
+    <h1>Notifications</h1><p class="sub">You only see the groups that can reach you.</p>
+    <div class="banner warn" role="alert" style="margin-top:12px"><b>Your notification settings were changed elsewhere since you opened them.</b><br>We've loaded the latest; your unsaved changes are kept on top. Save again.</div>
+    <div class="tablewrap stack"><table>
+      <thead><tr><th>Group</th><th>In app</th><th>Email</th></tr></thead>
+      <tbody>
+        <tr><td class="full"><b>Payments</b><span class="what">Payment failed; invoice overdue (email on). Payment received; invoice sent; refund; dunning escalation (in-app only).</span></td><td data-l="In app"><label class="sw"><input type="checkbox" role="switch" checked aria-label="In app for Payments"></label></td><td data-l="Email"><label class="sw"><input type="checkbox" role="switch" checked aria-label="Email for Payments"></label></td></tr>
+        <tr><td class="full"><b>Mentions</b><span class="what">@mentions.</span></td><td data-l="In app"><label class="sw"><input type="checkbox" role="switch" checked aria-label="In app for Mentions"></label></td><td data-l="Email"><label class="sw"><input type="checkbox" role="switch" checked aria-label="Email for Mentions"></label></td></tr>
+        <tr><td class="full"><b>Security emails (new sign-in, password change)</b></td><td data-l="Email"><span class="lock">Always on</span></td></tr>
+      </tbody></table></div>
+    <div class="savebar"><button class="btn primary">Save</button></div>
+  </main>
+  <p class="note">Payments' words are the API's whatIsInIt, verbatim: the email switch covers payment failed and invoice overdue only.</p>
+</section>
+
+<!-- ============ B / C. OFFICES ============ -->
+<h2 class="board-title">Board B · Offices · one office · Owner (Add) and, below, Case Officer (read-only) · desktop</h2>
+<section class="frame" aria-label="Board B: offices with one office">
+  <div class="hdr"><span class="logo">Sample Firm</span><span class="grow"></span><button class="help" aria-label="Get help with this page">?</button><span>Owner A</span></div>
+  <div class="where">My account › Offices</div>
+  <div class="shell">
+    <nav class="menu" aria-label="My account"><p>My account</p><a href="#">Profile</a><a href="#">Notifications</a><a class="on" href="#">Offices</a><a href="#">Team</a><a href="#">Help &amp; support</a></nav>
+    <main class="page">
+      <div class="head"><div><h1>Offices</h1><p class="sub">Advanced → Offices. Each office keeps its own time zone and hours once you have more than one.</p></div><button class="btn primary">Add an office</button></div>
+      <div class="card"><h3>Sample Firm</h3><p class="sub">Your firm's one office. Its hours, closed days and time zone are the firm's own (Settings → Your firm).</p></div>
+      <div class="card" style="border-style:dashed"><p class="sub" style="margin:0"><b>Case Officer B sees:</b> the same card, no "Add an office" button, and the line "Only an Owner or Admin can add an office."</p></div>
+    </main>
+  </div>
+  <p class="note">multipleOffices:false → one implicit office, no time-zone field, no "Who works where" (AG-16-68, AG-1-74 rule 1).</p>
+</section>
+
+<h2 class="board-title">Board C1 · Offices · two offices, "Who works where" · Owner · desktop</h2>
+<section class="frame" aria-label="Board C1: offices with two offices">
+  <div class="hdr"><span class="logo">Sample Firm</span><span class="grow"></span><button class="help" aria-label="Get help with this page">?</button><span>Owner A</span></div>
+  <div class="where">My account › Offices</div>
+  <div class="shell">
+    <nav class="menu" aria-label="My account"><p>My account</p><a href="#">Profile</a><a href="#">Notifications</a><a class="on" href="#">Offices</a><a href="#">Team</a><a href="#">Help &amp; support</a></nav>
+    <main class="page">
+      <div class="head"><div><h1>Offices</h1><p class="sub">Advanced → Offices. Each office keeps its own time zone and hours.</p></div><button class="btn primary">Add an office</button></div>
+      <div class="banner info">2 people have no office yet: their times use the firm's zone until you place them.</div>
+      <div class="tablewrap" style="margin-bottom:20px"><table>
+        <thead><tr><th>Name</th><th>Where</th><th>Time zone</th><th>Hours</th><th><span class="sr">Actions</span></th></tr></thead>
+        <tbody>
+          <tr><td><b>Sample Firm</b> <span class="def">First office</span></td><td>ON, Canada</td><td>America/Toronto</td><td>Mon–Fri 09:00–17:00</td><td><button class="btn link">Edit</button></td></tr>
+          <tr><td><b>Calgary</b></td><td>AB, Canada</td><td>America/Edmonton</td><td>Mon–Fri 09:00–17:00</td><td><button class="btn link">Edit</button></td></tr>
+        </tbody></table></div>
+      <h2 style="margin-bottom:8px">Who works where</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Person</th><th>Office</th><th><span class="sr">Actions</span></th></tr></thead>
+        <tbody>
+          <tr><td>Owner A</td><td>Sample Firm</td><td><button class="btn link">Change</button></td></tr>
+          <tr><td>Case Officer B</td><td><span class="sub">No office (uses the firm's time zone)</span></td><td><button class="btn link">Change</button></td></tr>
+          <tr><td>Billing C</td><td><span class="sub">No office (uses the firm's time zone)</span></td><td><button class="btn link">Change</button></td></tr>
+        </tbody></table></div>
+    </main>
+  </div>
+  <p class="note">Hours are shown, not edited, here (AG-16-75 is not this row's). "Who works where" needs G1 (placements read) and is hidden from anyone without agent/settings:edit. Change opens the dialog in board C3 → PUT /api/platform/staff/:staffId/office.</p>
+</section>
+
+<h2 class="board-title">Board C2 · Edit office drawer after adding "Calgary", AB · zone pre-filled, field error on a forced bad zone · desktop</h2>
+<section class="frame" aria-label="Board C2: edit office drawer">
+  <div class="drawer-host"><aside class="drawer" role="dialog" aria-labelledby="c2h">
+    <header><h2 id="c2h">Edit office</h2></header>
+    <div class="body">
+      <div class="field"><label for="c2n">Name</label><input id="c2n" value="Calgary"></div>
+      <div class="field"><label for="c2c">Country</label><select id="c2c"><option>Canada</option></select></div>
+      <div class="field"><label for="c2p">Province or territory</label><select id="c2p"><option>Alberta (AB)</option></select></div>
+      <div class="field bad"><label for="c2z">Time zone</label><div class="hint">Pre-filled from Alberta. Change it here.</div><select id="c2z" aria-invalid="true" aria-describedby="c2e"><option>America/Edmonton</option></select><div class="err" id="c2e">Choose a time zone from the list</div></div>
+      <div class="field"><span style="font-weight:600">Hours</span><p class="sub" style="margin:4px 0 0">Mon–Fri 09:00–17:00 (started as the firm's). Closed days: none.</p></div>
+    </div>
+    <footer><button class="btn">Cancel</button><button class="btn primary">Save</button></footer>
+  </aside></div>
+  <p class="note">The add drawer is the same without Time zone: the server pre-fills it (timeZoneFrom: "province") and this edit drawer shows it. A stale save (409) shows "Someone changed this office since you opened it." with Reload.</p>
+</section>
+
+<h2 class="board-title">Board C3 · Place a person · phone 375 (offices list stacked, then the dialog)</h2>
+<section class="frame phone" aria-label="Board C3: place a person, phone">
+  <div class="hdr"><span class="logo">Sample Firm</span><span class="grow"></span><button class="help" aria-label="Get help with this page">?</button></div>
+  <main class="page">
+    <h1>Offices</h1>
+    <div class="tablewrap stack" style="margin-top:12px"><table><tbody>
+      <tr><td class="full"><b>Calgary</b></td><td data-l="Where">AB, Canada</td><td data-l="Time zone">America/Edmonton</td><td data-l="Hours">Mon–Fri 09:00–17:00</td></tr>
+    </tbody></table></div>
+    <div class="card" role="dialog" aria-labelledby="c3h" style="margin-top:16px;box-shadow:0 4px 16px rgba(0,0,0,.15)">
+      <h2 id="c3h">Which office does Case Officer B work from?</h2>
+      <fieldset style="border:0;padding:0;margin:12px 0"><legend class="sr" style="position:absolute;left:-9999px">Office</legend>
+        <label style="display:flex;gap:8px;margin:6px 0"><input type="radio" name="o"> Sample Firm</label>
+        <label style="display:flex;gap:8px;margin:6px 0"><input type="radio" name="o" checked> Calgary</label>
+        <label style="display:flex;gap:8px;margin:6px 0"><input type="radio" name="o"> No office (uses the firm's time zone)</label>
+      </fieldset>
+      <div style="display:flex;justify-content:space-between"><button class="btn">Cancel</button><button class="btn primary">Save</button></div>
+    </div>
+  </main>
+</section>
+
+<!-- ============ D. "?" ============ -->
+<h2 class="board-title">Board D · The "?" button and the Ask for help panel (pressed on a complaint page) · desktop</h2>
+<section class="frame" aria-label="Board D: ask for help panel">
+  <div class="hdr"><span class="logo">Sample Firm</span><span class="grow"></span><button class="help" aria-label="Get help with this page" aria-expanded="true" style="border-color:var(--primary)">?</button><span>Case Officer B</span></div>
+  <div class="where">Complaints › Sample complainant</div>
+  <div class="drawer-host"><aside class="drawer" role="dialog" aria-labelledby="dh">
+    <header><h2 id="dh">Ask for help</h2><p class="sub">We reply in Help &amp; support.</p></header>
+    <div class="body">
+      <div class="field"><label for="dt">What do you need help with?</label><textarea id="dt" rows="6">The Close button stays greyed out after I recorded the response.</textarea><div class="hint">Up to 5,000 characters.</div></div>
+      <div class="field"><label for="df">Attach files (optional)</label><div class="hint">Up to 3 files: PDF, PNG, JPEG or plain text, 10 MB each (Sample limit).</div><input id="df" type="file" multiple></div>
+      <p style="font-weight:600;margin:0 0 4px">We'll note the page you're on</p>
+      <div class="noted">/platform/complaints/3f2a9c1e-7b40-4d1a-9e0b-5c6d7e8f9a01</div>
+      <p class="sub" style="font-size:12px">Only this address is sent: no search terms, names or anything typed on the page.</p>
+    </div>
+    <footer><button class="btn">Cancel</button><button class="btn primary" disabled aria-disabled="true">Sending…</button></footer>
+  </aside></div>
+  <p class="note">The "?" is one slot in PF-6's frame controls, on every PlatformFrame page. The page sent is location.pathname (the server also drops ? and #). Send shows its busy state; the same guard as BR-11. Closing returns focus to "?". Sent → toast "Ticket sent. We'll answer in Help &amp; support." with a link.</p>
+</section>
+
+<!-- ============ E. HELP & SUPPORT ============ -->
+<h2 class="board-title">Board E1 · Help &amp; support list · Owner (all the firm's tickets) · desktop</h2>
+<section class="frame" aria-label="Board E1: help and support list">
+  <div class="hdr"><span class="logo">Sample Firm</span><span class="grow"></span><button class="help" aria-label="Get help with this page">?</button><span>Owner A</span></div>
+  <div class="where">My account › Help &amp; support</div>
+  <div class="shell">
+    <nav class="menu" aria-label="My account"><p>My account</p><a href="#">Profile</a><a href="#">Notifications</a><a href="#">Offices</a><a class="on" href="#">Help &amp; support</a></nav>
+    <main class="page">
+      <div class="head"><div><h1>Help &amp; support</h1><p class="sub">Settings → Help &amp; support. Ask us anything; we reply here. You see every ticket in the firm.</p></div><button class="btn primary">Raise a ticket</button></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Raised</th><th>About (G2)</th><th>From page</th><th>Raised by</th><th>Status</th><th>Last change</th></tr></thead>
+        <tbody>
+          <tr><td><a href="#">18 Nov 2026, 14:05</a></td><td><span class="cut" title="The Close button stays greyed out after I recorded the response.">The Close button stays greyed out after I recorded the response.</span></td><td><span class="cut">/platform/complaints/3f2a…</span></td><td>Case Officer B</td><td><span class="status firm" title="We've answered and are waiting for you.">Waiting on firm</span></td><td>19 Nov, 09:12</td></tr>
+          <tr><td><a href="#">17 Nov 2026, 10:40</a></td><td><span class="cut">How do I add a second office?</span></td><td>/platform/offices</td><td>Owner A</td><td><span class="status sup" title="We have your message.">Waiting on support</span></td><td>17 Nov, 10:40</td></tr>
+          <tr><td><a href="#">2 Nov 2026, 16:20</a></td><td><span class="cut">Invoice PDF did not download.</span></td><td>/platform/support</td><td>Billing C</td><td><span class="status closed" title="No more messages on this ticket.">Closed</span></td><td>4 Nov, 11:00</td></tr>
+        </tbody></table></div>
+    </main>
+  </div>
+  <p class="note">Case Officer B sees only their own rows and no "Raised by" column (allFirm:false). "About" needs G2 (preview); without it the column is absent and the page names the row. Waiting on firm is the one orange status.</p>
+</section>
+
+<h2 class="board-title">Board E2 · Ticket page with the reply box (double-send guard) · phone 375</h2>
+<section class="frame phone" aria-label="Board E2: ticket page, phone">
+  <div class="hdr"><span class="logo">Sample Firm</span><span class="grow"></span><button class="help" aria-label="Get help with this page">?</button></div>
+  <div class="where"><a href="#">‹ Back to Help &amp; support</a></div>
+  <main class="page">
+    <h1 style="font-size:18px">Ticket from /platform/complaints/3f2a…</h1>
+    <p style="margin:8px 0 12px"><span class="status firm">Waiting on firm</span></p>
+    <ol class="msgs">
+      <li><div class="when">You · 18 Nov, 14:05</div>The Close button stays greyed out after I recorded the response.<br><a href="#">screenshot-1.png</a></li>
+      <li class="us"><div class="when">ExpatReady support · 19 Nov, 09:12</div>Thanks. Could you tell us which outcome you picked?</li>
+    </ol>
+    <form class="card" style="margin-top:12px" aria-label="Reply">
+      <div class="field"><label for="e2r">Your reply</label><textarea id="e2r" rows="4">I picked Resolved.</textarea><div class="hint">Ctrl or ⌘ + Enter sends.</div></div>
+      <div class="banner danger" role="alert">Not sent. Your message is still here; try again.</div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary">Send</button></div>
+    </form>
+  </main>
+  <p class="note">BR-11: from the first press Send shows "Sending…", disabled, and Enter does nothing until the answer; on failure (drawn) Send is back and the text kept. Closed ticket: no form, "This ticket is closed. Raise a new one if you still need help."</p>
+</section>
+
+<!-- ============ STATES ============ -->
+<h2 class="board-title">Board F · States (every page)</h2>
+<section class="frame" aria-label="Board F: states">
+  <div class="states">
+    <div class="card"><h3>Loading</h3><div class="skel" style="width:60%"></div><div class="skel"></div><div class="skel" style="width:80%"></div></div>
+    <div class="card"><h3>Empty · Help &amp; support</h3><p class="sub">No tickets yet. Press ? on any page, or Raise a ticket here.</p><button class="btn primary">Raise a ticket</button></div>
+    <div class="card"><h3>Empty · Owner</h3><p class="sub">No one in the firm has raised a ticket yet.</p></div>
+    <div class="card"><h3>Read-only · Offices</h3><p class="sub">Only an Owner or Admin can add an office.</p></div>
+    <div class="card"><h3>Conflict · office</h3><div class="banner warn">Someone changed this office since you opened it. <button class="btn link">Reload</button></div></div>
+    <div class="card"><h3>Not found · ticket</h3><p class="sub">We can't find this ticket. It may not exist, or it may not be one you can see.</p><a href="#">Back to Help &amp; support</a></div>
+    <div class="card"><h3>Closed · 409 on reply</h3><div class="banner danger">A closed ticket takes no new message: raise a new ticket instead.</div></div>
+    <div class="card"><h3>Field error · raise</h3><div class="field bad"><label>What do you need help with?</label><textarea rows="2" aria-invalid="true"></textarea><div class="err">Write what you need help with.</div></div></div>
+    <div class="card"><h3>Long content</h3><p><span class="cut" title="Sample office with a name that runs to the full one hundred and twenty characters to show wrapping and cutting rules here">Sample office with a name that runs to the full one hundred and twenty characters…</span></p><p class="sub">Cut with the full name on hover in tables; wraps in drawers and headers. A 5,000-character message wraps in the ticket page.</p></div>
+  </div>
+</section>
+</body>
+</html>
