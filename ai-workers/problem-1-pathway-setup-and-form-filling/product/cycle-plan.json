@@ -1,5 +1,5 @@
 {
-  "about": "The Lead's plan for the current 07:00 -> 07:00 IST cycle (founder A243/A244). tools/cycle-timeline.py reads it. Seeded by ENF-783b from STATE's 10:25 IST 21 Nov hand-over block; the Lead keeps rows, PRs, ETAs and waits current.",
+  "about": "The Lead's plan for the current 07:00 -> 07:00 IST cycle (founder A243/A244). tools/cycle-timeline.py reads it. Seeded by ENF-783b from STATE's 10:25 IST 21 Nov hand-over block; the Lead keeps rows, PRs, ETAs and waits current. ENF-783c (A263) added aws, reserve and outside for founder-report.py's board; lane, parts and owner (the qa lane that owns a merged row's proof: it then counts in the forecast, Lead 15 on #2809) are optional per row.",
   "cycle_start": "2026-11-21",
   "proof_minutes": 60,
   "rows": [
@@ -12,11 +12,18 @@
     {"r1": "R1.108", "by": "19:00", "prs": [2651, 2716]},
     {"r1": "R1.4", "by": "19:00", "prs": [], "step": "PF-12b2 not started", "waits_on": "#1959, #2633, #2626, #2627 to merge"},
     {"r1": "R1.19", "by": "07:00", "prs": [1959]},
-    {"r1": "R1.13", "by": "07:00", "prs": [2626], "waits_on": "PF-8b, PF-23c and the founder's AWS to prove"},
-    {"r1": "R1.14", "by": "07:00", "prs": [2638]},
-    {"r1": "R1.15", "by": "07:00", "prs": [], "step": "prove", "waits_on": "PF-8b, PF-23c and the founder's AWS"},
+    {"r1": "R1.13", "by": "07:00", "prs": [2626], "aws": true, "waits_on": "PF-8b, PF-23c and the founder's AWS to prove"},
+    {"r1": "R1.14", "by": "07:00", "prs": [2638], "aws": true},
+    {"r1": "R1.15", "by": "07:00", "prs": [], "aws": true, "step": "prove", "waits_on": "PF-8b, PF-23c and the founder's AWS"},
     {"r1": "R1.3", "by": "07:00", "prs": [2349]},
-    {"r1": "R1.24", "by": "07:00", "prs": [], "step": "no lane", "waits_on": "PF-23c and the founder's AWS"},
+    {"r1": "R1.24", "by": "07:00", "prs": [], "aws": true, "step": "no lane", "waits_on": "PF-23c and the founder's AWS"},
     {"r1": "R1.10", "by": "07:00", "prs": [2619]}
+  ],
+  "reserve": [],
+  "outside": [
+    {"kind": "pipeline", "what": "CI-SPEED-1 parallel checks 6 to 12", "prs": [2754]},
+    {"kind": "tooling", "what": "ENF-782a readiness gate and static sweeps", "prs": [2738, 2746]},
+    {"kind": "tooling", "what": "ENF-782b flow measures and the weekly human sample", "prs": [2741, 2776]},
+    {"kind": "tooling", "what": "ENF-783c founder report", "prs": [2809]}
   ]
 }

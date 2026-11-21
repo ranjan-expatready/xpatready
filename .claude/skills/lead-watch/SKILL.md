@@ -10,7 +10,7 @@ The outcome, in this order (founder, 3 Nov): **quality first** (P-303), **comple
 ## Each check: three calls, then act
 1. `get_usage` (weekly plan %, extra usage, your context) · `bash product/tools/lead-watch.sh 30` (disk, test databases, merges, queue, questions, lanes that pushed, last the cycle timeline; exit = lines to act on) · `list_sessions` only when a lane looks quiet.
 2. Act on every `ACT` line in this check. Do not re-read STATE, BACKLOG or DECISIONS on a check; read them only when a ruling needs them.
-3. Tell the founder three to five plain lines in IST (P-302), only what changed, and only a decision, risk or spend unasked. **Open with "🔴 Needs you"** (what, where, what stops; "nothing" when empty), then "🟡 Decide when you can"; every 🔴 item is also the end-of-turn box's question (P-478). Then the timeline (A244; keep `product/cycle-plan.json` current).
+3. **Every report to the founder is `product/tools/founder-report.py` output, never retyped** (A260; IST, P-302): checks `--short` (blocks 1-3, "Since last report": only what changed; only a decision, risk or spend unasked), full all 6. One `--needs` per 🔴 item (what, where, what stops; else `nothing`), then "🟡 Decide when you can"; every 🔴 item is also the end-of-turn box's question (P-478). Keep `product/cycle-plan.json` current (rows, parts, lane, aws, qa owner, reserve, outside; A244, A263).
 
 ## The app view and the ETA board (founder, 4 Nov, P-338, P-339)
 * **App view, every check (P-326):** one script read of claude.ai/code statuses in the built-in browser (Awaiting input, Failed, Merge conflicts, quiet over 90 min), plus `list_sessions include_archived` for any lane archived with work left (restore and brief it). Open a lane only when flagged; confirm its URL and title before typing or clicking; the list re-sorts, so never click by an old position.
@@ -20,15 +20,15 @@ The outcome, in this order (founder, 3 Nov): **quality first** (P-303), **comple
 
 ## Full report (minutes 03 and 33 IST, P-783 (2), or asked; else short; cron prompt unchanged)
 Run the same check, plus `waves.py active`, `wip` and `gen --stdout`, `flow-measure.py --since <00:00 IST as UTC> --lead` (`--lead`: ENF-782b), the app view ("Show more" expanded), open PRs, `mergify/` batches, runners (`gh.sh api .../actions/runners`). **Measure, name the constraint, act on it first (Unblock playbook), then reply in chat only** (no file). Samples named (P-500); a number no tool gives says "counted by hand from <source>". Codes carry their purpose: "R1.38 (staff Bookings calendar)". Business words.
-**Counts:** Proven = R1 rows at Works in `qa/CAPABILITIES.md` on `origin/main` (not the "four" line: C rows). Proven today = now minus at 00:00 IST, net (a row that left Works subtracts). Rate = now minus 24 h ago; forecast = IST date all 101 are proven at that rate, with "(n rows in 24 h)". On track = the forecast is on or before the Release 1 date (P-609).
-1. **🔴 Needs you / 🟡 Decide when you can** (P-478), each with "Recommend: ..."; each also a card; spend red with US$.
-2. **Headline:** proven today N (target 10) · total T of 101 · forecast · on track yes/no.
+**Counts:** the script's (R1 rows at Works on `origin/main`, net since 07:00). Release forecast (P-609): IST date all 101 are proven at the 24 h rate, "(n rows in 24 h)", on or before the Release 1 date.
+1. **The report, all 6 blocks**; after it 🟡 (P-478), the release forecast, items 3, 6, 8. 🔴 and 🟡 each say "Recommend: ..." and are also cards; spend red with US$.
+2. Flags: item 4 `--stage`, 5 `--constraint`, 7 `--aws --weekly --rate --context`.
 3. **One recommendation**, and what the founder can do now.
-4. **Stage table**, one row per stage: Shaped-ready (a buffer, kept 1+1 waves ahead, never the constraint for being full) · Building · Approve · Lead answers (`SLE Q` lines) · Red after approval · Merge queue and machines (one wait) · qa proof. Columns: items · median age · in and out in the last 3 h. Then "The constraint today is ___ because ___": the stage with out below in and the highest median age; on a tie, the one feeding most proofs.
-5. **Five whys** on the gap to 10, each step with evidence (PR, run, count, time), ending "Fix · Owner · by HH:MM IST". Skip at 10 or more proven today.
+4. **Stage table** (A262): one `--stage "<stage>: items · median age · in/out 3 h · ✅/⚠️/❌ reason"` per stage, numbers from `lead-watch.sh` / `flow-measure.py`: Shaped-ready (a buffer, kept 1+1 waves ahead, never the constraint) · Building · Review/Approve · Waiting on the Lead (`SLE Q` lines) · Red after approval · Merge queue + machines · qa proof. The script names "Constraint today" (out below in, oldest; a tie goes to the nearer proof).
+5. **Five whys** on the gap to 15, each step with evidence (PR, run, count, time), ending "Fix · Owner · by HH:MM IST". Skip at 15 or more this cycle.
 6. **Risks and mitigations**, at most five, each with cost and owner.
-7. **Resources:** weekly %, burn per hour, IST times of 96% and 98%; your context and hand-over; disk; runners; standbys.
-8. **Timeline** (A244), and **recovery steps** per late row: step, owner, IST.
+7. **Resources:** the script's (weekly %, burn/h, 96%, context), plus the 98% time, hand-over, disk, runners, standbys.
+8. **Recovery steps** per late board row: step, owner, IST.
 **Appendix, only when asked or when it explains a 🔴 line**: waves item by item with WIP (`waves.py wip`: building + approve + merge queue against cap 8; built not proven against cap 12) · lanes (item, last push IST, waiting / failed / quiet / ok) · manual unblocks done (PR, time, rule).
 
 ## Unblock playbook (each line points to its rule; read the failed log or Mergify's summary first, P-502)

@@ -2,7 +2,8 @@
 # cycle view. Its tests run the tool as `python3 -I` on a Sample 15-row plan with GitHub answered from a file and a
 # fixed clock, and check the Lead's real cycle-plan.json still parses (15 rows, 8 by 19:00). Runs only when the tool,
 # its test, its fixtures, the plan or this file change. Advisory (not a Mergify condition). Read-only, standard
-# library, under 1 minute, US$0.
+# library, under 1 minute, US$0. Also runs founder-report.py's tests (ENF-783c, A260): it wraps the timeline in the founder's
+# fixed report template, so a change to either is checked against both.
 name: cycle-timeline
 on:
   pull_request:
@@ -10,6 +11,9 @@ on:
       - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/cycle-timeline.py"
       - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/test_cycle_timeline.py"
       - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/fixtures/cycle-timeline/**"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/founder-report.py"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/test_founder_report.py"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/fixtures/founder-report/**"
       - "ai-workers/problem-1-pathway-setup-and-form-filling/product/cycle-plan.json"
       - ".github/workflows/cycle-timeline.yml"
 permissions:
@@ -25,3 +29,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: unit tests (Sample plan, no network)
         run: python3 -I ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/test_cycle_timeline.py
+      - name: founder report tests (ENF-783c; Sample, no network)
+        run: python3 -I ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/test_founder_report.py

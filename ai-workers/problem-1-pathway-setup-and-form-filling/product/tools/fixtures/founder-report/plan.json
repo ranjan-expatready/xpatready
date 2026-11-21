@@ -1,0 +1,29 @@
+{
+  "about": "Sample plan for test_founder_report.py (Sample, not the real cycle): cycle-timeline's Sample plus the board's keys (lane, parts, aws, reserve, outside).",
+  "cycle_start": "2026-11-21",
+  "proof_minutes": 60,
+  "rows": [
+    {"r1": "R1.27", "by": "19:00", "prs": [11]},
+    {"r1": "R1.74", "by": "19:00", "prs": [12]},
+    {"r1": "R1.42", "by": "19:00", "prs": [13]},
+    {"r1": "R1.49", "by": "19:00", "prs": [14]},
+    {"r1": "R1.32", "by": "19:00", "prs": [15]},
+    {"r1": "R1.47", "by": "19:00", "prs": [16, 17], "parts": {"16": "part 1", "17": "part 2"}},
+    {"r1": "R1.108", "by": "19:00", "prs": [18]},
+    {"r1": "R1.4", "by": "19:00", "prs": [], "waits_on": "PF-12b2 to be shaped", "lane": "runtime"},
+    {"r1": "R1.19", "by": "07:00", "prs": [21]},
+    {"r1": "R1.13", "by": "07:00", "prs": [27], "aws": true},
+    {"r1": "R1.14", "by": "07:00", "prs": [23]},
+    {"r1": "R1.15", "by": "07:00", "prs": [], "step": "prove", "waits_on": "the founder's AWS"},
+    {"r1": "R1.3", "by": "07:00", "prs": [24]},
+    {"r1": "R1.24", "by": "07:00", "prs": [25]},
+    {"r1": "R1.10", "by": "07:00", "prs": [26], "eta": "09:30"}
+  ],
+  "reserve": [
+    {"r1": "R1.53", "prs": [31], "lane": "runtime"}
+  ],
+  "outside": [
+    {"kind": "pipeline", "what": "Sample parallel checks 6 to 12", "prs": [41]},
+    {"kind": "tooling", "what": "Sample founder report", "prs": [42, 43]}
+  ]
+}
