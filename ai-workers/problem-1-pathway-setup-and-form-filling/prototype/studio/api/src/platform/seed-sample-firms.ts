@@ -49,7 +49,9 @@ const emailOf = (u: SampleUser, firmKey: string) => (u.email ?? `${u.id}@${firmK
 
 export type SeedResult = { firmsAdded: number; staffAdded: number; grantsAdded: number; credentialsAdded: number; subscriptionsAdded: number; settingKeys: number; unmatchedCaseFirmKeys: string[] };
 
-export async function seedSampleFirms(db: PrismaClient, firms: SampleFirm[] = readSampleFirms()): Promise<SeedResult> {
+/** `then` (DEMO-LINK): more Sample rows written in this same transaction after the firms, so a bypass use touches each
+ *  firm once (the demo reset's front-office Sample consultation type, demo.ts). */
+export async function seedSampleFirms(db: PrismaClient, firms: SampleFirm[] = readSampleFirms(), then?: (tx: Prisma.TransactionClient) => Promise<unknown>): Promise<SeedResult> {
   return db.$transaction(async (tx) => {
     const r: SeedResult = { firmsAdded: 0, staffAdded: 0, grantsAdded: 0, credentialsAdded: 0, subscriptionsAdded: 0, settingKeys: 0, unmatchedCaseFirmKeys: [] };
     r.settingKeys = await syncDefinitionsIfChanged(tx);
@@ -94,6 +96,7 @@ export async function seedSampleFirms(db: PrismaClient, firms: SampleFirm[] = re
         }
       }
     }
+    if (then) await then(tx);
     r.unmatchedCaseFirmKeys = await unmatchedCaseFirmKeys(tx);
     return r;
   });

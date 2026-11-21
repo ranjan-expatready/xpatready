@@ -1,0 +1,2 @@
+Entry points: `identity/sample-seed.ts` start-up seed also adds the Sample consultation type (front-office/booking-seed.ts `seedSampleConsultationType`; a failure is logged, never stops start-up); `seedSampleFirms`' optional `then` (more Sample rows in the same transaction: one bypass line per firm on the demo reset) (DEMO-LINK)
+Tests: tests/check_demo_link_seed.ts, tests/check_aud1a_insert_only.ts

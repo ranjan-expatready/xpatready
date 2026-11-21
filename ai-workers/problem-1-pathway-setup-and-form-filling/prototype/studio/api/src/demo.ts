@@ -35,11 +35,14 @@ import { sampleSeedDecision } from "./platform/identity/sample-seed.ts";
 import { seedSampleFirms } from "./platform/seed-sample-firms.ts";
 import { logPort } from "./platform/observability/log.ts";
 import { dbRuleOf } from "./platform/observability/redact.ts";
+import { addSampleConsultationTypeSafely } from "./front-office/booking-seed.ts";
 /** CS-W1: PF-3's Sample seed (adds only what is missing) on the demo's bypass use (it writes both Sample firms' platform
  *  rows), then the cases' platform firm. Never in a production configuration (sampleSeedDecision's refusal; breaker m1). */
 const seedSampleFirmsAsDemo = async (db: Db) => {
   if (!sampleSeedDecision(process.env, { forceOn: true }).run) return;   // the loaded configuration (PF-24w break M1)
-  await asBypass("platform.demo.reset", () => seedSampleFirms(db));
+  // DEMO-LINK: and the Sample firm's one Sample consultation type, in the same transaction (one bypass line per firm; a
+  // failure undoes only that step, behind a savepoint, and is logged).
+  await asBypass("platform.demo.reset", () => seedSampleFirms(db, undefined, (tx) => addSampleConsultationTypeSafely(tx, "demo")));
   // One case written past the database's rules must not block a reset or a load (breaker R2-m3): said in the log, in its words.
   await fillCaseFirmIds(db).catch((e) => logPort.error("case_firm_fill_failed", e, { at: "demo", rule: dbRuleOf(e) }));
 };

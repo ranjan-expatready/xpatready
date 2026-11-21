@@ -9,9 +9,10 @@
 // Run: tsx api/src/front-office/booking-seed.ts   (after tsx api/src/platform/seed-sample-firms.ts)
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { pathToFileURL } from "node:url";
-import { firmScope } from "../platform/firm-scope.ts";
+import { firmScope, touchFirm } from "../platform/firm-scope.ts";
 import { readSampleFirms } from "../platform/seed-sample-firms.ts";
 import { BUSINESS_HOURS, readSetting, TIME_ZONE } from "../platform/settings.ts";
+import { logPort } from "../platform/observability/log.ts";
 
 type Tx = Prisma.TransactionClient;
 type BusinessHours = typeof BUSINESS_HOURS.default;
@@ -59,6 +60,53 @@ export async function seedSampleStaffHours(db: PrismaClient): Promise<Record<str
   }
   return out;
 }
+
+/** DEMO-LINK: the one Sample consultation type, so the Sample firm's public booking page (/book/sample-firm) is not empty.
+ *  Every value is Sample: no fee, no official value; AG-4-66's Sample defaults for the timings. */
+export const SAMPLE_TYPE = { firmKey: "sample-firm", hostActorId: "user-R", slug: "sample-free-consultation", name: "Free consultation (Sample)",
+  description: "A first conversation about your plans. Sample consultation type for the demo.", minutes: 30 } as const;
+
+/**
+ * Adds SAMPLE_TYPE to the Sample firm, hosted by its Owner, once, inside the caller's transaction. A type is matched by
+ * its slug only: one with that slug, even one a person deleted (soft) or edited, is never touched again; a person who
+ * changes the slug gets a fresh Sample type on the next seed. The host gets the firm's hours only when they have none
+ * (copyFirmHoursTo), so the page offers times. The firm's platform.bypass line (touchFirm) is written only when the type
+ * is added; on the demo reset it runs in the Sample seed's own transaction (seedSampleFirms' `then`), where that firm
+ * is touched already, so the reset still writes one seed line per firm (check_aud1a_insert_only.ts). The answer says
+ * whether it added the type and, when not, why (logged at info by the callers).
+ */
+export async function addSampleConsultationType(tx: Tx): Promise<{ added: boolean; why: string }> {
+  const firm = await tx.platformFirm.findUnique({ where: { key: SAMPLE_TYPE.firmKey }, select: { id: true } });
+  if (!firm) return { added: false, why: `no firm ${SAMPLE_TYPE.firmKey} yet (PF-3's seed runs first)` };
+  const host = await tx.platformStaff.findFirst({ where: firmScope(firm.id, { actorId: SAMPLE_TYPE.hostActorId }), select: { id: true } });
+  if (!host) return { added: false, why: `the Owner ${SAMPLE_TYPE.hostActorId} is not staff of ${SAMPLE_TYPE.firmKey}` };
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`fo-sample-type:${firm.id}`}))`;
+  if (await tx.foConsultationType.findFirst({ where: firmScope(firm.id, { slug: SAMPLE_TYPE.slug }), select: { id: true } })) return { added: false, why: `a type with slug ${SAMPLE_TYPE.slug} is there already` };
+  await touchFirm(tx, firm.id);   // PF-12b: the bypass line for this firm (nothing outside a bypass use; once per transaction)
+  await copyFirmHoursTo(tx, firm.id, [host.id]);
+  await tx.foConsultationType.create({ data: { firmId: firm.id, slug: SAMPLE_TYPE.slug, name: SAMPLE_TYPE.name, description: SAMPLE_TYPE.description,
+    purpose: "FREE_CONSULT", modes: ["VIDEO", "PHONE"], hostStaffIds: [host.id], minutes: SAMPLE_TYPE.minutes } });
+  return { added: true, why: "added" };
+}
+
+/** The same behind a savepoint, so a failure (an older schema, say) is logged and undoes only this step, never the
+ *  caller's transaction (the Sample firms' seed). Returns whether it added the type. */
+export async function addSampleConsultationTypeSafely(tx: Tx, where: string): Promise<boolean> {
+  await tx.$executeRaw`SAVEPOINT demo_link_sample_type`;
+  try {
+    const r = await addSampleConsultationType(tx);
+    await tx.$executeRaw`RELEASE SAVEPOINT demo_link_sample_type`;
+    if (!r.added) console.info(`${where}: Sample consultation type not added (DEMO-LINK): ${r.why}`);
+    return r.added;
+  } catch (e) {
+    await tx.$executeRaw`ROLLBACK TO SAVEPOINT demo_link_sample_type`;
+    logPort.error("demo_link_sample_type_failed", e, { at: where });   // PF-23m: the error object, never its text in the line
+    return false;
+  }
+}
+
+/** In a transaction of its own (the start-up seed, outside any bypass use). */
+export const seedSampleConsultationType = (db: PrismaClient, where = "platform"): Promise<boolean> => db.$transaction((tx) => addSampleConsultationTypeSafely(tx, where));
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { PrismaPg } = await import("@prisma/adapter-pg");

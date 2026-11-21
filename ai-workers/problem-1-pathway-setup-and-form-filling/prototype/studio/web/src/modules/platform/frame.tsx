@@ -67,7 +67,7 @@ function Place({ crumbs, back, area }: { crumbs: Crumb[]; back: { to: string; la
 export type Area = { label: string; home: string; menu: (me: Me) => React.ReactNode };
 
 /** A staff page: the frame, the place line, and the page once a firm staff member is signed in. */
-export function PlatformFrame({ crumbs = [], back = null, area, children }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; area?: Area; children: React.ReactNode }) {
+export function PlatformFrame({ crumbs = [], back = null, area, intro, children }: { crumbs?: Crumb[]; back?: { to: string; label: string } | null; area?: Area; /** DEMO-LINK: shown above the page whether or not someone is signed in. */ intro?: React.ReactNode; children: React.ReactNode }) {
   const token = useStaffToken();
   const because = useSessionEnd();
   const me = useMe();
@@ -94,7 +94,7 @@ export function PlatformFrame({ crumbs = [], back = null, area, children }: { cr
     <Frame area="outside" title={who ? who.firmKey : "Your firm"} home="/home"
       controls={who ? <><span className="min-w-0 truncate text-sm font-medium" data-staff-name>{who.displayName}</span><Button variant="ghost" size="sm" busy={leaving} onClick={() => void signOut()}>Sign out</Button></> : null}
       menu={who ? (area ? area.menu(who) : <AccountMenu me={who} />) : null}>
-      <Place crumbs={crumbs} back={back} area={area} />
+      <Place crumbs={crumbs} back={back} area={area} />{intro}
       {!token ? (because === "SIGNED_IN_ELSEWHERE" ? <SignedInElsewhere /> : <SignInCard focus={had.current} />)
         : me.isError && !who ? <SignInCard failed={refused} />
           : !who || !pending.checked ? <p role="status" className="text-sm text-text-muted" data-loading>Checking who is signed in…</p>

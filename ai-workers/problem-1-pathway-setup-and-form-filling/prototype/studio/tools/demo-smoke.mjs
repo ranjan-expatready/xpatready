@@ -1,7 +1,9 @@
 // M4 (A19 (j), master plan 08-monitoring.md): the smoke walk run after every demo update (.github/workflows/demo-update.yml).
 // A person's journey by screens, read-only: the copy's health (GET /api/health, M1), then by role — the Configuration
 // author's Immigration programs; the Case officer's Cases, the finished-story case and its forms (Prepare application);
-// Client A's questionnaire on that case. It presses no button (no priced button, no write, live AI untouched) and only
+// Client A's questionnaire on that case; DEMO-LINK: the Release 1 screens (the staff Home's list, Leads and the Bookings
+// calendar, which show the firm sign-in card to a visitor not signed in, and the Sample firm's public booking page with its
+// Sample consultation type, "Free consultation (Sample)", seeded by api/src/front-office/booking-seed.ts). It presses no button (no priced button, no write, live AI untouched) and only
 // opens pages. Each screen fails on: a script error on the page, a server error (5xx) from /api, an error notice
 // ("could not be loaded", "went wrong", …), or the screen's own content not appearing within 20 s. The first screen that
 // breaks ends the walk, named in the output and in $GITHUB_STEP_SUMMARY, with a screenshot when --shots is given.
@@ -16,6 +18,7 @@ import { chromium } from "playwright";
 const arg = (name, dflt) => { const i = process.argv.indexOf(name); return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : dflt; };
 const BASE = arg("--base", "http://localhost:4400").replace(/\/$/, ""), SHOTS = arg("--shots", ""), WAIT = Number(arg("--timeout-ms", "20000"));
 const STORY_REF = "SAMPLE-VV-FAMILY-1";
+const SAMPLE_TYPE = "Free consultation (Sample)", BOOK = "/book/sample-firm";   // DEMO-LINK (booking-seed.ts SAMPLE_TYPE)
 const AUTHOR = "user-A", OFFICER = "user-O";
 const t0 = Date.now(), lines = [], writes = [];
 const say = (l) => { lines.push(l); console.log(l); };
@@ -103,6 +106,15 @@ async function walk() {
 
     // 2. Configuration author: Immigration programs.
     await screen(page, "Immigration programs (/), as the Configuration author", AUTHOR, "/", (p) => p.getByRole("heading", { level: 1, name: "Immigration programs" }));
+    // DEMO-LINK: the Release 1 screens, reached from the Studio's menu ("Release 1 screens" → /home). Staff pages show the
+    // firm sign-in card to a visitor not signed in (the walk signs in to nothing: no write); either heading is the page working.
+    const staffPage = (h1) => (p) => p.getByRole("heading", { level: 1 }).filter({ hasText: new RegExp(`^(${h1}|Sign in to your firm)$`) });
+    await screen(page, "Release 1 screens (/home)", AUTHOR, "/home", (p) => p.getByRole("heading", { level: 2, name: "Release 1 screens" }),
+      async (p) => { if (!(await p.locator('[data-release-one-menu] a[href="/front-office/leads"]').count())) throw new Broke("Release 1 screens (/home)", "the list has no link to Leads"); });
+    await screen(page, "Leads (/front-office/leads)", AUTHOR, "/front-office/leads", staffPage("Leads"));
+    await screen(page, "Bookings calendar (/front-office/bookings)", AUTHOR, "/front-office/bookings", staffPage("Bookings"));
+    await screen(page, `Public booking page (${BOOK})`, AUTHOR, BOOK, (p) => p.locator("[data-type-card]").filter({ hasText: SAMPLE_TYPE }), undefined, null, `the Sample consultation type "${SAMPLE_TYPE}" is not on the page`);
+    await screen(page, `Booking times (${BOOK}/sample-free-consultation)`, AUTHOR, `${BOOK}/sample-free-consultation`, (p) => p.getByRole("heading", { level: 1, name: "Choose a time" }));
     // 3. Case officer: Cases.
     await screen(page, "Cases (/cases), as the Case officer", OFFICER, "/cases", (p) => p.getByRole("heading", { level: 1, name: "Cases" }),
       theCase ? async (p) => { if (!(await p.getByText(theCase.reference, { exact: true }).first().waitFor({ state: "visible", timeout: WAIT }).then(() => true, () => false))) throw new Broke("Cases (/cases), as the Case officer", `the case ${theCase.reference} is not in the list`); } : undefined);

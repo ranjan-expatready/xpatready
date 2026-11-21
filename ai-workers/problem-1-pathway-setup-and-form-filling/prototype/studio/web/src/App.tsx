@@ -100,6 +100,7 @@ function Shell() {
           {nav.slice(3, 9).map((n) => <NavItem key={n.to} {...n} />)}
           <p className="px-2 pb-1 pt-4 text-xs font-medium text-text-muted">History</p>
           {nav.slice(9).map((n) => <NavItem key={n.to} {...n} />)}
+          <p className="px-2 pb-1 pt-4 text-xs font-medium text-text-muted">Release 1</p><NavItem to="/home" label="Release 1 screens" icon={DoorOpen} />{/* DEMO-LINK: the staff Home lists every Release 1 screen */}
           <div className="mt-auto rounded-lg border border-border bg-surface p-3 text-[11px] leading-relaxed text-text-muted">
             Simulated people; local PostgreSQL demo database. AI drafting uses the guarded prototype route (synthetic or public official inputs only). Not production.
           </div>

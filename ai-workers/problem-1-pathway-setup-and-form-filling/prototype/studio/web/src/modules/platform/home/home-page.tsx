@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Notice } from "@/components/ui/controls";
 import { Loading } from "@/modules/front-office/sales/loading";
 import { PlatformFrame } from "../frame";
+import { ReleaseOneMenu } from "./release-one-menu";
 import { staffApi } from "../session";
 import { cameIn, COPY, countWords, itemWords, NeedsYou, type NeedsYouItem, whatOf, zoneName } from "./contract";
 
@@ -105,7 +106,7 @@ function NeedsYouSection() {
 
 export function HomePage() {
   return (
-    <PlatformFrame crumbs={[{ label: "Home" }]}>
+    <PlatformFrame crumbs={[{ label: "Home" }]} intro={<ReleaseOneMenu />}>
       <div className="mx-auto flex max-w-3xl flex-col gap-6" data-home>
         <h1 className="text-2xl font-semibold text-text">Home</h1>
         <NeedsYouSection />
